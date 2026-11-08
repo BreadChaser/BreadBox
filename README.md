@@ -1,5 +1,7 @@
 # BreadBox
 
+**Alive and close to v1, now testing on Old and New 3DS. Star or watch to hear when it ships.**
+
 A multi-system emulator for the Nintendo 3DS, built on the frontend of
 [PSX3D](https://github.com/BreadChaser/PSX3D).
 
@@ -14,10 +16,6 @@ Play, safe saves with backups, and a console-style interface.
 
 The library opens on your favorites and your systems; pick a system to see
 its games.
-
-## Status
-
-Alive and close to v1, now testing on Old and New 3DS. Star or watch to hear when it ships.
 
 ## Credits
 
