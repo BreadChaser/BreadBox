@@ -17,7 +17,7 @@ its games.
 
 ## Status
 
-Early development. Nothing to download yet.
+Alive and close to v1, now testing on Old and New 3DS. Star or watch to hear when it ships.
 
 ## Credits
 
