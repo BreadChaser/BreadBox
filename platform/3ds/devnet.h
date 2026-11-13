@@ -1,0 +1,31 @@
+#ifndef PSX3D_DEVNET_H
+#define PSX3D_DEVNET_H
+#include "devtools.h"
+#include <3ds.h>
+#define DEV_COMMAND_MAX 16384
+#define DEV_HISTORY 60
+#define DEV_METRICS 88
+/* Numeric JSON/TSV columns, kept in one order for live and batch output. */
+extern const char *const dev_columns[DEV_METRICS];
+typedef struct {
+	u64 seq, ms;
+	double v[DEV_METRICS];
+	char audio[256], pica[1024], probe[512];
+} dev_measurement;
+void devnet_init(void);
+void devnet_notification_done(void);
+bool devnet_stopping(void);
+bool devnet_exit_timeout(uint64_t timeout); /* failed join retains resources */
+void devnet_exit(void);
+bool devnet_take(char *command);
+void devnet_reply(const char *json);
+void devnet_status(const char *json);
+void devnet_sample(const dev_measurement *s, bool reset);
+bool devnet_shot(const char *path, bool bottom);
+bool devnet_shot_eyes(const char *path);   /* top screen: left eye above, right eye below */ /* main copies only; worker encodes */
+bool devnet_import_active(void);
+void devnet_import_reply(const char *path, const char *sha256);
+void devnet_start_update(const char *args);
+void devnet_update_reply(const char *args); /* after current game fully unloaded */
+void devnet_busy(bool busy); /* game or batch running: file commands wait */
+#endif

@@ -1,0 +1,9 @@
+# Plain commits replay.sh cherry-picks after the three scripted steps (oldest first):
+# AGENTS.md; its registry correction; the never-used PSX3D code; the restored library suite;
+# the GBA settings helpers the removed code used, and the test check of one of them.
+fca914a0
+cae6c805
+6ae99ee2
+61ec32f3
+8367d7fb
+ceefaefa

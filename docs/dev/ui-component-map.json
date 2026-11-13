@@ -1,0 +1,119 @@
+{
+  "home.c": [
+    "draw_top",
+    "draw_tile",
+    "draw_group",
+    "draw_sub",
+    "draw_bottom",
+    "tri",
+    "ring",
+    "icon_library",
+    "empty_card",
+    "cover_card",
+    "slow_banner",
+    "big_title",
+    "top_common",
+    "soon_bottom",
+    "soon_top",
+    "empty_top",
+    "empty_bottom",
+    "cover_fan",
+    "text_w",
+    "together_at",
+    "layout",
+    "with_alpha",
+    "icon_play",
+    "tile_icon",
+    "library_picks"
+  ],
+  "libui.c": [
+    "text",
+    "draw_cover",
+    "draw_jump",
+    "draw_top",
+    "libui_draw_backdrop",
+    "draw_bottom",
+    "game_label"
+  ],
+  "settings_ui.c": [
+    "draw_settings",
+    "draw_category",
+    "draw_help",
+    "row_label",
+    "row_value",
+    "list_top",
+    "row_height",
+    "list_rows"
+  ],
+  "browser.c": [
+    "draw_top",
+    "draw_bottom",
+    "row_label"
+  ],
+  "savestates.c": [
+    "draw_tex",
+    "draw_preview",
+    "draw_top",
+    "draw_grid",
+    "draw_bottom",
+    "resume_top",
+    "resume_bottom"
+  ],
+  "share.c": [
+    "draw_top",
+    "draw_bottom"
+  ],
+  "gba.c": [
+    "draw_bottom",
+    "draw_paused_top",
+    "draw_pause",
+    "draw_gba_confirm",
+    "draw_continue",
+    "draw_slots",
+    "draw_gba_settings",
+    "draw_prepare"
+  ],
+  "gba_library.c": [
+    "draw_scan_status",
+    "favorite_cover",
+    "draw_top",
+    "draw_bottom",
+    "draw_favorites_top",
+    "draw_favorites_bottom",
+    "game_row_label",
+    "favorite_row_label"
+  ],
+  "gba_settings_ui.c": [
+    "gba_settings_list_draw",
+    "draw_settings_bottom",
+    "draw_settings_top"
+  ],
+  "theme_picker.c": [
+    "theme_picker_draw"
+  ],
+  "library.c": [
+    "draw_index_progress"
+  ],
+  "emu.c": [
+    "alert_draw_top",
+    "menu_draw_top",
+    "menu_draw_bottom",
+    "game_draw_bottom",
+    "game_draw_top"
+  ],
+  "main.c": [
+    "draw_message"
+  ],
+  "input.c": [
+    "edge",
+    "touch_panel_draw",
+    "quadrant_draw",
+    "stick_cutout_draw",
+    "stick_draw",
+    "touch_rect_draw",
+    "touch_buttons_draw"
+  ],
+  "stereo.c": [
+    "stereo_draw_preview"
+  ]
+}

@@ -1,0 +1,172 @@
+[
+  {
+    "name": "gpsp_retro_set_environment",
+    "expression": "(core_held() ? gpsp_retro_set_environment(__VA_ARGS__) : (void)0)",
+    "condition": null
+  },
+  {
+    "name": "gpsp_retro_set_video_refresh",
+    "expression": "(core_held() ? gpsp_retro_set_video_refresh(__VA_ARGS__) : (void)0)",
+    "condition": null
+  },
+  {
+    "name": "gpsp_retro_set_audio_sample",
+    "expression": "(core_held() ? gpsp_retro_set_audio_sample(__VA_ARGS__) : (void)0)",
+    "condition": null
+  },
+  {
+    "name": "gpsp_retro_set_audio_sample_batch",
+    "expression": "(core_held() ? gpsp_retro_set_audio_sample_batch(__VA_ARGS__) : (void)0)",
+    "condition": null
+  },
+  {
+    "name": "gpsp_retro_set_input_poll",
+    "expression": "(core_held() ? gpsp_retro_set_input_poll(__VA_ARGS__) : (void)0)",
+    "condition": null
+  },
+  {
+    "name": "gpsp_retro_set_input_state",
+    "expression": "(core_held() ? gpsp_retro_set_input_state(__VA_ARGS__) : (void)0)",
+    "condition": null
+  },
+  {
+    "name": "gpsp_retro_init",
+    "expression": "(core_held() ? gpsp_retro_init(__VA_ARGS__) : (void)0)",
+    "condition": null
+  },
+  {
+    "name": "gpsp_retro_deinit",
+    "expression": "(core_held() ? gpsp_retro_deinit(__VA_ARGS__) : (void)0)",
+    "condition": null
+  },
+  {
+    "name": "gpsp_retro_load_game",
+    "expression": "(core_held() ? gpsp_retro_load_game(__VA_ARGS__) : 0)",
+    "condition": null
+  },
+  {
+    "name": "gpsp_retro_unload_game",
+    "expression": "(core_held() ? gpsp_retro_unload_game(__VA_ARGS__) : (void)0)",
+    "condition": null
+  },
+  {
+    "name": "gpsp_retro_run",
+    "expression": "(core_held() ? gpsp_retro_run(__VA_ARGS__) : (void)0)",
+    "condition": null
+  },
+  {
+    "name": "gpsp_retro_set_run_guard",
+    "expression": "(core_held() ? gpsp_retro_set_run_guard(__VA_ARGS__) : (void)0)",
+    "condition": null
+  },
+  {
+    "name": "gpsp_retro_reset",
+    "expression": "(core_held() ? gpsp_retro_reset(__VA_ARGS__) : (void)0)",
+    "condition": null
+  },
+  {
+    "name": "gpsp_retro_get_system_av_info",
+    "expression": "(core_held() ? gpsp_retro_get_system_av_info(__VA_ARGS__) : (void)0)",
+    "condition": null
+  },
+  {
+    "name": "gpsp_retro_get_memory_data",
+    "expression": "(core_held() ? gpsp_retro_get_memory_data(__VA_ARGS__) : 0)",
+    "condition": null
+  },
+  {
+    "name": "gpsp_retro_get_memory_size",
+    "expression": "(core_held() ? gpsp_retro_get_memory_size(__VA_ARGS__) : 0)",
+    "condition": null
+  },
+  {
+    "name": "gpsp_retro_serialize_size",
+    "expression": "(core_held() ? gpsp_retro_serialize_size(__VA_ARGS__) : 0)",
+    "condition": null
+  },
+  {
+    "name": "gpsp_retro_serialize",
+    "expression": "(core_held() ? gpsp_retro_serialize(__VA_ARGS__) : 0)",
+    "condition": null
+  },
+  {
+    "name": "gpsp_retro_unserialize",
+    "expression": "(core_held() ? gpsp_retro_unserialize(__VA_ARGS__) : 0)",
+    "condition": null
+  },
+  {
+    "name": "gpsp_ctr_jit_has_mappings",
+    "expression": "(core_held() ? gpsp_ctr_jit_has_mappings(__VA_ARGS__) : 0)",
+    "condition": null
+  },
+  {
+    "name": "gpsp_gba_stereo_config",
+    "expression": "(core_held() ? gpsp_gba_stereo_config(__VA_ARGS__) : (void)0)",
+    "condition": null
+  },
+  {
+    "name": "gpsp_gba_stereo_valid",
+    "expression": "(core_held() ? gpsp_gba_stereo_valid(__VA_ARGS__) : 0)",
+    "condition": null
+  },
+  {
+    "name": "gpsp_gba_stereo_flags",
+    "expression": "(core_held() ? gpsp_gba_stereo_flags(__VA_ARGS__) : 0)",
+    "condition": null
+  },
+  {
+    "name": "gpsp_retro_profile_read",
+    "expression": "(core_held() ? gpsp_retro_profile_read(__VA_ARGS__) : (void)0)",
+    "condition": null
+  },
+  {
+    "name": "gpsp_retro_set_solar_level",
+    "expression": "(core_held() ? gpsp_retro_set_solar_level(__VA_ARGS__) : (void)0)",
+    "condition": null
+  },
+  {
+    "name": "gpsp_retro_has_solar_sensor",
+    "expression": "(core_held() ? gpsp_retro_has_solar_sensor(__VA_ARGS__) : 0)",
+    "condition": null
+  },
+  {
+    "name": "gpsp_retro_get_rtc",
+    "expression": "(core_held() ? gpsp_retro_get_rtc(__VA_ARGS__) : 0)",
+    "condition": null
+  },
+  {
+    "name": "gpsp_retro_set_rtc",
+    "expression": "(core_held() ? gpsp_retro_set_rtc(__VA_ARGS__) : (void)0)",
+    "condition": null
+  },
+  {
+    "name": "gpsp_gba_stereo_admit",
+    "expression": "(core_held() ? gpsp_gba_stereo_admit(__VA_ARGS__) : (void)0)",
+    "condition": null
+  },
+  {
+    "name": "gpsp_gba_cpu_config",
+    "expression": "(core_held() ? gpsp_gba_cpu_config(__VA_ARGS__) : (void)0)",
+    "condition": null
+  },
+  {
+    "name": "gpsp_gba_timing_config",
+    "expression": "(core_held() ? gpsp_gba_timing_config(__VA_ARGS__) : (void)0)",
+    "condition": "BBGBA_TIMING"
+  },
+  {
+    "name": "gpsp_gba_timing_read",
+    "expression": "(core_held() ? gpsp_gba_timing_read(__VA_ARGS__) : (void)0)",
+    "condition": "BBGBA_TIMING"
+  },
+  {
+    "name": "gpsp_gba_rom_budget",
+    "expression": "(core_held() ? gpsp_gba_rom_budget(__VA_ARGS__) : (void)0)",
+    "condition": null
+  },
+  {
+    "name": "gpsp_gba_battery_generation",
+    "expression": "(core_held()?gpsp_gba_battery_generation(__VA_ARGS__):0)",
+    "condition": null
+  }
+]

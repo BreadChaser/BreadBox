@@ -1,0 +1,546 @@
+{
+ "_doc": "Room styles (tools/room/lamplight/gi.py, rig.py). Changing a style's look is editing this file and re-running tools/room/build.sh: no code change. Space: metres, x right, y into the room, z up (scene.py). Per style: textures (its texture set); gi: the Cycles bake (lights: SUN/POINT/AREA with colour, power, pos, aim, size/radius/angle; exposure and gamma: irradiance to display light (gi.tone); range: the light range, 2 (PS1 x2) or 4; ao, ao_dist: the contact-shadow pass; emit/translucent: the shade's material; a light's only/except: [part names] it lights directly (light linking: the window's sun and sky on the wallpaper are their own, warmer and weaker, lights); samples, ao_samples: Cycles samples per vertex: the bake is bit-exact only for the same Blender build and counts). tint: flat colours of untextured parts. emit: self-light of the lamp shade and the candle on top of the bake. glow: additive halo per sprite key (colour, scale; absent = off). post: [dither strength 0..1, share of empty cubbies with decor 0..1]. texture_sets: each style's \"textures\" names one: wood, floor, wallpaper and rug palettes, the window gradient (sky) and the window view (sky_view); the patterns are the calm ones of light round 3 (tex.py); each set is its own 256x128 atlas. The light is V3 of light round 3 (owner approved 2026-11-07). Day neutral round: Day 2 Nov 7 colours with depth from the window; Night 2 moodier.",
+ "order": [
+  "day",
+  "night"
+ ],
+ "styles": {
+  "day": {
+   "textures": "day",
+   "glow": {
+    "steam": [
+     "#c8c0b0",
+     0.35
+    ],
+    "window": [
+     "#e8eef6",
+     0.48,
+     1.6
+    ]
+   },
+   "emit": {
+    "shade": 0.12,
+    "jar": 0.0,
+    "wax": 0.0
+   },
+   "tint": {
+    "ceiling": "#a89878",
+    "frame": "#7a7264",
+    "knob": "#2a2622",
+    "knobcap": "#d8d0b8",
+    "plant2": "#5a8a3a",
+    "pot": "#a0583a",
+    "mug": "#d8d0c0",
+    "coffee": "#2a160c",
+    "ps1top": "#18181c",
+    "standwood": "#5a3a22",
+    "glass": "#101418",
+    "mat": "#e8dcc0",
+    "gbabody": "#5a44a0",
+    "jar": "#d88a48",
+    "wax": "#f4e6c8"
+   },
+   "gi": {
+    "exposure": 220,
+    "gamma": 1.9,
+    "lift": 0.0,
+    "range": 4,
+    "ao": 0.8,
+    "ao_dist": 0.4,
+    "world": [
+     "#000000",
+     0.0
+    ],
+    "portal": false,
+    "clamp": 1.0,
+    "lights": [
+     {
+      "type": "SUN",
+      "name": "sun",
+      "color": "#fff0dc",
+      "power": 12.0,
+      "angle": 3,
+      "aim": [
+       -0.4,
+       -0.9,
+       -0.75
+      ],
+      "except": [
+       "wall"
+      ]
+     },
+     {
+      "type": "AREA",
+      "name": "fill",
+      "color": "#ffe4c4",
+      "power": 0.3,
+      "size": [
+       1.3,
+       1.4
+      ],
+      "pos": [
+       0.0,
+       0.95,
+       1.0
+      ],
+      "aim": [
+       0,
+       1,
+       0.05
+      ]
+     },
+     {
+      "type": "AREA",
+      "name": "sky",
+      "color": "#b4c8e8",
+      "power": 16.5876,
+      "size": [
+       1.0,
+       1.1
+      ],
+      "pos": [
+       1.5,
+       2.04,
+       1.6
+      ],
+      "aim": [
+       -0.2,
+       -1,
+       -0.3
+      ],
+      "except": [
+       "wall"
+      ]
+     },
+     {
+      "type": "SUN",
+      "name": "sun_wall",
+      "color": "#ffc080",
+      "power": 0.6,
+      "angle": 8,
+      "aim": [
+       -0.4,
+       -0.9,
+       -0.75
+      ],
+      "only": [
+       "wall"
+      ]
+     },
+     {
+      "type": "AREA",
+      "name": "sky_wall",
+      "color": "#e8d2b4",
+      "power": 0.864,
+      "size": [
+       1.0,
+       1.1
+      ],
+      "pos": [
+       1.5,
+       2.04,
+       1.6
+      ],
+      "aim": [
+       0,
+       -1,
+       0
+      ],
+      "only": [
+       "wall"
+      ]
+     }
+    ],
+    "samples": 2048,
+    "ao_samples": 256,
+    "falloff": {
+     "center": [
+      1.2,
+      1.2,
+      1.0
+     ],
+     "radius": 1.4,
+     "edge": 2.3,
+     "floor": 0.35,
+     "scale": [
+      1.0,
+      0.8,
+      1.2
+     ]
+    },
+    "gain": {
+     "bookcase_back": 2.6,
+     "bookcase": 0.9
+    },
+    "smooth": {
+     "bookcase_back": 0.6,
+     "bookcase": 0.3
+    }
+   }
+  },
+  "night": {
+   "textures": "night",
+   "glow": {
+    "lamp": [
+     "#ffb060",
+     0.15
+    ],
+    "desk": [
+     "#ffc070",
+     0.18
+    ],
+    "candle": [
+     "#ffa850",
+     0.28
+    ],
+    "steam": [
+     "#a09890",
+     0.25
+    ],
+    "window": [
+     "#6a6496",
+     0.22,
+     1.0
+    ]
+   },
+   "emit": {
+    "shade": 0.35,
+    "jar": 0.3,
+    "wax": 0.6
+   },
+   "tint": {
+    "ceiling": "#5a4a3c",
+    "frame": "#b8ac94",
+    "knob": "#2a2622",
+    "knobcap": "#d8d0b8",
+    "plant2": "#5a8a3a",
+    "pot": "#a0583a",
+    "mug": "#d8d0c0",
+    "coffee": "#2a160c",
+    "ps1top": "#18181c",
+    "standwood": "#5a3a22",
+    "glass": "#101418",
+    "mat": "#e8dcc0",
+    "gbabody": "#5a44a0",
+    "jar": "#d88a48",
+    "wax": "#f4e6c8"
+   },
+   "gi": {
+    "exposure": 6,
+    "gamma": 2.2,
+    "lift": 0.0,
+    "range": 2,
+    "ao": 0.7,
+    "ao_dist": 0.4,
+    "world": [
+     "#000000",
+     0.0
+    ],
+    "portal": false,
+    "clamp": 1.0,
+    "lights": [
+     {
+      "type": "AREA",
+      "name": "sky",
+      "color": "#3a4c90",
+      "power": 2.5,
+      "size": [
+       1.0,
+       1.1
+      ],
+      "pos": [
+       1.5,
+       2.04,
+       1.6
+      ],
+      "aim": [
+       0,
+       -1,
+       0
+      ]
+     },
+     {
+      "type": "POINT",
+      "name": "lamp",
+      "color": "#ffb060",
+      "power": 46,
+      "radius": 0.04,
+      "pos": [
+       -1.14,
+       1.74,
+       1.57
+      ]
+     },
+     {
+      "type": "POINT",
+      "name": "desk",
+      "color": "#ffc070",
+      "power": 12,
+      "radius": 0.02,
+      "pos": [
+       2.05,
+       1.66,
+       1.1
+      ]
+     },
+     {
+      "type": "POINT",
+      "name": "candle",
+      "color": "#ff9a40",
+      "power": 1.5,
+      "radius": 0.01,
+      "pos": [
+       0.55,
+       0.36,
+       0.53
+      ]
+     },
+     {
+      "type": "AREA",
+      "name": "picture",
+      "color": "#ffd8a8",
+      "power": 24,
+      "size": [
+       1.3,
+       0.06
+      ],
+      "pos": [
+       0.0,
+       1.4,
+       2.02
+      ],
+      "aim": [
+       0,
+       0.42,
+       -1
+      ],
+      "except": [
+       "picture_light"
+      ]
+     },
+     {
+      "type": "AREA",
+      "name": "fill",
+      "color": "#ffc890",
+      "power": 1.0,
+      "size": [
+       1.3,
+       1.4
+      ],
+      "pos": [
+       0.0,
+       0.85,
+       1.0
+      ],
+      "aim": [
+       0,
+       1,
+       0.05
+      ]
+     },
+     {
+      "type": "AREA",
+      "name": "tvglow",
+      "color": "#8ab4ff",
+      "power": 2.5,
+      "size": [
+       0.3,
+       0.22
+      ],
+      "pos": [
+       -1.55,
+       1.22,
+       0.98
+      ],
+      "aim": [
+       0.75,
+       -1,
+       0
+      ]
+     }
+    ],
+    "emit": {
+     "shade": [
+      "#ffb060",
+      0.8
+     ]
+    },
+    "translucent": {
+     "shade": 0.0
+    },
+    "samples": 2048,
+    "ao_samples": 256,
+    "falloff": {
+     "center": [
+      0.0,
+      1.0,
+      1.0
+     ],
+     "radius": 1.4,
+     "edge": 2.4,
+     "floor": 0.3,
+     "scale": [
+      1.0,
+      0.8,
+      1.2
+     ]
+    },
+    "gain": {
+     "bookcase_back": 2.9,
+     "bookcase": 0.85,
+     "shade": 0.7
+    },
+    "smooth": {
+     "bookcase_back": 0.6,
+     "bookcase": 0.3
+    }
+   }
+  }
+ },
+ "texture_sets": {
+  "day": {
+   "walnut": [
+    "#24130c",
+    "#40220f",
+    "#5e3519",
+    "#7e4c26",
+    "#a06a38"
+   ],
+   "oak": [
+    "#33200f",
+    "#563619",
+    "#7a4f26",
+    "#986634",
+    "#b8844a"
+   ],
+   "wall": [
+    "#2b3d33",
+    "#33493d",
+    "#6e6a48"
+   ],
+   "rug": [
+    "#3a2016",
+    "#b8a886",
+    "#8e3020",
+    "#5a1c14",
+    "#2c3a5e",
+    "#b08438"
+   ],
+   "sky": [
+    "#3e6cb8",
+    "#5a8ad0",
+    "#86b0dc",
+    "#b8d2e0",
+    "#e8e4cc"
+   ],
+   "sky_view": {
+    "hills": "#3e6a3c",
+    "lights": "#a8463a",
+    "far": "#7a9aa8",
+    "clouds": [
+     "#f4f4ec",
+     "#c8d4dc"
+    ],
+    "stars": 0,
+    "nlights": 6
+   },
+   "finish": "soft",
+   "soft": {
+    "grain": 0.8,
+    "edge": 1.3,
+    "seam": 1.2,
+    "stripe": 1.2,
+    "mottle": 0.5,
+    "shade": 0.5
+   },
+   "wall_soft": [
+    "#283a30",
+    "#2b3d33",
+    "#2f4338",
+    "#33493d"
+   ],
+   "fabric1": [
+    "#5e4418",
+    "#84622a",
+    "#9c7834"
+   ],
+   "fabric2": [
+    "#183436",
+    "#204640",
+    "#2a5650"
+   ]
+  },
+  "night": {
+   "walnut": [
+    "#24130c",
+    "#40220f",
+    "#5e3519",
+    "#7e4c26",
+    "#a06a38"
+   ],
+   "oak": [
+    "#33200f",
+    "#563619",
+    "#7a4f26",
+    "#986634",
+    "#b8844a"
+   ],
+   "wall": [
+    "#2b3d33",
+    "#33493d",
+    "#6e6a48"
+   ],
+   "rug": [
+    "#3a2016",
+    "#b8a886",
+    "#8e3020",
+    "#5a1c14",
+    "#2c3a5e",
+    "#b08438"
+   ],
+   "sky": [
+    "#141a3c",
+    "#2a2c5c",
+    "#4a3a6c",
+    "#8a5468",
+    "#c87a5a"
+   ],
+   "sky_view": {
+    "hills": "#100c1a",
+    "lights": "#ffd070",
+    "far": "#2a2440",
+    "stars": 10,
+    "nlights": 8
+   },
+   "finish": "soft",
+   "soft": {
+    "grain": 0.8,
+    "edge": 1.3,
+    "seam": 1.2,
+    "stripe": 1.2,
+    "mottle": 0.5,
+    "shade": 0.5
+   },
+   "wall_soft": [
+    "#283a30",
+    "#2b3d33",
+    "#2f4338",
+    "#33493d"
+   ],
+   "fabric1": [
+    "#5e4418",
+    "#84622a",
+    "#9c7834"
+   ],
+   "fabric2": [
+    "#183436",
+    "#204640",
+    "#2a5650"
+   ]
+  }
+ },
+ "post": [
+  0.5,
+  0.5
+ ]
+}

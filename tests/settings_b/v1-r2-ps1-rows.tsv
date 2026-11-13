@@ -1,0 +1,484 @@
+0	0	0	model	Screen
+0	0	0	model	Smoothing
+0	0	0	model	FPS counter
+0	0	0	model	Button mappings
+0	0	0	model	Controller
+0	0	0	model	Analog
+0	0	0	model	Stick response
+0	0	0	model	Memory card 1
+0	0	0	model	Memory card 2
+0	0	0	model	Frameskip
+0	0	0	model	Game CPU speed
+0	0	0	model	Flicker fix
+0	0	0	model	Safe drawing
+0	0	0	model	Faster disc loading
+0	0	0	model	Simpler CPU timing
+0	0	0	model	Simplify CPU loads
+0	0	0	model	Faster 3D calculations
+0	0	0	model	Simpler 3D clipping
+0	0	0	model	Skip code safety checks
+0	0	0	model	Accurate CPU cache
+0	0	0	model	Accurate CPU errors
+0	0	0	model	Disable automatic game fixes
+0	0	0	binding	A
+0	0	0	binding	B
+0	0	0	binding	X
+0	0	0	binding	Y
+0	0	0	binding	L
+0	0	0	binding	R
+0	0	0	binding	START
+0	0	0	binding	SELECT
+0	0	0	binding	Touch top left
+0	0	0	binding	Touch top right
+0	0	0	binding	Touch bottom left
+0	0	0	binding	Touch bottom right
+0	0	0	binding	Touch side 1
+0	0	0	binding	Touch right stick
+0	0	0	binding	Fast forward
+0	0	1	model	Screen
+0	0	1	model	Smoothing
+0	0	1	model	FPS counter
+0	0	1	model	Button mappings
+0	0	1	model	Controller
+0	0	1	model	Analog
+0	0	1	model	Stick response
+0	0	1	model	Memory card 1
+0	0	1	model	Memory card 2
+0	0	1	model	Frameskip
+0	0	1	model	Game CPU speed
+0	0	1	model	Flicker fix
+0	0	1	model	Safe drawing
+0	0	1	model	Faster disc loading
+0	0	1	model	Simpler CPU timing
+0	0	1	model	Simplify CPU loads
+0	0	1	model	Faster 3D calculations
+0	0	1	model	Simpler 3D clipping
+0	0	1	model	Skip code safety checks
+0	0	1	model	Accurate CPU cache
+0	0	1	model	Accurate CPU errors
+0	0	1	model	Disable automatic game fixes
+0	0	1	model	Debug: core messages
+0	0	1	binding	A
+0	0	1	binding	B
+0	0	1	binding	X
+0	0	1	binding	Y
+0	0	1	binding	L
+0	0	1	binding	R
+0	0	1	binding	START
+0	0	1	binding	SELECT
+0	0	1	binding	Touch top left
+0	0	1	binding	Touch top right
+0	0	1	binding	Touch bottom left
+0	0	1	binding	Touch bottom right
+0	0	1	binding	Touch side 1
+0	0	1	binding	Touch right stick
+0	0	1	binding	Fast forward
+0	1	0	model	Screen
+0	1	0	model	Smoothing
+0	1	0	model	FPS counter
+0	1	0	model	Button mappings
+0	1	0	model	Controller
+0	1	0	model	Analog
+0	1	0	model	Stick response
+0	1	0	model	Memory card 1
+0	1	0	model	Memory card 2
+0	1	0	model	Frameskip
+0	1	0	model	Game CPU speed
+0	1	0	model	Flicker fix
+0	1	0	model	Safe drawing
+0	1	0	model	Faster disc loading
+0	1	0	model	Simpler CPU timing
+0	1	0	model	Simplify CPU loads
+0	1	0	model	Faster 3D calculations
+0	1	0	model	Simpler 3D clipping
+0	1	0	model	Skip code safety checks
+0	1	0	model	Accurate CPU cache
+0	1	0	model	Accurate CPU errors
+0	1	0	model	Disable automatic game fixes
+0	1	0	binding	A
+0	1	0	binding	B
+0	1	0	binding	X
+0	1	0	binding	Y
+0	1	0	binding	L
+0	1	0	binding	R
+0	1	0	binding	START
+0	1	0	binding	SELECT
+0	1	0	binding	Touch top left
+0	1	0	binding	Touch top right
+0	1	0	binding	Touch bottom left
+0	1	0	binding	Touch bottom right
+0	1	0	binding	Touch side 1
+0	1	0	binding	Touch right stick
+0	1	0	binding	Fast forward
+0	1	1	model	Screen
+0	1	1	model	Smoothing
+0	1	1	model	FPS counter
+0	1	1	model	Button mappings
+0	1	1	model	Controller
+0	1	1	model	Analog
+0	1	1	model	Stick response
+0	1	1	model	Memory card 1
+0	1	1	model	Memory card 2
+0	1	1	model	Frameskip
+0	1	1	model	Game CPU speed
+0	1	1	model	Flicker fix
+0	1	1	model	Safe drawing
+0	1	1	model	Faster disc loading
+0	1	1	model	Simpler CPU timing
+0	1	1	model	Simplify CPU loads
+0	1	1	model	Faster 3D calculations
+0	1	1	model	Simpler 3D clipping
+0	1	1	model	Skip code safety checks
+0	1	1	model	Accurate CPU cache
+0	1	1	model	Accurate CPU errors
+0	1	1	model	Disable automatic game fixes
+0	1	1	model	Record audio
+0	1	1	model	Test tone
+0	1	1	model	Debug: core messages
+0	1	1	binding	A
+0	1	1	binding	B
+0	1	1	binding	X
+0	1	1	binding	Y
+0	1	1	binding	L
+0	1	1	binding	R
+0	1	1	binding	START
+0	1	1	binding	SELECT
+0	1	1	binding	Touch top left
+0	1	1	binding	Touch top right
+0	1	1	binding	Touch bottom left
+0	1	1	binding	Touch bottom right
+0	1	1	binding	Touch side 1
+0	1	1	binding	Touch right stick
+0	1	1	binding	Fast forward
+0	2	0	model	Screen
+0	2	0	model	Smoothing
+0	2	0	model	FPS counter
+0	2	0	model	Button mappings
+0	2	0	model	Controller
+0	2	0	model	Analog
+0	2	0	model	Stick response
+0	2	0	model	Memory card 1
+0	2	0	model	Memory card 2
+0	2	0	model	Frameskip
+0	2	0	model	Game CPU speed
+0	2	0	model	Flicker fix
+0	2	0	model	Safe drawing
+0	2	0	model	Faster disc loading
+0	2	0	model	Simpler CPU timing
+0	2	0	model	Simplify CPU loads
+0	2	0	model	Faster 3D calculations
+0	2	0	model	Simpler 3D clipping
+0	2	0	model	Skip code safety checks
+0	2	0	model	Accurate CPU cache
+0	2	0	model	Accurate CPU errors
+0	2	0	model	Disable automatic game fixes
+0	2	0	model	Reset to recommended
+0	2	0	binding	A
+0	2	0	binding	B
+0	2	0	binding	X
+0	2	0	binding	Y
+0	2	0	binding	L
+0	2	0	binding	R
+0	2	0	binding	START
+0	2	0	binding	SELECT
+0	2	0	binding	Touch top left
+0	2	0	binding	Touch top right
+0	2	0	binding	Touch bottom left
+0	2	0	binding	Touch bottom right
+0	2	0	binding	Touch side 1
+0	2	0	binding	Touch right stick
+0	2	0	binding	Fast forward
+0	2	1	model	Screen
+0	2	1	model	Smoothing
+0	2	1	model	FPS counter
+0	2	1	model	Button mappings
+0	2	1	model	Controller
+0	2	1	model	Analog
+0	2	1	model	Stick response
+0	2	1	model	Memory card 1
+0	2	1	model	Memory card 2
+0	2	1	model	Frameskip
+0	2	1	model	Game CPU speed
+0	2	1	model	Flicker fix
+0	2	1	model	Safe drawing
+0	2	1	model	Faster disc loading
+0	2	1	model	Simpler CPU timing
+0	2	1	model	Simplify CPU loads
+0	2	1	model	Faster 3D calculations
+0	2	1	model	Simpler 3D clipping
+0	2	1	model	Skip code safety checks
+0	2	1	model	Accurate CPU cache
+0	2	1	model	Accurate CPU errors
+0	2	1	model	Disable automatic game fixes
+0	2	1	model	Reset to recommended
+0	2	1	model	Record audio
+0	2	1	model	Test tone
+0	2	1	model	Debug: core messages
+0	2	1	binding	A
+0	2	1	binding	B
+0	2	1	binding	X
+0	2	1	binding	Y
+0	2	1	binding	L
+0	2	1	binding	R
+0	2	1	binding	START
+0	2	1	binding	SELECT
+0	2	1	binding	Touch top left
+0	2	1	binding	Touch top right
+0	2	1	binding	Touch bottom left
+0	2	1	binding	Touch bottom right
+0	2	1	binding	Touch side 1
+0	2	1	binding	Touch right stick
+0	2	1	binding	Fast forward
+1	0	0	model	Screen
+1	0	0	model	Smoothing
+1	0	0	model	FPS counter
+1	0	0	model	3D
+1	0	0	model	Button mappings
+1	0	0	model	Controller
+1	0	0	model	Analog
+1	0	0	model	Stick response
+1	0	0	model	Bottom-screen buttons
+1	0	0	model	Memory card 1
+1	0	0	model	Memory card 2
+1	0	0	model	Frameskip
+1	0	0	model	Game CPU speed
+1	0	0	model	Flicker fix
+1	0	0	model	Safe drawing
+1	0	0	model	Faster disc loading
+1	0	0	model	Simpler CPU timing
+1	0	0	model	Simplify CPU loads
+1	0	0	model	Faster 3D calculations
+1	0	0	model	Simpler 3D clipping
+1	0	0	model	Skip code safety checks
+1	0	0	model	Accurate CPU cache
+1	0	0	model	Accurate CPU errors
+1	0	0	model	Disable automatic game fixes
+1	0	0	binding	A
+1	0	0	binding	B
+1	0	0	binding	X
+1	0	0	binding	Y
+1	0	0	binding	L
+1	0	0	binding	R
+1	0	0	binding	ZL
+1	0	0	binding	ZR
+1	0	0	binding	START
+1	0	0	binding	SELECT
+1	0	0	binding	Touch top
+1	0	0	binding	Touch bottom
+1	0	0	binding	Touch side 1
+1	0	0	binding	Touch side 2
+1	0	0	binding	Fast forward
+1	0	0	binding	Rewind
+1	0	1	model	Screen
+1	0	1	model	Smoothing
+1	0	1	model	FPS counter
+1	0	1	model	3D
+1	0	1	model	Button mappings
+1	0	1	model	Controller
+1	0	1	model	Analog
+1	0	1	model	Stick response
+1	0	1	model	Bottom-screen buttons
+1	0	1	model	Memory card 1
+1	0	1	model	Memory card 2
+1	0	1	model	Frameskip
+1	0	1	model	Game CPU speed
+1	0	1	model	Flicker fix
+1	0	1	model	Safe drawing
+1	0	1	model	Faster disc loading
+1	0	1	model	Simpler CPU timing
+1	0	1	model	Simplify CPU loads
+1	0	1	model	Faster 3D calculations
+1	0	1	model	Simpler 3D clipping
+1	0	1	model	Skip code safety checks
+1	0	1	model	Accurate CPU cache
+1	0	1	model	Accurate CPU errors
+1	0	1	model	Disable automatic game fixes
+1	0	1	model	Debug: core messages
+1	0	1	binding	A
+1	0	1	binding	B
+1	0	1	binding	X
+1	0	1	binding	Y
+1	0	1	binding	L
+1	0	1	binding	R
+1	0	1	binding	ZL
+1	0	1	binding	ZR
+1	0	1	binding	START
+1	0	1	binding	SELECT
+1	0	1	binding	Touch top
+1	0	1	binding	Touch bottom
+1	0	1	binding	Touch side 1
+1	0	1	binding	Touch side 2
+1	0	1	binding	Fast forward
+1	0	1	binding	Rewind
+1	1	0	model	Screen
+1	1	0	model	Smoothing
+1	1	0	model	FPS counter
+1	1	0	model	3D
+1	1	0	model	Button mappings
+1	1	0	model	Controller
+1	1	0	model	Analog
+1	1	0	model	Stick response
+1	1	0	model	Bottom-screen buttons
+1	1	0	model	Memory card 1
+1	1	0	model	Memory card 2
+1	1	0	model	Rewind
+1	1	0	model	Frameskip
+1	1	0	model	Game CPU speed
+1	1	0	model	Flicker fix
+1	1	0	model	Safe drawing
+1	1	0	model	Faster disc loading
+1	1	0	model	Simpler CPU timing
+1	1	0	model	Simplify CPU loads
+1	1	0	model	Faster 3D calculations
+1	1	0	model	Simpler 3D clipping
+1	1	0	model	Skip code safety checks
+1	1	0	model	Accurate CPU cache
+1	1	0	model	Accurate CPU errors
+1	1	0	model	Disable automatic game fixes
+1	1	0	binding	A
+1	1	0	binding	B
+1	1	0	binding	X
+1	1	0	binding	Y
+1	1	0	binding	L
+1	1	0	binding	R
+1	1	0	binding	ZL
+1	1	0	binding	ZR
+1	1	0	binding	START
+1	1	0	binding	SELECT
+1	1	0	binding	Touch top
+1	1	0	binding	Touch bottom
+1	1	0	binding	Touch side 1
+1	1	0	binding	Touch side 2
+1	1	0	binding	Fast forward
+1	1	0	binding	Rewind
+1	1	1	model	Screen
+1	1	1	model	Smoothing
+1	1	1	model	FPS counter
+1	1	1	model	3D
+1	1	1	model	Button mappings
+1	1	1	model	Controller
+1	1	1	model	Analog
+1	1	1	model	Stick response
+1	1	1	model	Bottom-screen buttons
+1	1	1	model	Memory card 1
+1	1	1	model	Memory card 2
+1	1	1	model	Rewind
+1	1	1	model	Frameskip
+1	1	1	model	Game CPU speed
+1	1	1	model	Flicker fix
+1	1	1	model	Safe drawing
+1	1	1	model	Faster disc loading
+1	1	1	model	Simpler CPU timing
+1	1	1	model	Simplify CPU loads
+1	1	1	model	Faster 3D calculations
+1	1	1	model	Simpler 3D clipping
+1	1	1	model	Skip code safety checks
+1	1	1	model	Accurate CPU cache
+1	1	1	model	Accurate CPU errors
+1	1	1	model	Disable automatic game fixes
+1	1	1	model	Record audio
+1	1	1	model	Test tone
+1	1	1	model	Debug: core messages
+1	1	1	binding	A
+1	1	1	binding	B
+1	1	1	binding	X
+1	1	1	binding	Y
+1	1	1	binding	L
+1	1	1	binding	R
+1	1	1	binding	ZL
+1	1	1	binding	ZR
+1	1	1	binding	START
+1	1	1	binding	SELECT
+1	1	1	binding	Touch top
+1	1	1	binding	Touch bottom
+1	1	1	binding	Touch side 1
+1	1	1	binding	Touch side 2
+1	1	1	binding	Fast forward
+1	1	1	binding	Rewind
+1	2	0	model	Screen
+1	2	0	model	Smoothing
+1	2	0	model	FPS counter
+1	2	0	model	3D
+1	2	0	model	Button mappings
+1	2	0	model	Controller
+1	2	0	model	Analog
+1	2	0	model	Stick response
+1	2	0	model	Bottom-screen buttons
+1	2	0	model	Memory card 1
+1	2	0	model	Memory card 2
+1	2	0	model	Rewind
+1	2	0	model	Frameskip
+1	2	0	model	Game CPU speed
+1	2	0	model	Flicker fix
+1	2	0	model	Safe drawing
+1	2	0	model	Faster disc loading
+1	2	0	model	Simpler CPU timing
+1	2	0	model	Simplify CPU loads
+1	2	0	model	Faster 3D calculations
+1	2	0	model	Simpler 3D clipping
+1	2	0	model	Skip code safety checks
+1	2	0	model	Accurate CPU cache
+1	2	0	model	Accurate CPU errors
+1	2	0	model	Disable automatic game fixes
+1	2	0	model	Reset to recommended
+1	2	0	binding	A
+1	2	0	binding	B
+1	2	0	binding	X
+1	2	0	binding	Y
+1	2	0	binding	L
+1	2	0	binding	R
+1	2	0	binding	ZL
+1	2	0	binding	ZR
+1	2	0	binding	START
+1	2	0	binding	SELECT
+1	2	0	binding	Touch top
+1	2	0	binding	Touch bottom
+1	2	0	binding	Touch side 1
+1	2	0	binding	Touch side 2
+1	2	0	binding	Fast forward
+1	2	0	binding	Rewind
+1	2	1	model	Screen
+1	2	1	model	Smoothing
+1	2	1	model	FPS counter
+1	2	1	model	3D
+1	2	1	model	Button mappings
+1	2	1	model	Controller
+1	2	1	model	Analog
+1	2	1	model	Stick response
+1	2	1	model	Bottom-screen buttons
+1	2	1	model	Memory card 1
+1	2	1	model	Memory card 2
+1	2	1	model	Rewind
+1	2	1	model	Frameskip
+1	2	1	model	Game CPU speed
+1	2	1	model	Flicker fix
+1	2	1	model	Safe drawing
+1	2	1	model	Faster disc loading
+1	2	1	model	Simpler CPU timing
+1	2	1	model	Simplify CPU loads
+1	2	1	model	Faster 3D calculations
+1	2	1	model	Simpler 3D clipping
+1	2	1	model	Skip code safety checks
+1	2	1	model	Accurate CPU cache
+1	2	1	model	Accurate CPU errors
+1	2	1	model	Disable automatic game fixes
+1	2	1	model	Reset to recommended
+1	2	1	model	Record audio
+1	2	1	model	Test tone
+1	2	1	model	Debug: core messages
+1	2	1	binding	A
+1	2	1	binding	B
+1	2	1	binding	X
+1	2	1	binding	Y
+1	2	1	binding	L
+1	2	1	binding	R
+1	2	1	binding	ZL
+1	2	1	binding	ZR
+1	2	1	binding	START
+1	2	1	binding	SELECT
+1	2	1	binding	Touch top
+1	2	1	binding	Touch bottom
+1	2	1	binding	Touch side 1
+1	2	1	binding	Touch side 2
+1	2	1	binding	Fast forward
+1	2	1	binding	Rewind

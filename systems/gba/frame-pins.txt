@@ -1,0 +1,5 @@
+# Frontend objects pinned in frame-text.ld; the core blob is checked too.
+gba
+index_gpu
+retro_host
+retro_bindings_gba

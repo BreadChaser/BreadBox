@@ -1,0 +1,29 @@
+; Native-index tile draws: lighting palette, plus screen-space winner mask.
+.fvec projection[4], depth
+.constf constants(0.0, 1.0, 0.00390625, -0.00390625)
+.out outpos position
+.out outtc0 texcoord0
+.out outtc1 texcoord1
+.out outtc2 texcoord2
+.out outclr color
+.out outview view
+.out outnq normalquat
+.alias inpos v0
+.alias intex v1
+.proc main
+ dp4 r0.x, projection[0], inpos
+ dp4 r0.y, projection[1], inpos
+ dp4 r0.z, projection[2], inpos
+ dp4 r0.w, projection[3], inpos
+ mov r0.z, depth.x
+ mov outpos, r0
+ mov outtc0, intex
+ mov outtc1, intex
+ mul outtc2.x, constants.z, inpos.x
+ mul r0.y, constants.w, inpos.y
+ add outtc2.y, constants.y, r0.y
+ mov outclr, constants.yyyy
+ mov outview, constants.xxyy
+ mov outnq, constants.xxxy
+ end
+.end

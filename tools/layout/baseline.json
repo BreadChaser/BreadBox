@@ -1,0 +1,11 @@
+{
+  "build": 2650,
+  "commit": "ffbe4132",
+  "commit_full": "ffbe4132ae9099ef355b7db5703498f31def59a2",
+  "reference_elf": "psx3d/BreadBox.elf",
+  "reference_make": "APP=breadbox",
+  "branch": "ui/room-port",
+  "note": "BreadBox.elf of CIA 2650 (room + pause tag menu), installed and hardware-checked on the Old 3DS 2026-10-31: ten library cycles, PS1/GBA saves. NOT a performance acceptance: the 4.9 s cold-start library stall on the Old was still open (BB-2650-REPORT.md). Matching its addresses says nothing about Old CPU speed of later builds. Replaces the PSX3D byte-identity gate; a later build becomes the baseline only after hardware acceptance.",
+  "sha256": "84e79a1bea4043ce20bae23ea00d5ec50a1bb38f6a24f949326f2ea7334a7656",
+  "default_path": ""
+}

@@ -1,0 +1,78 @@
+name: Bug report
+description: A game draws wrong, runs slow, has sound problems, or BreadBox crashes
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Please check the [known issues](https://github.com/BreadChaser/BreadBox#known-issues) first.
+        Don't attach game files, BIOS files or anything you don't own.
+  - type: dropdown
+    id: console
+    attributes:
+      label: Console
+      options:
+        - Old 3DS
+        - Old 3DS XL
+        - Old 2DS
+        - New 3DS
+        - New 3DS XL
+        - New 2DS XL
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: BreadBox version
+      description: Shown in the top corner of the library, for example v0.9.0.
+      placeholder: v0.9.0
+    validations:
+      required: true
+  - type: input
+    id: game
+    attributes:
+      label: Game and region
+      description: Add the serial (like SCUS-94900) if you know it.
+      placeholder: Resident Evil 2, Spain (PAL)
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of problem?
+      options:
+        - Picture (wrong, flickering, missing, garbage)
+        - Speed (slow, stuttering)
+        - Sound
+        - Crash or freeze
+        - Saves or memory card
+        - Controls
+        - 3D
+        - Menus or library
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repeat
+    attributes:
+      label: Where in the game and which settings
+      description: Where it happens, and any settings you changed (frameskip, widescreen, 3D, game CPU speed).
+  - type: textarea
+    id: photo
+    attributes:
+      label: Photo or screenshot
+      description: A phone photo of the screen is fine. Drag it into this box.
+  - type: textarea
+    id: log
+    attributes:
+      label: log.txt (optional)
+      description: |
+        If you can, drag `sdmc:/3ds/BreadBox/log.txt` from your SD card into this box. It's from the last time you played,
+        so copy it before you start BreadBox again. Older sessions are `log.1.txt` to `log.4.txt`.

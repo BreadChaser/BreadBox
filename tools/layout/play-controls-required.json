@@ -1,0 +1,178 @@
+{
+ "comment": "Explicit reviewed extracted-control contract, added with the play-controls implementation. Build 2650 has no bodies for the new names. Literal-aware v2: opcode words stay raw except branch targets; only disassembler-marked literal pools normalize named pointers/anonymous string or gap identities. Size, normalized instructions and cache offsets must match; --record never rewrites this file. Inlined touch_update is covered by ps1_controls_poll. Drawing is retained/dirty-only, not idle frame work. ui/v1-polish-r8 (owner design rules 2026-11-05): the panel draws icons for its actions (the menu button's pause mark, fast forward, rewind) instead of the words MENU / FF / REW; play_render_button_ink.part.0, play_render_touch_mark, play_render_touch_panel_draw.isra.0, play_render_touch_rect_draw, ui_play_begin, ui_play_draw, ui_play_geometry, ui_play_reset, ui_play_speed, ui_play_take_menu, ui_play_take_stats, gba_touch_begin, gba_touch_descriptor, gba_touch_dispatch, gba_touch_draw, gba_touch_keys, gba_touch_lit, gba_touch_reset re-recorded after review (drawing is still retained/dirty-only; private validation archive/UI-POLISH-REPORT.md). ui/v1-polish-r8 (owner design rules 2026-11-05): the panel draws icons for its actions (the menu button's pause mark, fast forward, rewind) instead of the words MENU / FF / REW; play_render_button_ink.part.0, play_render_touch_mark, play_render_touch_panel_draw.isra.0, play_render_touch_rect_draw, ui_play_begin, ui_play_draw, ui_play_geometry, ui_play_reset, ui_play_speed, ui_play_take_menu, ui_play_take_stats, gba_touch_begin, gba_touch_descriptor, gba_touch_dispatch, gba_touch_draw, gba_touch_keys, gba_touch_lit, gba_touch_reset re-recorded after review (drawing is still retained/dirty-only; private validation archive/UI-POLISH-REPORT.md).",
+ "functions": {
+  "input_contact": {
+   "size": 28,
+   "fingerprint": "d4772ba344b87273b42c0c0139daa71cf768eb7c1b369d2c8477175c7448e093",
+   "page_offset": 248
+  },
+  "input_poll": {
+   "size": 144,
+   "fingerprint": "337a7292fe3c551238d15159de6122f556d6161cdf2e681b2465d6b270f8dd23",
+   "page_offset": 396
+  },
+  "input_transport_handler": {
+   "size": 16,
+   "fingerprint": "7b5ddffb09cd41ebb673f9b881413963a7e2caf41a049046d40e857a4dd9efcc",
+   "page_offset": 200
+  },
+  "control_bindings_snapshot": {
+   "size": 208,
+   "fingerprint": "865618906d0073ceacccfb53a9ef20baa4156ee9e86a3508bbf101e3386fd0a7",
+   "page_offset": 1732
+  },
+  "input_fast_forward": {
+   "size": 68,
+   "fingerprint": "23dc8c02fcb5ac2c76e697b1fc27360b36fbeb53a0711feb9bc1fac784c81c52",
+   "page_offset": 1528
+  },
+  "input_rewind": {
+   "size": 36,
+   "fingerprint": "7df2fd5b0945381a952dbad7b8e438239916be23e895b7c03605e015033e859d",
+   "page_offset": 1620
+  },
+  "input_state": {
+   "size": 920,
+   "fingerprint": "ebecd1232724d0fc8e952b0db629dc25dfb769c1dd774602a886e05c0c4c5b3e",
+   "page_offset": 1796
+  },
+  "input_stick_binding": {
+   "size": 140,
+   "fingerprint": "8e39c7b5d1952a1294484a98a9a1de7c1208607d4a4ac7f9f8e06797df177abf",
+   "page_offset": 1656
+  },
+  "input_touch_changed": {
+   "size": 96,
+   "fingerprint": "79e6ec1a93e6d5b8dbcfa20f1c15bbc43cf28f17b88cd09953094e700d5b7190",
+   "page_offset": 3364
+  },
+  "ps1_controls_poll": {
+   "size": 692,
+   "fingerprint": "feee3da4239a33f41ad654f57cc17651f1c09d5ea852a93a65c811e2d6141f97",
+   "page_offset": 1176
+  },
+  "ps1_mark": {
+   "size": 108,
+   "fingerprint": "7f11961f04ef6304e6bd5bc9b56e84c4cdfeb28dc3a9be9ecc89ecc1644ecdbe",
+   "page_offset": 3696
+  },
+  "ps1_panel_prepare": {
+   "size": 636,
+   "fingerprint": "e2c0c901fa342cd53a17e36af17f0dae48f1efb77d654056ff91dc468a14add6",
+   "page_offset": 540
+  },
+  "ps1_touch_descriptor": {
+   "size": 712,
+   "fingerprint": "a8c0c2a4ab088b04ebe3c5dce737c06a3572a9c0330a008f8b9339b13f70c159",
+   "page_offset": 1020
+  },
+  "play_render_button_ink.part.0": {
+   "size": 188,
+   "fingerprint": "9c826bae7943f2c64b80906b5cb280a0388d8b1f479e451e62c49db575c0c906",
+   "page_offset": 2276
+  },
+  "play_render_touch_mark": {
+   "size": 336,
+   "fingerprint": "e56049d64de423a0d4846378bf653f805c8639ba7c2ed86e1b115b1cbc5eaae6",
+   "page_offset": 1940
+  },
+  "play_render_touch_panel_draw.isra.0": {
+   "size": 340,
+   "fingerprint": "90f81a13dfa093e748b22a39de23766910cda2bbc2fe78608e9b98c073ad9910",
+   "page_offset": 2464
+  },
+  "play_render_touch_rect_draw": {
+   "size": 644,
+   "fingerprint": "acb770c3fda688065b058a0b816c1f1748601bfef7dcbed8c18347cdb12fb410",
+   "page_offset": 2804
+  },
+  "play_slot_contains": {
+   "size": 160,
+   "fingerprint": "d657eb445145056e6882a945aa4e55559245288897163bef3d59d7298c2fed54",
+   "page_offset": 1868
+  },
+  "ui_play_begin": {
+   "size": 60,
+   "fingerprint": "7240ca921547f2245c57c723af43ac63afc2040274d420b3909b029d07c6e163",
+   "page_offset": 260
+  },
+  "ui_play_draw": {
+   "size": 3188,
+   "fingerprint": "637400d3c002a2f3c6e67d4479a5919fa4632dff91fda61a4370e5dd051a2bf5",
+   "page_offset": 384
+  },
+  "ui_play_geometry": {
+   "size": 864,
+   "fingerprint": "778c21ff3e520f6aab1333cb2f040cc1ea2525bab6d10053b15c5d309d566e84",
+   "page_offset": 3448
+  },
+  "ui_play_poll": {
+   "size": 1172,
+   "fingerprint": "7a95e2c891cc5bb4e4648944a3443b46f204c5aba3d93824dde28edbd32dba54",
+   "page_offset": 2028
+  },
+  "ui_play_redraw": {
+   "size": 20,
+   "fingerprint": "46ed588f655f57325cca94983ce0e9a0c438d883ee40e09d6743b04389f9afbe",
+   "page_offset": 3200
+  },
+  "ui_play_reset": {
+   "size": 44,
+   "fingerprint": "dc1b000a454d9d0f93538dbdde2786068b811c2fe3a2b99c8fc6d476c56fd7bf",
+   "page_offset": 216
+  },
+  "ui_play_speed": {
+   "size": 24,
+   "fingerprint": "9cc7a8f3123c1062ae31ee6ac0f399f2d1e93956c390b6ede8e5340fc75cbe79",
+   "page_offset": 360
+  },
+  "ui_play_take_menu": {
+   "size": 20,
+   "fingerprint": "4be42e4b5d26d953df5100d6955eb93299571f8642130c73be15def7f71cbefc",
+   "page_offset": 320
+  },
+  "ui_play_take_stats": {
+   "size": 20,
+   "fingerprint": "2b1997900d942804c93509a2280c6fa5372f6ab8889e1aa51eb10412b11e42da",
+   "page_offset": 340
+  },
+  "gba_touch_begin": {
+   "size": 772,
+   "fingerprint": "d0acbe40e4c36a42d2ededb9a77011e6505c58423ee5e9129241d85965d1c4fc",
+   "page_offset": 3572,
+   "literal_strings": {
+    "748": ""
+   }
+  },
+  "gba_touch_descriptor": {
+   "size": 324,
+   "fingerprint": "d3540001ba831f7add8f0aeff3d2bcc6d3114caf744836978f323284c7d0762d",
+   "page_offset": 404
+  },
+  "gba_touch_dispatch": {
+   "size": 276,
+   "fingerprint": "c3632340901b75398a7812c6ed2f80b157239f7d60811f3e3bbf3a5bd024fded",
+   "page_offset": 728
+  },
+  "gba_touch_draw": {
+   "size": 12,
+   "fingerprint": "ba8a920bd281cd3e69d54496af63d8c06d445227b849ceeb97ae766cbb540869",
+   "page_offset": 340
+  },
+  "gba_touch_keys": {
+   "size": 52,
+   "fingerprint": "6ca2ba2c2bf40553c410344e323650a39a47e394e3d22a286e052287c2e1005e",
+   "page_offset": 288
+  },
+  "gba_touch_lit": {
+   "size": 52,
+   "fingerprint": "71ef30cc6ac6d382487cc61572f486f1309bf18cbfb30cb4784cc4f23bf1570a",
+   "page_offset": 352
+  },
+  "gba_touch_reset": {
+   "size": 40,
+   "fingerprint": "4b98f3d84d8063f49d616ba9a55aed52e40cea18101489f89bdd26639d2cde38",
+   "page_offset": 248
+  }
+ }
+}

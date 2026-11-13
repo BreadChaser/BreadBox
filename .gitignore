@@ -1,0 +1,36 @@
+*.3dsx
+*.elf
+*.smdh
+*.map
+assets/romfs/gfx/
+*.cia
+
+# Generated test output stays in the ignored support workspace
+/tools/*/evidence/
+/tools/*/results/
+/tools/**/*gallery*.html
+
+/core/*.o
+/core/*.a
+*.cxi
+/artifacts/
+
+/build/3ds/build-breadbox/
+
+__pycache__/
+*.pyc
+/gba-core/**/*.o
+/gba-core/*.o
+/gba-core/*.a
+/gba-core/build-breadbox/
+/build/3ds/core-first-breadbox.ld
+
+/build/*
+!/build/3ds/
+
+# Rebuilt room assets (tools/room/build.sh)
+/tools/room/build/
+__pycache__/
+
+/devtools/
+/release-validation/

@@ -1,0 +1,81 @@
+; Vertex shader for the BreadBox room (room_scene.c). One vertex format for
+; everything (BBR v3, tools/room/source/SPEC.md): position + w (shorts), uv in texels x 16
+; (shorts), colour (bytes, raw 0-255).
+; Meshes: w = palette slot; the vertex goes through its slot's affine matrix
+; and takes its slot's tint; colour x lscale.x (range / 1020; the combiner scales x4):
+; 1.0 = 128 (range 2) or 63.75 (range 4), up to the style's light range.
+; Sprites (bool sprite): w = size (mm), alpha = corner 0-3; the quad is built
+; facing the camera and fades out as the camera gets close; colour / 255.
+.fvec proj[4]
+.fvec texscale        ; s, t scale; s, t offset
+.fvec right, up, eye  ; camera axes and eye position (sprites)
+.fvec corner[4]       ; sprite corners (x, y) of 0..3
+.fvec pal[36]         ; 12 slots x 3 rows
+.fvec tint[12]
+.fvec lscale          ; x: vertex colour scale (light range / 1020)
+.fvec fadek           ; sprite fade: clamp(dist x z / (size x x + 1) + y) x w
+.bool sprite
+
+.constf k(0.0, 1.0, 0.5, 3.0)
+.constf kc(0.0, 0.00392156863, 0.0, 0.0)   ; y: 1/255 (sprites, alpha)
+
+.out outpos position
+.out outtc0 texcoord0
+.out outclr color
+
+.alias inpos v0
+.alias intex v1
+.alias inclr v2
+
+.proc main
+	mov r0.xyz, inpos.xyz
+	mov r0.w, k.y
+	ifu sprite
+		; corner offset = corner * size / 2 along the camera's right and up
+		mova a0.x, inclr.w
+		mul r1.xy, corner[a0.x].xy, inpos.ww
+		mul r1.xy, k.zz, r1.xy
+		mul r2.xyz, right.xyz, r1.xxx
+		mad r2.xyz, r1.yyy, up.xyz, r2.xyz
+		; fade a glow as the camera gets close: clamp(dist / (size * 2.6 + 1) - 0.45)
+		add r3.xyz, -eye.xyz, r0.xyz
+		dp3 r3.x, r3.xyz, r3.xyz
+		rsq r3.x, r3.x
+		rcp r3.x, r3.x
+		mul r3.x, fadek.z, r3.x
+		mul r4.x, fadek.x, inpos.w
+		add r4.x, k.y, r4.x
+		rcp r4.x, r4.x
+		mul r3.x, r3.x, r4.x
+		add r3.x, fadek.y, r3.x
+		max r3.x, k.x, r3.x
+		min r3.x, k.y, r3.x
+		mul r3.x, fadek.w, r3.x
+		add r0.xyz, r0.xyz, r2.xyz
+		mul r5.xyz, kc.yyy, inclr.xyz
+		mul r5.xyz, r5.xyz, r3.xxx
+		mov r5.w, k.y
+	.else
+		; the slot's matrix (3 rows from pal[slot * 3]) and tint
+		mul r1.x, k.w, inpos.w
+		mov r1.y, inpos.w
+		mova a0.xy, r1.xy
+		dp4 r2.x, pal[a0.x], r0
+		dp4 r2.y, pal[a0.x + 1], r0
+		dp4 r2.z, pal[a0.x + 2], r0
+		mov r0.xyz, r2.xyz
+		mul r5.xyz, lscale.xxx, inclr.xyz
+		mul r5.xyz, tint[a0.y].xyz, r5.xyz
+		mul r5.w, kc.y, inclr.w
+	.end
+	dp4 outpos.x, proj[0], r0
+	dp4 outpos.y, proj[1], r0
+	dp4 outpos.z, proj[2], r0
+	dp4 outpos.w, proj[3], r0
+	mul r6.xy, texscale.xy, intex.xy
+	add r6.xy, texscale.zw, r6.xy
+	mov r6.zw, k.xx
+	mov outtc0, r6
+	mov outclr, r5
+	end
+.end

@@ -1,0 +1,73 @@
+; Vertex shader for the hands and the case they hold (room_hands.c, hands.h).
+; Hands: v0 = position + bone (shorts), v1 = uv in texels x 16, v2 = colour bytes
+; (alpha 254 = hand surface: the glove's tile offset is added), v3 = the smooth
+; normal (bytes x 127). The vertex goes through its bone's matrix (3 rows from
+; bones[bone * 3]); its normal too, for a soft two-sided warm light.
+; Rigid (the case's parts): every vertex through bones[0..2], colour / 255.
+; The combiner scales by 2: 128 = 1.0 (by 4 when room_hands_draw halves a bright warm light).
+.fvec proj[4]
+.fvec texscale        ; s, t scale; s, t offset
+.fvec glove           ; uv offset (texels x 16) of the chosen glove tile
+.fvec key             ; light direction (world)
+.fvec bones[51]       ; 17 bones x 3 rows
+.bool rigid
+
+.constf k(0.0, 1.0, 3.0, 254.5)
+.constf kl(0.4, 0.16, 0.0078740157, 0.00392156863)   ; 0.8 / 2, 0.32 / 2, 1 / 127, 1 / 255
+.fvec warm           ; the light's colour (room_hands_light: the room's probes)
+
+.out outpos position
+.out outtc0 texcoord0
+.out outclr color
+
+.alias inpos v0
+.alias intex v1
+.alias inclr v2
+.alias innrm v3
+
+.proc main
+	mov r0.xyz, inpos.xyz
+	mov r0.w, k.y
+	mov r1.x, k.x
+	ifu rigid
+	.else
+		mul r1.x, k.z, inpos.w
+	.end
+	mova a0.x, r1.x
+	dp4 r2.x, bones[a0.x], r0
+	dp4 r2.y, bones[a0.x + 1], r0
+	dp4 r2.z, bones[a0.x + 2], r0
+	mov r2.w, k.y
+	dp4 outpos.x, proj[0], r2
+	dp4 outpos.y, proj[1], r2
+	dp4 outpos.z, proj[2], r2
+	dp4 outpos.w, proj[3], r2
+	mov r9.xy, intex.xy
+	ifu rigid
+		mul r5, kl.wwww, inclr
+		mov r5.w, k.y
+	.else
+		; the normal through the bone (no translation), light 0.8 + 0.32 |n . key|, warm
+		mul r3.xyz, kl.zzz, innrm.xyz
+		mov r3.w, k.x
+		dp4 r4.x, bones[a0.x], r3
+		dp4 r4.y, bones[a0.x + 1], r3
+		dp4 r4.z, bones[a0.x + 2], r3
+		dp3 r6.x, key.xyz, r4.xyz
+		max r6.x, r6.x, -r6.x
+		mul r6.x, kl.y, r6.x
+		add r6.x, kl.x, r6.x
+		mul r5.xyz, warm.xyz, r6.xxx
+		mov r5.w, k.y
+		; hand surface (alpha 254): the glove's tile
+		sge r8.x, k.w, inclr.w
+		mul r8.xy, glove.xy, r8.xx
+		add r9.xy, r9.xy, r8.xy
+	.end
+	mul r9.xy, texscale.xy, r9.xy
+	add r9.xy, texscale.zw, r9.xy
+	mov r9.zw, k.xx
+	mov outtc0, r9
+	mov outclr, r5
+	end
+.end

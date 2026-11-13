@@ -1,0 +1,25 @@
+{"name": "ready", "wait_log": "shared ready", "wait": 2, "shot": false}
+{"name": "library", "cmd": "ui library", "wait": 3}
+{"name": "select-bookcase", "cmd": "ui-key select", "wait": 1}
+{"name": "back-bookcase", "cmd": "ui-key b", "wait": 1}
+{"name": "open-shelf", "cmd": "ui-key a", "wait": 1}
+{"name": "select-shelf", "cmd": "ui-key select", "wait": 1}
+{"name": "back-shelf", "cmd": "ui-key b", "wait": 1}
+{"name": "remote-shelf", "cmd": "ui settings", "wait": 1}
+{"name": "remote-shelf-back", "cmd": "ui-key b", "wait": 1}
+{"name": "hold-box", "cmd": "ui-key a", "wait": 3}
+{"name": "select-held", "cmd": "ui-key select", "wait": 1}
+{"name": "back-held", "cmd": "ui-key b", "wait": 1}
+{"name": "options-held", "cmd": "ui-key x", "wait": 1}
+{"name": "back-options", "cmd": "ui-key b", "wait": 1}
+{"name": "remote-held", "cmd": "ui settings", "wait": 1}
+{"name": "back-remote-held", "cmd": "ui-key b", "wait": 1}
+{"name": "return-box", "cmd": "ui-key b", "wait": 2}
+{"name": "bookcase-again", "cmd": "ui-key b", "wait": 1}
+{"name": "remote-bookcase", "cmd": "ui settings", "wait": 1}
+{"name": "back-remote-bookcase", "cmd": "ui-key b", "wait": 1}
+{"name": "room", "cmd": "ui-key b", "wait": 3}
+{"name": "room-settings", "cmd": "ui settings", "wait": 3}
+{"name": "room-settings-back", "cmd": "ui-key b", "wait": 3}
+{"name": "final-library", "cmd": "ui library", "wait": 3}
+{"name": "final-status", "cmd": "status", "wait": 1}

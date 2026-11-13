@@ -1,0 +1,141 @@
+// Per-game settings: sdmc:/3ds/PSX3D/games/<game>.ini, "key=value" lines
+// (screen mode, rewind, button mapping...). Loaded when a game starts,
+// written back whenever a value changes.
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <errno.h>
+#include <stddef.h>
+#include "safefile.h"
+#include "app_paths.h"
+#include "gamecfg.h"
+#include "safefile.h"
+
+#define DIR_ PSX3D_DIR "/games"
+#define MAX_KEYS 64
+
+static struct { char key[32], value[64]; } kv[MAX_KEYS];
+static int nkv;
+static char game[PATH_LEN];
+
+static void path_of(char *out, size_t len)
+{
+/* Bounded truncation is intentional; preserve the validated release code layout. */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-truncation"
+	snprintf(out, len, DIR_ "/%s.ini", game);
+#pragma GCC diagnostic pop
+}
+
+void gamecfg_load(const char *name)
+{
+	char path[PATH_LEN], line[128];
+	snprintf(game, sizeof(game), "%s", name);
+	nkv = 0;
+	path_of(path, sizeof(path));
+	safe_recover(path);
+	FILE *f = fopen(path, "r");
+	if (!f)
+		return;
+	while (fgets(line, sizeof(line), f) && nkv < MAX_KEYS) {
+		line[strcspn(line, "\r\n")] = 0;
+		char *eq = strchr(line, '=');
+		if (!eq)
+			continue;
+		*eq = 0;
+/* Bounded truncation is intentional; preserve the validated release code layout. */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-truncation"
+		snprintf(kv[nkv].key, sizeof(kv[nkv].key), "%s", line);
+#pragma GCC diagnostic pop
+		snprintf(kv[nkv].value, sizeof(kv[nkv].value), "%s", eq + 1);
+		nkv++;
+	}
+	fclose(f);
+}
+
+static void save(void)
+{
+	char path[PATH_LEN];
+	if (!game[0])
+		return;
+	mkdir(DIR_, 0777);
+	path_of(path, sizeof(path));
+	FILE *f = safe_begin(path);
+	if (!f)
+		return;
+	for (int i = 0; i < nkv; i++)
+		fprintf(f, "%s=%s\n", kv[i].key, kv[i].value);
+	safe_finish(f, path, true);
+}
+
+const char *gamecfg_get(const char *key)
+{
+	for (int i = 0; i < nkv; i++)
+		if (!strcmp(kv[i].key, key))
+			return kv[i].value;
+	return NULL;
+}
+
+int gamecfg_int(const char *key, int def)
+{
+	const char *v = gamecfg_get(key);
+	return v ? atoi(v) : def;
+}
+
+void gamecfg_set(const char *key, const char *value)
+{
+	int i;
+	for (i = 0; i < nkv; i++)
+		if (!strcmp(kv[i].key, key))
+			break;
+	if (i == nkv) {
+		if (nkv == MAX_KEYS)
+			return;
+		nkv++;
+		snprintf(kv[i].key, sizeof(kv[i].key), "%s", key);
+		kv[i].value[0] = 0;
+	} else if (!strcmp(kv[i].value, value)) {
+		return;   // unchanged
+	}
+	snprintf(kv[i].value, sizeof(kv[i].value), "%s", value);
+	save();
+}
+
+void gamecfg_set_int(const char *key, int v)
+{
+	char b[16];
+	snprintf(b, sizeof(b), "%d", v);
+	gamecfg_set(key, b);
+}
+
+void gamecfg_end(void)
+{
+	game[0] = 0;
+	nkv = 0;
+}
+
+void gamecfg_unset(const char *key)
+{
+	for (int i = 0; i < nkv; i++)
+		if (!strcmp(kv[i].key, key)) {
+			memmove(&kv[i], &kv[i+1], (nkv-i-1) * sizeof(kv[0]));
+			nkv--;
+			save();
+			return;
+		}
+}
+
+bool gamecfg_reset(void)
+{
+	char path[PATH_LEN];
+	if (!game[0]) return false;
+	path_of(path, sizeof(path));
+	if (remove(path) && errno != ENOENT) return false;
+	char other[PATH_LEN + 8];
+	snprintf(other, sizeof(other), "%s.bak", path);
+	remove(other);   // or an interrupted save would bring the settings back
+	nkv = 0;
+	return true;
+}

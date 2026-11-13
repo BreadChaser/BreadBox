@@ -1,0 +1,213 @@
+{
+ "comment": "Frozen legacy references for tools/architecture/ownership-guard.py: per file and category, the approved source lines. The list only shrinks: a cleanup deletes its lines here in the same change (a vanished line is an error), a new reference is never approved by editing this file, and a new shared file gets no entry. 'ownership-guard.py --strict --freeze' rewrites the lines of existing entries (never their reasons). User-facing prose string literals are not policy and need no entry.",
+ "exceptions": {
+  "app/ui/bb_disc.c": {
+   "reason": "chd reader for the library probe uses the vendored libchdr header (transitional, moves with the PS1 adapter)",
+   "approved": {
+    "private-include": [
+     "#include \"../../core/deps/libchdr/include/libchdr/chd.h\""
+    ]
+   }
+  },
+  "platform/3ds/bb_platform.c": {
+   "reason": "generated arena size header (build/systems), a build product not a system policy",
+   "approved": {
+    "private-include": [
+     "#include \"../../build/systems/arena-size.h\""
+    ]
+   }
+  },
+  "app/ui/breadbox_arena.c": {
+   "reason": "generated arena size header (build/systems), a build product not a system policy",
+   "approved": {
+    "private-include": [
+     "#include \"../../build/systems/arena-size.h\""
+    ]
+   }
+  },
+  "app/ui/config.c": {
+   "reason": "shared config still carries PS1 core override keys (audit step 3 splits app config from system state); shared config still stores the PS1 last-game state name (audit step 3 splits app config from system state)",
+   "approved": {
+    "pcsx-key": [
+     "#define WS_KEY \"pcsx_rearmed_psx3d_widescreen\"",
+     "!strcmp(k, \"core.pcsx_rearmed_psx3d_stereo\") || !strcmp(k, \"core.preset_fast_forward\") || !strcmp(k, \"core.psx3d_auto_floor\");",
+     "if (!strcmp(key, \"pcsx_rearmed_frameskip_threshold\") ||",
+     "!strcmp(key, \"pcsx_rearmed_frameskip_interval\")) return;",
+     "if (!strcmp(key, \"pcsx_rearmed_frameskip_type\") &&",
+     "config_set_core_override(\"pcsx_rearmed_psx3d_stereo\","
+    ],
+    "ps1-state-policy": [
+     "else if (strcmp(k, \"last_game_state\") == 0)",
+     "snprintf(g_cfg.last_game_state, sizeof(g_cfg.last_game_state), \"%s\", v);",
+     "if (g_cfg.last_game_state[0])",
+     "g_cfg.last_game, g_cfg.last_game_save, g_cfg.last_game_state, g_cfg.last_game_path);",
+     "strcpy(g_cfg.last_game_state, old.last_game_state);"
+    ]
+   }
+  },
+  "app/ui/covers.c": {
+   "reason": "cover fetch reads disc lists from the PS1 library entry (audit step 3)",
+   "approved": {
+    "ps1-content-type": [
+     "typedef struct {game_t game;",
+     "static const game_t *cover_game(int id, cover_record *scratch)",
+     "scratch->game=(game_t){.title=(char *)it.title,.cover_key=(char *)it.key,.group=(char *)it.code,.ndiscs=it.path!=NULL};",
+     "scratch->game.discs[0]=(char *)it.path;return &scratch->game;",
+     "scratch->game=(game_t){.title=scratch->title,.cover_key=scratch->key,.ndiscs=1};",
+     "scratch->game.discs[0]=scratch->path;return &scratch->game;",
+     "cover_record scratch; const game_t *g=cover_game(tslots[i].game,&scratch);",
+     "static bool fetch_cover(const game_t *g, bool *retry, cover_t *c)",
+     "snprintf(disc, sizeof(disc), \"%s\", g->ndiscs > 0 ? g->discs[0] : \"\");",
+     "static bool load_cover(const game_t *g, bool *retry, bool refresh, cover_t *c, bool *fresh)",
+     "if (strchr(g->cover_key,'/') && g->ndiscs) {",
+     "snprintf(local,sizeof(local),\"%s\",g->discs[0]);",
+     "static bool upgrade_cover(const game_t *g, bool *retry, cover_t *c)",
+     "const game_t *g = library_get(i);",
+     "const game_t *g = cover_game(game, &scratch);",
+     "const game_t *g = cover_game(game, &scratch);",
+     "const game_t *g = cover_game(game, &scratch);"
+    ]
+   }
+  },
+  "app/ui/devcontrol.c": {
+   "reason": "developer remote reports PS1 core options and picks library entries (dev tool, audit step 3); dev remote reads the PS1 state folder for state import/export (moves with the PS1 adapter, step 3)",
+   "approved": {
+    "pcsx-key": [
+     "quote(fs, sizeof(fs), running ? opt(\"pcsx_rearmed_frameskip_type\") : \"\");",
+     "quote(clock, sizeof(clock), running ? opt(\"pcsx_rearmed_psxclock\") : \"\");",
+     "running && !strcmp(opt(\"pcsx_rearmed_gpu_thread_rendering\"), \"enabled\") ? \"true\" : \"false\","
+    ],
+    "private-include": [
+     "#include \"../../core/plugins/gpu_pica/gpu_pica_debug.h\""
+    ],
+    "ps1-content-type": [
+     "const game_t *selection = NULL;",
+     "const game_t *picked = NULL;",
+     "const game_t *picked = NULL;",
+     "const game_t *picked = NULL;",
+     "const game_t *g = library_get(i);"
+    ],
+    "ps1-state-policy": [
+     "snprintf(path,sizeof(path),PSX3D_STATE_DIR \"/%s.st%u\",picked->cover_key,slot);"
+    ]
+   }
+  },
+  "app/ui/gpu_cache.c": {
+   "reason": "PS1 renderer glue: direct gpu_pica header (platform split, audit step 2/3)",
+   "approved": {
+    "private-include": [
+     "#include \"../../core/plugins/gpu_pica/gpu_pica.h\""
+    ]
+   }
+  },
+  "app/ui/home.c": {
+   "reason": "Continue still resolves the PS1 library entry (audit step 3; room line owns this file); home resume logic still tracks the PS1 last-game state name (typed resume ref is audit step 3)",
+   "approved": {
+    "ps1-content-type": [
+     "const game_t *g = library_get(i);",
+     "for (int d = 0; d < g->ndiscs; d++)",
+     "if (!strcmp(g->discs[d], path)) {"
+    ],
+    "ps1-state-policy": [
+     "return g_cfg.last_game[0] ? g_cfg.last_game : g_cfg.last_game_state;",
+     "if (!g_cfg.last_game_state[0] || !g_cfg.last_game_path[0])",
+     "snprintf(prefix, sizeof(prefix), \"%s/%.*s\", PSX3D_STATE_DIR, 400, g_cfg.last_game_state);",
+     "if (!strcmp(g_cfg.last_game_path, path) && !strcmp(g_cfg.last_game_state, state_name) &&",
+     "snprintf(g_cfg.last_game_state, sizeof(g_cfg.last_game_state), \"%s\", state_name);"
+    ]
+   }
+  },
+  "app/ui/main.c": {
+   "reason": "launch path, PS1 memory map and BIOS dir creation (audit step 3; room line owns this file); startup creates the PS1 state folder (PS1 adapter init owns it after step 3)",
+   "approved": {
+    "private-include": [
+     "#include \"../../core/plugins/gpu_pica/gpu_pica_debug.h\"",
+     "#include \"../../core/plugins/gpu_pica/gpu_pica.h\""
+    ],
+    "ps1-content-type": [
+     "const game_t *picked = NULL;"
+    ],
+    "ps1-state-policy": [
+     "mkdir(PSX3D_STATE_DIR, 0777);"
+    ],
+    "ps1-storage-policy": [
+     "mkdir(PSX3D_BIOS_DIR, 0777);"
+    ]
+   }
+  },
+  "app/ui/pmu.c": {
+   "reason": "PMU stats read the PS1 gpu thread option and frameskip header",
+   "approved": {
+    "pcsx-key": [
+     "strcmp(options_get(\"pcsx_rearmed_gpu_thread_rendering\"), \"enabled\") ? renderer_boundary : NULL;"
+    ],
+    "private-include": [
+     "#include \"../../core/plugins/gpulib/psx3d_frameskip.h\""
+    ]
+   }
+  },
+  "include/breadbox/library.h": {
+   "reason": "split from psx3d.h: mixed legacy header: game_t, BIOS dir and libretro glue (audit step 2 splits it); PSX3D_STATE_DIR path macro and last_game_state config field live in the umbrella header until step 3",
+   "approved": {
+    "ps1-content-type": [
+     "int ndiscs;",
+     "char *discs[8];",
+     "} game_t;",
+     "const game_t *library_get(int i);",
+     "const char *library_launch_path(const game_t *g, char *buf, size_t len);"
+    ]
+   }
+  },
+  "include/breadbox/app_paths.h": {
+   "reason": "split from psx3d.h: mixed legacy header: game_t, BIOS dir and libretro glue (audit step 2 splits it); PSX3D_STATE_DIR path macro and last_game_state config field live in the umbrella header until step 3",
+   "approved": {
+    "ps1-state-policy": [
+     "#define PSX3D_STATE_DIR PSX3D_DIR \"/states\""
+    ],
+    "ps1-storage-policy": [
+     "#define PSX3D_BIOS_DIR PSX3D_DIR \"/bios\""
+    ]
+   }
+  },
+  "include/breadbox/app_config.h": {
+   "reason": "split from psx3d.h: mixed legacy header: game_t, BIOS dir and libretro glue (audit step 2 splits it); PSX3D_STATE_DIR path macro and last_game_state config field live in the umbrella header until step 3",
+   "approved": {
+    "ps1-state-policy": [
+     "char last_game_state[256];"
+    ]
+   }
+  },
+  "platform/3ds/video.c": {
+   "reason": "PS1 renderer glue: direct gpu_pica/gpulib/depth headers (platform split, audit step 2/3)",
+   "approved": {
+    "private-include": [
+     "#include \"../../core/plugins/gpu_pica/gpu_pica.h\"",
+     "#include \"../../core/plugins/gpulib/gpu.h\"",
+     "#include \"../../core/libpcsxcore/psx3d_depth.h\""
+    ]
+   }
+  },
+  "platform/3ds/devnet.c": {
+   "reason": "dev file API special-cases the PS1 state folder (moves with the PS1 adapter, step 3)",
+   "approved": {
+    "ps1-state-policy": [
+     "DIR *dir = opendir(PSX3D_STATE_DIR);",
+     "snprintf(path, sizeof(path), PSX3D_STATE_DIR \"/%s.sta%s\", game, thm ? \".thm\" : \"\");",
+     "snprintf(path, sizeof(path), PSX3D_STATE_DIR \"/%s.st%d%s\", game, want_slot, thm ? \".thm\" : \"\");",
+     "snprintf(path, sizeof(path), PSX3D_STATE_DIR \"/%s.sta%s\", game, thm ? \".thm\" : \"\");",
+     "snprintf(path, sizeof(path), PSX3D_STATE_DIR \"/%s.st%d%s\", game, slot, thm ? \".thm\" : \"\");"
+    ]
+   }
+  },
+  "app/ui/room_walls.c": {
+   "reason": "room corkboard reads PS1 state thumbnails (P3TH) by savestates.c file names; should ask the save service for the card picture (room/pause follow-up, step 2/3)",
+   "approved": {
+    "ps1-state-policy": [
+     "ok = fread(hd, 1, 12, f) == 12 && !memcmp(hd, \"P3TH\", 4);",
+     "} else if (!strcmp(g_cfg.last_game_path, path) && g_cfg.last_game_state[0]) {",
+     "snprintf(j->base, sizeof(j->base), \"%s/%s\", PSX3D_STATE_DIR, g_cfg.last_game_state);"
+    ]
+   }
+  }
+ }
+}

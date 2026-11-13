@@ -1,0 +1,185 @@
+{
+  "base": "4067397a",
+  "sources": {
+    "systems/gba/gba_settings_ui.c": "f158190cee1629a2ce4e27d606dca79e18ffe03fdcd8cba079f9a018a9f6fca6",
+    "app/ui/bb_controls.c": "ceb5711f4d416782ef58ce10a245f20549c6d38035bd7b329a3a8fff6508f7a6"
+  },
+  "contexts": {
+    "0/0": {
+      "model": [
+        "Screen size",
+        "Smoothing",
+        "Color correction",
+        "Frame blend",
+        "Fast forward",
+        "Controls"
+      ],
+      "binding": [
+        "A button",
+        "B button",
+        "X button",
+        "Y button",
+        "L button",
+        "R button",
+        "Start button",
+        "Select button",
+        "Up / Circle Pad",
+        "Down / Circle Pad",
+        "Left / Circle Pad",
+        "Right / Circle Pad",
+        "Pause hotkey",
+        "Quick save hotkey",
+        "Quick load hotkey"
+      ]
+    },
+    "0/1": {
+      "model": [
+        "Screen size",
+        "Smoothing",
+        "Color correction",
+        "Frame blend",
+        "Fast forward",
+        "Controls"
+      ],
+      "binding": [
+        "A button",
+        "B button",
+        "X button",
+        "Y button",
+        "L button",
+        "R button",
+        "Start button",
+        "Select button",
+        "Up / Circle Pad",
+        "Down / Circle Pad",
+        "Left / Circle Pad",
+        "Right / Circle Pad",
+        "Pause hotkey",
+        "Quick save hotkey",
+        "Quick load hotkey"
+      ]
+    },
+    "0/2": {
+      "model": [
+        "Screen size",
+        "Smoothing",
+        "Color correction",
+        "Frame blend",
+        "Sunlight",
+        "Fast forward",
+        "Controls"
+      ],
+      "binding": [
+        "A button",
+        "B button",
+        "X button",
+        "Y button",
+        "L button",
+        "R button",
+        "Start button",
+        "Select button",
+        "Up / Circle Pad",
+        "Down / Circle Pad",
+        "Left / Circle Pad",
+        "Right / Circle Pad",
+        "Pause hotkey",
+        "Quick save hotkey",
+        "Quick load hotkey"
+      ]
+    },
+    "1/0": {
+      "model": [
+        "Screen size",
+        "Smoothing",
+        "Color correction",
+        "Frame blend",
+        "Rewind",
+        "Fast forward",
+        "Rewind",
+        "Controls"
+      ],
+      "binding": [
+        "A button",
+        "B button",
+        "X button",
+        "Y button",
+        "L button",
+        "R button",
+        "ZL button",
+        "ZR button",
+        "Start button",
+        "Select button",
+        "Up / Circle Pad",
+        "Down / Circle Pad",
+        "Left / Circle Pad",
+        "Right / Circle Pad",
+        "Pause hotkey",
+        "Quick save hotkey",
+        "Quick load hotkey"
+      ]
+    },
+    "1/1": {
+      "model": [
+        "Screen size",
+        "Smoothing",
+        "Color correction",
+        "Frame blend",
+        "Rewind",
+        "Fast forward",
+        "Rewind",
+        "Controls"
+      ],
+      "binding": [
+        "A button",
+        "B button",
+        "X button",
+        "Y button",
+        "L button",
+        "R button",
+        "ZL button",
+        "ZR button",
+        "Start button",
+        "Select button",
+        "Up / Circle Pad",
+        "Down / Circle Pad",
+        "Left / Circle Pad",
+        "Right / Circle Pad",
+        "Pause hotkey",
+        "Quick save hotkey",
+        "Quick load hotkey"
+      ]
+    },
+    "1/2": {
+      "model": [
+        "Screen size",
+        "Smoothing",
+        "Color correction",
+        "Frame blend",
+        "Sunlight",
+        "Rewind",
+        "Fast forward",
+        "Rewind",
+        "Controls"
+      ],
+      "binding": [
+        "A button",
+        "B button",
+        "X button",
+        "Y button",
+        "L button",
+        "R button",
+        "ZL button",
+        "ZR button",
+        "Start button",
+        "Select button",
+        "Up / Circle Pad",
+        "Down / Circle Pad",
+        "Left / Circle Pad",
+        "Right / Circle Pad",
+        "Pause hotkey",
+        "Quick save hotkey",
+        "Quick load hotkey"
+      ]
+    }
+  }
+}

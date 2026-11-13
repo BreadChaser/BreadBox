@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Known issues
+    url: https://github.com/BreadChaser/BreadBox#known-issues
+    about: Problems we already know about.
+  - name: Compatibility list
+    url: https://github.com/BreadChaser/BreadBox/blob/trunk/docs/compatibility.md
+    about: Which games have been tested, on which console.

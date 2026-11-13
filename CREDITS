@@ -1,0 +1,44 @@
+BreadBox and PSX3D
+  BreadChaser
+
+PCSX-ReARMed
+  notaz, Exophase, and libretro contributors; based on PCSX, PCSX-Reloaded,
+  and P.E.Op.S. The original AUTHORS, COPYING, dependency licenses, and
+  individual copyright notices remain under core/.
+  https://github.com/libretro/pcsx_rearmed
+
+Nintendo 3DS platform
+  PCSX-ReARMed 3DS port authors; devkitPro (libctru, citro2d, citro3d).
+  DSP1 by zoogie: https://github.com/zoogie/DSP1
+
+Artwork, fonts, and cheat sources
+  See tools/art/CREDITS.md and the included font and asset licenses.
+  Icons by Dreamstale (https://www.flaticon.com/authors/dreamstale) from
+  Flaticon (https://www.flaticon.com), under the Flaticon license, not GPL.
+
+BreadBox room hands (assets/romfs/room/hands.bbh)
+  "Hand (low poly)" by scribbletoad, CC BY 4.0, modified (scaled, rigged,
+  re-mapped, cuff, sleeve and mittens added): see assets/romfs/room/CREDITS.md.
+  https://sketchfab.com/3d-models/hand-low-poly-d6c802a74a174c8c805deb20186d1877
+
+BreadBox banner and icon (apps/breadbox/)
+  BreadClip round 12 "Lean" by BreadChaser, GPL-2.0-or-later. The banner name
+  is set in Michroma by Vernon Adams, SIL OFL 1.1 (see tools/art/Michroma-OFL.txt);
+  raster glyphs only. The banner audio is silent PCM.
+
+BreadBox menu sounds (assets/romfs/sfx: every file but launch.pcm and music.pcm)
+  Paper recordings by Joseph Sardin (BigSoundBank, https://bigsoundbank.com),
+  Kenney (https://kenney.nl) and OwlishMedia (https://opengameart.org), all
+  CC0 1.0; trimmed and levelled for the menus.
+
+Not affiliated with Sony, Nintendo, or libretro.
+
+Game Boy Advance: gpSP by Exophase and the libretro gpSP contributors
+(https://github.com/libretro/gpsp), GPLv2 family; see gba-core/COPYING.
+Open GBA BIOS by Normmatt and the VBA/VBA-M team, GPLv2; see gba-core/bios.
+
+BreadClip round 9 pick 01 room poster: BreadChaser, GPL-2.0-or-later.
+Archivo Black: Archivo Black Project Authors / Omnibus-Type, SIL OFL 1.1
+(see tools/art/ArchivoBlack-OFL.txt). Raster glyphs only; no runtime font file.
+
+PCSX-ReARMed vendored commit c8816799b50388e61cfe237fe2cdbb7d8175f20a; maintained directly, no upstream sync.
