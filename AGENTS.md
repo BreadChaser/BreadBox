@@ -43,9 +43,10 @@ one-time import from `sdmc:/3ds/PSX3D` remain live BreadBox compatibility code.
   `tools/room/lamplight/` builds the room (Blender: `scene.py` geometry,
   `gi.py` Cycles light per vertex, `soft.py` the soft texture finish
   (test: `tests/room/soft-textures.py`, needs NumPy), `lights.json`/`refine.json` data;
-  `docs/assets/room.md`).
+  `tools/room/README.md`).
 - `tests/`: host suites (`tests/ps1_messages/check.py` covers both libretro
-  message callbacks and the production notice router); `docs/`: documentation.
+  message callbacks and the production notice router); `docs/`: player docs,
+  `docs/dev/` developer docs (index `docs/dev/README.md`).
 
 ## Build and test
 

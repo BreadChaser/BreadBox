@@ -16,8 +16,8 @@ static inline int shelf_browse_step(shelf_repeat *r, unsigned down, unsigned hel
  r->next = now + (fresh ? .4f : .1f);
  return dir == 1 ? -1 : 1;
 }
-// The box in the hand turns all the way round (owner 2026-11-12: "when you spin the game disc around it should
-// loop around"): side 0 front, 1 spine, 2 back, 3 the open edge. R turns it a quarter on (front, spine, back,
+// The box in the hand turns all the way round, in a loop:
+// side 0 front, 1 spine, 2 back, 3 the open edge. R turns it a quarter on (front, spine, back,
 // edge, front...), L a quarter the other way; never a dead stop. steps: the turn just made, in quarters (+ R, - L).
 #define SHELF_SIDES 4
 static inline int shelf_turn_steps(unsigned keys) { return !!(keys & KEY_R) - !!(keys & KEY_L); }

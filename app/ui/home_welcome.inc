@@ -15,7 +15,7 @@ static PSX3D_COLD int welcome_pages(void) { return bb_welcome_pages(welcome_kind
 static PSX3D_COLD void welcome_glide(int page)
 {
 	// -1: the room's own view. The PSX3D card stays on it: the corkboard close up is a glowing blur until it holds
-	// postcards, and a player arriving from PSX3D has none yet (coordinator 2026-11-12)
+	// postcards, and a player arriving from PSX3D has none yet.
 	static const int place[3] = { -1, ROOM_LIBRARY, -1 };
 	if (place[page] >= 0) room_view_go(&room, place[page]);
 	else { room_view_back(&room); room.focus = welcome_focus; }   // the same home view as card 1 (not leaning to the bookcase)

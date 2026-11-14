@@ -31,7 +31,7 @@ multiplier 16777619, modulo 2^32) over the 2048-byte PS-X EXE header followed
 by its declared text bytes, read from disc. The core caps text size at 2 MiB.
 No file is selected by game title, cheat description or an executable patched
 in RAM. Serial-only files are reserved for deliberately revision-independent
-entries; none is shipped in this branch.
+entries; none is shipped.
 
 ```
 PSX3D-WS-1

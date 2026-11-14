@@ -9,12 +9,12 @@
 ## BreadClip logo
 
 BreadClip logo and original artwork by BreadChaser, GPL-2.0-or-later.
-The HOME icon and banner are round 12 "Lean": one cream bread clip with a
+The HOME icon and banner are the BreadClip logo: one cream bread clip with a
 dotted "BB" print. `apps/breadbox/icon.png` (48 px) and `icon24.png` (24 px,
 hand-made; `smdh24.py` writes it into the CIA's SMDH, which bannertool would
 otherwise shrink from the 48) are RGB565-exact; `banner.png` floats on
 transparency and sets the name in Michroma (above).
-The room poster is round 9 pick 01, “Occlupanida breadboxis”, with rasterized
+The room poster, “Occlupanida breadboxis”, is by BreadChaser too, with rasterized
 Archivo Black lettering by the Archivo Black Project Authors / Omnibus-Type,
 SIL OFL 1.1 ([license](ArchivoBlack-OFL.txt)).
 

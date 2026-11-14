@@ -1,31 +1,49 @@
 # Changelog
 
 What changed in each release, newest first. One line per point.
-Speed figures are for specific saved scenes; see [compatibility](docs/compatibility.md).
+Speed figures are for specific saved scenes; see [Performance](README.md#performance)
+and [compatibility](docs/compatibility.md).
 
 ## v0.9.0 (public beta)
 
-- First public release of BreadBox (beta): PlayStation and Game Boy Advance games on Nintendo 3DS, in one app.
-- A small 3D room is the main menu: walk to Continue, your Collection or Settings.
-- The room has a Day and a Night look.
-- Your Collection is a bookcase: one shelf per system, boxes with their cover art.
-- A short welcome tour on first start shows where things are and finds your games.
-- BreadBox finds your games folder by itself and checks it for new games every time it starts, even big libraries.
-- Continue picks up the last game where you left it, shown as a postcard in the room.
-- Twelve postcards per game for your own saves, each with a picture of the moment.
-- Saves keep backups: automatic saves and memory cards can be put back from Backups.
-- A save from another emulator is asked about first, and the original is kept in Backups.
-- Settings are one list per page, for all games of a system or for one game.
-- Every menu has paper sounds.
-- Coming from PSX3D: your memory cards, postcards, settings, cheats and BIOS files are copied on first start; PSX3D is untouched.
-- BreadBox can update itself over Wi-Fi (Automatic, Ask first or Off).
-- Share BreadBox with a friend's 3DS by QR code.
-- PlayStation: rewind on New 3DS, cheats, widescreen for supported games, and an optional Real 3D (experimental, New 3DS).
-- Game Boy Advance: battery saves, real-time clock games, solar sensor games and cheats.
+The first public release of BreadBox: PlayStation and Game Boy Advance games on
+the Nintendo 3DS, in one app.
+
+- New: a small 3D room is the main menu. Walk to Continue, your Collection or Settings.
+- New: the room has a Day and a Night style.
+- New: your Collection is a bookcase, with one shelf per system and boxes with their cover art.
+- New: a short welcome tour on first start shows you around and finds your games.
+- New: BreadBox finds your games folder by itself and checks it for new games at every start, even in big libraries.
+- New: Continue picks up the last game where you left it, shown as a postcard in the room.
+- New: twelve postcards per game for your own saves, each with a picture of the moment.
+- New: automatic saves and memory cards keep backups you can put back from Backups.
+- New: a save from another emulator is asked about first, and the original is kept in Backups.
+- New: Settings are one list per page, for all games of a system or for one game.
+- New: paper sounds in every menu.
+- New: on first start, BreadBox copies your PSX3D memory cards, postcards, settings, cheats and BIOS files. PSX3D is left untouched.
+- New: BreadBox updates itself over Wi-Fi (Automatic, Ask first or Off).
+- New: share BreadBox with a friend's 3DS by QR code.
+- PlayStation: everything PSX3D 0.5.2 did, including rewind on New 3DS, cheats, widescreen for supported games and the optional Real 3D (experimental, New 3DS).
+- Game Boy Advance: battery saves, real-time clock games, the solar sensor in the Boktai games, cheats, fast forward, rewind on New 3DS, and 3D with the slider.
 - Known: demanding games can run slowly on Old 3DS.
-- Known: Real 3D and some PlayStation picture effects have visual issues.
+- Known: Real 3D and some PlayStation picture effects have drawing problems.
 - Known: a few Game Boy Advance games don't play (link cable, motion sensor or unusual cartridges).
-- Known: Game Boy Advance has no on-screen touch buttons in this version; tap the bottom screen to pause.
+- Known: Game Boy Advance has no touch-screen buttons in this version; tap the touch screen to pause.
+
+## PSX3D
+
+BreadBox grew out of [PSX3D](https://github.com/BreadChaser/PSX3D), a PlayStation
+emulator for the 3DS. Its releases are listed below for reference.
+
+## v0.5.2
+
+- Faster Old 3DS gameplay with improvements to the emulator and GPU renderer.
+- Faster experimental Real 3D on New 3DS.
+- Twelve animated themes, a live Theme preview, and matching menu icons and touch controls.
+- A smoother Original menu backdrop with the same classic look.
+- Recommended Old 3DS settings for nine tested US games, including Silent Hill and Klonoa.
+- Improved correctness when games change code across memory pages.
+- American English throughout the interface.
 
 ## v0.5.1
 

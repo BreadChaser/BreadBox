@@ -34,3 +34,11 @@ __pycache__/
 
 /devtools/
 /release-validation/
+
+# Internal work notes stay in the private devtools folder, never in the repo
+# (tests/repo_hygiene checks the tracked tree for these too)
+/research/
+/notes/
+*-REPORT.md
+REVIEW*.md
+*.log

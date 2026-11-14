@@ -1,3 +1,7 @@
+# Game Boy Advance box art (internals)
+
+The player-facing summary is in the [README](../README.md#getting-started).
+
 GBA box art uses the same cover worker, pause/drain transaction, HTTPS driver,
 Wi-Fi backoff, 14-day miss state and RGB565 256x256 `.cv2` textures as PS1.
 A single shared worker handles both systems. Namespaced GBA cache files are in
@@ -7,7 +11,7 @@ The UI queues the selection first, then up to eight neighbors each side,
 including covers for list rows, before the carousel draws. It does no network,
 ROM, PNG decode or filesystem work. Sorting and incremental GBA publication
 use `covers_library_begin/end`, which waits for every worker borrow before
-changing indexes or freeing strings. The 1044 PS1 library boundary remains.
+changing indexes or freeing strings.
 
 Matching tries the ROM filename without its extension, replacing libretro's
 reserved characters (`&*/:` plus backtick, angle brackets, question mark,

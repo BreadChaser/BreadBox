@@ -1,4 +1,32 @@
-# GBA save ownership and lifecycle
+# Game Boy Advance saves
+
+## Files and slots
+
+Each cartridge gets a save identity, `gbs-<game code>-<sample CRC32>` (see
+below), resolved at launch by `gba_saveid_resolve()`. The battery file is
+`saves/gba/<identity>.sav` and postcards are `states/gba/<identity>.stateN`.
+Files named after the ROM (`<ROM filename>.sav`) from earlier versions are only
+read once, to adopt them into the new identity.
+
+Battery files are 128 KiB, enough for SRAM, EEPROM and flash. Any other size is
+asked about before the game runs (Restore backup / Start empty; the file is kept
+as `.bad`); nothing is converted on its own. When the size is one another
+emulator writes for the cartridge's chip (512 B or 8 KiB EEPROM, 32 KiB SRAM,
+64 KiB flash; any of them when gpSP does not know the chip yet), the question
+also offers "Use it": the original goes to Backups byte for byte first, then the
+game gets it padded to 128 KiB. Changed battery RAM is queued every 180 frames
+and written on pause, sleep or suspend, HOME Close and exit. A write failure is
+shown on the bottom screen. Use an in-game save before quitting, as on a GBA.
+
+Postcards 1–10 are N = 0–9 and postcards 11 and 12 are N = 13 and 14 (10, 11
+and 12 are Continue, Undo and the quick state; `bb_slots.h`). Each holds a
+versioned BreadBox header, gpSP's state and battery RAM. ROM header identity,
+ROM size and a payload CRC are checked before gpSP parses the state, and a
+damaged state falls back to a valid backup. These states belong to this core
+version and are not RetroArch states. Loading a state keeps the committed
+battery file (below); the battery bytes inside the state are not restored.
+
+## Ownership and life cycle
 
 GBA battery files are authoritative. Loading any state (Continue, manual or
 Undo) first commits pending in-game battery changes through safefile, then
@@ -60,8 +88,8 @@ then stays unstarred. The old log/favorite entries remain available for recovery
 
 ## Sleep is single-writer in the pinned SDK
 
-R2's event-thread claim does not match **libctru 2.7.0**, pinned and ABI-checked
-by tools/build/toolchain.lock. Verified against:
+In **libctru 2.7.0** (pinned and ABI-checked by tools/build/toolchain.lock), the
+sleep hooks run on the main thread, not on APT's event thread. Checked against:
 https://github.com/devkitPro/libctru/blob/v2.7.0/libctru/source/services/apt.c
 (SHA256 `2f5378fdc0f23b96f74b46e1df95d34467384fb46c7ded3d5d4314a19ae7c3ff`).
 

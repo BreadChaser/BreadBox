@@ -1,94 +1,347 @@
-# BreadBox
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/header-dark.png">
+    <img src="docs/images/header-light.png" alt="BreadBox" width="560">
+  </picture>
+</p>
 
-BreadBox is a multi-system emulator for Nintendo 3DS. Version 0.9.0, the public beta, supports
-PlayStation and Game Boy Advance, with experimental NES support available in
-development builds. BreadBox grew from PSX3D and is the maintained app. It uses title ID
-`000400000B0B0B00` and stores app data in `sdmc:/3ds/BreadBox`.
+<p align="center"><b>PlayStation and Game Boy Advance games on the Nintendo 3DS, in one app.</b></p>
 
-Coming from PSX3D: on first start, BreadBox copies from `sdmc:/3ds/PSX3D` your
-memory cards, postcards (save states and Continue) with their pictures,
-per-game settings, cheats (the ones you switched on and your own codes), BIOS
-files, play history and, when BreadBox has no settings of its own yet, PSX3D's
-app settings. A notice says how many files came over. It is a one-way copy:
-PSX3D's files are never changed, and what you play in BreadBox does not go back
-to PSX3D. PSX3D numbered postcards from 0; BreadBox numbers them from 1, so
-PSX3D slot 0 is slot 1. Settings > Collection > Import again from PSX3D copies
-anything new.
+<p align="center">
+  <a href="https://github.com/BreadChaser/BreadBox/releases/latest"><img src="https://img.shields.io/github/v/release/BreadChaser/BreadBox?color=c9a46a" alt="Latest release"></a>
+  <a href="https://github.com/BreadChaser/BreadBox/releases"><img src="https://img.shields.io/github/downloads/BreadChaser/BreadBox/total?color=8a6a45" alt="Downloads"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--2.0--or--later-blue" alt="GPL-2.0-or-later"></a>
+  <img src="https://img.shields.io/badge/platform-Nintendo%203DS-e60012" alt="Nintendo 3DS">
+</p>
 
-Each system has its own core and renderer:
+<p align="center">
+  <a href="#install">Install</a> ·
+  <a href="#controls">Controls</a> ·
+  <a href="#performance">Performance</a> ·
+  <a href="#faq">FAQ</a> ·
+  <a href="https://github.com/BreadChaser/BreadBox/issues/new/choose">Report a problem</a>
+</p>
 
-| System | Core | Renderer | Status |
-|---|---|---|---|
-| PS1 | vendored, modified [PCSX-ReARMed](https://github.com/libretro/pcsx_rearmed) in `core/` | PICA GPU renderer (`gpu_pica`) | Mature; tested on Old and New 3DS hardware. Real 3D is experimental. |
-| GBA | vendored, modified gpSP in `gba-core/` | its own CPU renderer, picture shown as a texture; it does not use the PS1 core or GPU renderer | Tested on Old and New 3DS hardware; some demanding games run below full speed on Old 3DS. The experimental GBA GPU compositor is shelved. |
-| NES | QuickNES through the shared libretro host in `systems/nes/` | CPU | Experimental development option; not part of the standard release. |
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/room-day.png" width="260" alt="The room in its Day style, with the Settings card on the touch screen"><br><sub>The room</sub></td>
+    <td align="center"><img src="docs/screenshots/collection.png" width="260" alt="The bookcase with a shelf for each system"><br><sub>Your Collection</sub></td>
+    <td align="center"><img src="docs/screenshots/settings.png" width="260" alt="PlayStation picture settings"><br><sub>Settings</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/ps1-crash.png" width="260" alt="Crash Bandicoot on an Old 3DS"><br><sub>Crash Bandicoot on Old 3DS</sub></td>
+    <td align="center"><img src="docs/screenshots/gba-mario-kart.png" width="260" alt="Mario Kart: Super Circuit on an Old 3DS"><br><sub>Mario Kart: Super Circuit on Old 3DS</sub></td>
+    <td align="center"><img src="docs/screenshots/room-night.png" width="260" alt="The room in its Night style"><br><sub>The room at night</sub></td>
+  </tr>
+</table>
 
-## Build
+BreadBox plays PlayStation and Game Boy Advance games on every 3DS and 2DS. Its
+main menu is a small 3D room: walk to the bookcase for your games, to the TV to
+pick up where you left off, or to the oscilloscope for Settings. It finds your games on
+the SD card by itself, needs no BIOS files, and keeps itself up to date over
+Wi-Fi. BreadBox is the successor to [PSX3D](https://github.com/BreadChaser/PSX3D)
+and brings your PSX3D saves over on first start.
 
-Use the pinned devkitPro toolchain described in [building](docs/building.md).
+All screenshots were taken on real consoles.
 
-```sh
-make                # build/3ds/BreadBox.3dsx (PS1 and GBA)
-make cia            # installable CIA; requires bannertool and fixed makerom
-make host-tests
-```
+> [!NOTE]
+> BreadBox 0.9.0 is a public beta. Most games play well, but demanding
+> PlayStation games run slower on the Old 3DS, and some games have drawing
+> problems. See [Performance](#performance) and [Known issues](#known-issues).
 
-Install the CIA with FBI on a console running Luma3DS. The `.3dsx` is also
-available for Homebrew Launcher. The retired PSX3D app (`000400000C3D3D00`) can
-stay installed beside BreadBox. Do not install a test build over another app.
+## Features
 
-## Games and controls
+**Two systems in one app**
+- PlayStation, drawn by the 3DS graphics chip, with tested settings for many games applied automatically
+- Game Boy Advance, with battery saves, real-time clock games and the solar sensor in the Boktai games
+- Built-in BIOS for both systems: BIOS files are optional
+- Fast forward in every game, and rewind on New 3DS
+- 3D: Game Boy Advance games get layered depth with the 3D slider; on New 3DS, PlayStation games can sit behind the screen or use the experimental Real 3D
+- Widescreen for PlayStation games with a tested fix
+- Cheats for both systems
 
-BreadBox finds common ROM folders automatically. Use one root, such as
-`sdmc:/roms`, for every system; subfolders such as `PS1` and
-`Nintendo - Game Boy Advance` work, as do mixed folders. Settings > Collection > Games folder
-lets you choose a different root. A shared index fills in the background and is
-cached on the SD card. Every start shows your Collection at once and checks the card
-for new, removed and renamed games in the background; hold Y in your Collection to
+**A room instead of a menu**
+- The room is the main menu, in a Day or a Night style
+- Your Collection is a bookcase with one shelf per system; take a game out to see its box
+- Box art downloads by itself for both systems
+- A short welcome tour on first start shows you around and finds your games
+
+**Keeps your progress safe**
+- **Continue**: your place is saved when you pause, quit or the 3DS sleeps, and shows up as a postcard in the room; PlayStation games also save it every few minutes
+- Twelve postcards per game for your own save states, each with a picture of the moment
+- Automatic saves and memory cards keep backups you can put back
+- A save from another emulator is asked about before it is used, and the original is kept
+
+**And more**
+- Updates itself over Wi-Fi: Automatic, Ask first or Off
+- Copies your memory cards, postcards, settings, cheats and BIOS files from PSX3D
+- Share BreadBox with a friend: the coffee table shows a QR code for FBI
+
+## Install
+
+**You need** a 3DS or 2DS with [Luma3DS](https://github.com/LumaTeam/Luma3DS)
+custom firmware, and your own game files.
+
+1. Open **FBI → Remote Install → Scan QR Code** and scan this code:
+
+   <img src="docs/qr-install.png" width="180" alt="QR code for the latest BreadBox.cia">
+
+   Or download [**BreadBox.cia**](https://github.com/BreadChaser/BreadBox/releases/latest/download/BreadBox.cia)
+   and install it with FBI.
+2. Copy your games to a folder on the SD card, for example `sdmc:/roms/`.
+3. Start **BreadBox** from the HOME Menu. The welcome tour finds your games folder.
+
+After that, BreadBox updates itself (see [Updates](#updates)). A `.3dsx` for the
+Homebrew Launcher is on the [release page](https://github.com/BreadChaser/BreadBox/releases/latest);
+it does not update itself.
+
+**Coming from PSX3D?** Install BreadBox next to it. See [Moving from PSX3D](#moving-from-psx3d).
+
+## Getting started
+
+**Games.** Put all your games under one folder, such as `sdmc:/roms/`. Subfolders
+are fine, and so is a mix of systems in one folder. BreadBox looks in common
+places by itself; to use another folder, pick it in **Settings → Collection →
+Games folder**. Each start shows your Collection at once and checks the card for
+new, removed and renamed games in the background. Hold **Y** at the bookcase to
 check right away.
 
-GBA accepts `.gba` and ZIP files containing exactly one `.gba` game with a valid
-header. Extract `.7z` archives first. ZIPs are extracted only when played, to a
-single cache file using bounded memory; allow up to 32 MiB of free SD space.
-Saves and states follow the original game filename. The list shows scan progress
-and supports Back while scanning.
+| System | Files |
+|---|---|
+| PlayStation | `.cue/.bin`, `.chd`, `.pbp`, `.iso`, `.img`, `.mdf`, and `.m3u` for multi-disc games |
+| Game Boy Advance | `.gba`, and `.zip` with exactly one game inside (extract `.7z` first; rename `.agb` files to `.gba`) |
 
-PS1 accepts CUE/BIN, CHD, PBP, ISO, IMG, MDF, and M3U. Keep CUE files
-with their referenced tracks. No games or proprietary BIOS files are included;
-the built-in HLE BIOS is the default. An optional BIOS goes in
-`sdmc:/3ds/BreadBox/bios`.
+Keep `.cue` files next to the tracks they name. A zipped Game Boy Advance game is
+unpacked when you play it, so leave about 32 MB free on the SD card. Games over
+32 MB don't start.
 
-BreadBox checks for game-setting updates automatically while you are in the
-room, using Wi-Fi. It also checks for BreadBox app updates from the room. The
-default update mode is Automatic: after a short idle countdown, an update
-installs; any button postpones it. Choose Settings > Updates to set
-Automatic, Ask first, or Off. The main menu opens your
-collection, settings, and the most recent game. Use the D-pad and A to select; B
-goes back. The touch screen provides menu controls and additional PS1 buttons.
+**BIOS.** Not needed. If you have a real BIOS, copy it to `sdmc:/3ds/BreadBox/bios/`
+and BreadBox uses it: for PlayStation `scph5500.bin`, `scph5501.bin`,
+`scph5502.bin`, `scph1001.bin`, `scph7001.bin`, `scph101.bin` or
+`psxonpsp660.bin`; for Game Boy Advance `gba_bios.bin`.
 
-Settings > Systems opened from the room apply to all games in that system. Settings opened from
-a game apply to that game and override the system values; reset or inherit a
-value to return to the system setting. PS1 and GBA each have their own settings.
+**Box art** downloads automatically, matched by file name, disc serial or
+cartridge code. To use your own picture, add a PNG named like the game file
+(up to 4096 pixels wide and high; it is scaled to fit): for PlayStation in `sdmc:/3ds/BreadBox/covers/` (for multi-disc
+games, name it after disc 1), for Game Boy Advance next to the game or in
+`sdmc:/3ds/BreadBox/covers/gba/`. Your picture wins over the download.
 
-App data stays under `sdmc:/3ds/BreadBox`: `bios/`, `config/`, `cache/`,
-`covers/`, `saves/`, `states/`, `backups/`, and `updates/` hold BIOS files,
-settings, cached data, covers, game saves, save states, recovery copies, and
-update staging. ROM folders can be anywhere on the SD card and are selected in
-Settings > Collection > Games folder. Back up the app folder before installing a test build.
+**Your files** live in `sdmc:/3ds/BreadBox/`:
 
-See [PSX3D save import](docs/psx3d-save-import.md) and [automatic updates](docs/auto-update.md)
-for details.
+| Folder or file | What it holds |
+|---|---|
+| `saves/` | Memory cards and Game Boy Advance battery saves |
+| `states/` | Postcards (save states) and Continue |
+| `backups/` | Save backups |
+| `config.ini`, `games/` | Your settings |
+| `covers/` | Downloaded box art |
+| `bios/` | Optional BIOS files |
+| `log.txt` | What happened last session (older ones: `log.1.txt` to `log.4.txt`) |
+
+Back up this folder before you install a test build.
+
+### Moving from PSX3D
+
+On its first start, BreadBox copies from `sdmc:/3ds/PSX3D/` your memory cards,
+postcards (save states and Continue) with their pictures, per-game settings,
+cheats, BIOS files and play history. If BreadBox has no settings of its own yet,
+it also takes PSX3D's app settings. A notice says how many files came over.
+
+It is a one-way copy: PSX3D's files are never changed, and what you play in
+BreadBox does not go back to PSX3D. Both apps can stay installed. PSX3D numbered
+its save slots from 0 and BreadBox numbers postcards from 1, so PSX3D slot 0 is
+postcard 1. **Settings → Collection → Import again from PSX3D** copies anything
+new. Details: [Moving from PSX3D](docs/moving-from-psx3d.md).
+
+### Updates
+
+BreadBox checks for a new version from the room when it starts, about once a
+day while it sits idle, and when the 3DS wakes up if the last check was over an
+hour ago. It never checks during a
+game. With **Automatic** (the default), a short countdown runs before the update
+installs, and any button puts it off. **Settings → Updates** switches to
+**Ask first** or **Off**, and **Check now** looks right away. The tested
+settings for PlayStation games also update by themselves from the room.
+
+## Controls
+
+| Where | Button | Action |
+|---|---|---|
+| Room | D-pad / A / B | Walk / open / back |
+| Collection | A / B | Open a shelf, take a game out, play / back |
+| Collection | Y / X | Favorite / sort (hold Y on the bookcase to look for new games) |
+| PlayStation | A / B / X / Y | Circle / Cross / Triangle / Square |
+| PlayStation | L / R / ZL / ZR | L1 / R1 / L2 / R2 |
+| PlayStation | Circle Pad / C-Stick | D-pad or left stick / right stick |
+| PlayStation | Pause button on the touch screen | Pause menu |
+| Game Boy Advance | A / B / L / R / START / SELECT | The same buttons |
+| Game Boy Advance | D-pad or Circle Pad | D-pad |
+| Game Boy Advance | X, or tap the touch screen | Pause menu |
+| In a game | SELECT + R | Fast forward on / off |
+| In a game | Hold SELECT + L | Rewind (New 3DS) |
+
+Buttons can be changed per system in **Settings → Systems**, and the fast
+forward and rewind shortcuts in **Settings → Customize**. The Old 3DS shows L2
+and R2 on the touch screen in PlayStation games, plus a right stick in analog
+games.
+
+## Settings
+
+Open Settings in the room to change things for all games, or from
+the pause menu to change only the game you are playing. A value set for one game
+says so, and **X** puts it back to the system's value.
+
+| Page | What's there |
+|---|---|
+| Customize | Room style (Day or Night), fast forward and rewind shortcuts, which side the touch buttons sit on (New 3DS) |
+| Systems | Picture, controls, saves and cheats for PlayStation and for Game Boy Advance; PlayStation also has an Advanced page for speed and compatibility |
+| Collection | Your games folder, and Import again from PSX3D |
+| Updates | Automatic, Ask first or Off, and Check now |
+| About | Credits, licenses, how to install BreadBox, and the welcome tour |
+
+Tested PlayStation games get their recommended settings for your console
+automatically, so most players never need Advanced.
+
+## Performance
+
+Measured on real consoles with BreadBox 0.9.0, in the scenes listed in
+[docs/performance.md](docs/performance.md). Speed: 100% = full speed. FPS: new pictures shown per second.
+— = not measured for this release. That page also has the method and the
+frameskip-off numbers.
+
+### PlayStation
+
+In the measured scenes, most games run at or near full speed on the Old 3DS with
+Auto frameskip; demanding 3D games, such as racing games, run slower there.
+
+<details>
+<summary>Speed per game</summary>
+
+| Game | Old 3DS (Auto frameskip) | New 3DS |
+|---|---:|---:|
+| Symphony of the Night | 100% / 56.8 | — |
+| Final Fantasy VII (battle) | 100% / 15.2 | — |
+| Klonoa | 100% / 23.0 | — |
+| Crash Bandicoot | 98% / 17.9 | — |
+| Crash Bandicoot 2 | 99% / 18.0 | — |
+| Crash Team Racing | 96% / 15.2 | — |
+| Ridge Racer Type 4 | 95% / 20.4 | — |
+| Tekken 3 | 98% / 15.2 | — |
+| Silent Hill (three scenes) | 96–100% / 12.0–12.1 | — |
+| Gran Turismo 2 (Arcade) | 64% / 12.1 | — |
+| Need for Speed: High Stakes | 38% / 11.0 | — |
+
+</details>
+
+### Game Boy Advance
+
+Most games we measured run at full speed on the Old 3DS; a few demanding ones
+run slower there.
+
+<details>
+<summary>Speed per game</summary>
+
+| Game | Old 3DS | New 3DS |
+|---|---:|---:|
+| Kirby: Nightmare in Dream Land | 100% / 60.0 | — |
+| Pokémon Emerald (intro) | 100% / 60.0 | — |
+| Mario Kart: Super Circuit (race) | 100% / 37.5 | — |
+| Classic NES Series: Excitebike (race) | 100% / 30.0 | — |
+| Star Wars: Flight of the Falcon (in flight) | 98% / 28.3 | — |
+| Golden Sun (intro) | 92% / 23.9 | — |
+| Mario Golf: Advance Tour (town) | 80% / 19.7 | — |
+| Doom (first level) | 60% / 17.3 | — |
+
+</details>
+
+BreadBox 0.9.0 has not been measured on the New 3DS game by game yet.
 
 ## Known issues
 
-Some demanding games run slowly on Old 3DS. Experimental Real 3D and some GPU
-effects can have visual issues. See the [compatibility list](docs/compatibility.md)
-for tested games and current notes. [Box art](docs/box-art.md) and
-[widescreen](docs/widescreen.md) describe the PS1 features.
+- Demanding games run below full speed on the Old 3DS.
+- Real 3D (New 3DS) and some PlayStation picture effects have drawing problems.
+- A few Game Boy Advance games don't play: games that need the link cable, a
+  motion sensor or other extra cartridge hardware, and games over 32 MB. See the
+  [compatibility list](docs/compatibility.md#game-boy-advance).
+- Game Boy Advance has no touch-screen buttons in this version, so the touch
+  screen stays dark while you play. Tap it to pause.
+- European PlayStation discs with LibCrypt protection need a matching `.sbi`
+  file next to the disc image.
+- With the built-in BIOS, the first Gran Turismo hangs and Mega Man Legends 2
+  goes black after the intro. A real BIOS fixes Gran Turismo.
 
-## Contributing and license
+Found something else? [Open an issue](https://github.com/BreadChaser/BreadBox/issues/new/choose)
+and attach `log.txt` if you can.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) and [the build and test guide](docs/building.md).
-BreadBox and the frozen PSX3D are GPL-2.0-or-later; retain
-[LICENSE](LICENSE), [CREDITS](CREDITS), and the core and dependency notices when
-redistributing sources or binaries. The core is maintained directly in `core/`.
+## Planned features
+
+- **Nintendo 64.** The next system for BreadBox. Early work has started; it
+  will run on the New 3DS only.
+- **Play together.** Play with a friend's 3DS over local wireless. The cushions
+  in the room are already waiting for it.
+- **Game Boy Advance touch controls.** The on-screen buttons are off in 0.9 and
+  will come back redesigned.
+- **More tuned games.** Recommended settings for more PlayStation and Game Boy
+  Advance games, on both the Old and the New 3DS.
+- **Motion sensor games.** Support for cartridges with a motion sensor, such as
+  the gyro sensor in WarioWare: Twisted!.
+
+## FAQ
+
+**Old 3DS or New 3DS?**
+Both are supported. The New 3DS has a faster processor, adds rewind for both
+systems, and adds 3D for PlayStation games. The Old 3DS runs most Game Boy
+Advance games and many PlayStation games at full speed; demanding PlayStation
+3D games are slower there. See [Performance](#performance).
+
+**Do I need a BIOS?**
+No. Both systems have one built in. A real one is used automatically if you add it.
+
+**Can I keep PSX3D?**
+Yes. BreadBox is a separate app with its own folder. It copies PSX3D's saves
+once and never changes them.
+
+**Why is it slow in Azahar or without Luma3DS?**
+BreadBox's fast mode needs Luma3DS on a real console. In a PC emulator it still
+starts, but much slower, and the room says so.
+
+**Can I turn off automatic updates?**
+Yes: **Settings → Updates → Off**. You can still use **Check now**.
+
+## Building from source
+
+You need devkitPro (devkitARM, libctru, citro2d, citro3d), makerom and
+bannertool, at the versions pinned in the repository. Full steps are in
+[docs/building.md](docs/building.md).
+
+```bash
+git clone https://github.com/BreadChaser/BreadBox.git
+cd BreadBox
+make            # build/3ds/BreadBox.3dsx
+make cia        # installable CIA (needs bannertool and a fixed makerom)
+make host-tests
+```
+
+Developer documentation is indexed in [docs/dev/](docs/dev/README.md).
+
+## Credits and license
+
+- **BreadChaser**: BreadBox and PSX3D
+- [PCSX-ReARMed](https://github.com/libretro/pcsx_rearmed): notaz, Exophase and
+  libretro contributors; based on PCSX, PCSX-Reloaded and P.E.Op.S.
+- [gpSP](https://github.com/libretro/gpsp): Exophase and the libretro gpSP
+  contributors; open GBA BIOS by Normmatt and the VBA/VBA-M team
+- The PCSX-ReARMed 3DS port authors; devkitPro (libctru, citro2d, citro3d);
+  [DSP1](https://github.com/zoogie/DSP1) by zoogie
+- Room hands: "Hand (low poly)" by scribbletoad (CC BY 4.0); menu sounds by
+  Joseph Sardin, Kenney and OwlishMedia (CC0)
+- Icons by [Dreamstale](https://www.flaticon.com/authors/dreamstale) from
+  [Flaticon](https://www.flaticon.com) (Flaticon license, not GPL);
+  [artwork, fonts and cheat sources](tools/art/CREDITS.md)
+
+The full list is in [CREDITS](CREDITS). The PlayStation emulator lives in
+`core/`; Game Boy Advance has its own emulator and renderer in `gba-core/`.
+
+BreadBox is licensed under the [GPL-2.0-or-later](LICENSE). Keep LICENSE,
+CREDITS and the core and dependency notices when you share sources or binaries.
+It is not affiliated with Sony, Nintendo or libretro.

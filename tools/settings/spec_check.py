@@ -107,7 +107,7 @@ for ctx in contexts:
             problems.append(f'{ctx}: {page}/{label} marker "{gmark}" != spec "{marker}"')
 
 # Every core option the core registers on 3DS has a fate in the section 3.1 table.
-table = re.search(r'### 3\.1 Core options.*?\n(\|.*?)\n\n', doc, re.S).group(1)
+table = re.search(r'### (?:3\.1 )?Core options.*?\n(\|.*?)\n\n', doc, re.S).group(1)
 patterns = []
 for line in table.split('\n')[2:]:
     names = [n.strip() for n in line.split('|')[1].split(',')]

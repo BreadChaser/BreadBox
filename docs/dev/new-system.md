@@ -1,7 +1,6 @@
 # Adding a system to BreadBox
 
-This is the checklist for a new emulated system (NES, Game Boy, ...) as the code
-stands after the struct/r1 cleanup. Everything the system owns lives in
+This is the checklist for a new emulated system (NES, Game Boy, ...). Everything the system owns lives in
 `systems/<id>/`. The only edit outside that folder is one word in `apps/breadbox.mk`.
 
 ## 1. Start the folder
@@ -128,7 +127,7 @@ Rules the build enforces:
    - 20 switches with PS1 and GBA;
    - the memory log against `budget[]`.
 
-## What still costs time (and the plan to remove it)
+## Known costs and limits
 
 - **Saves, states, Continue, pause menu, HOME and sleep.** Shared by
   `bb_save.c` / `bb_pause.c`; declare RAM-only `bb_save_ops` and extension rows.
@@ -138,7 +137,7 @@ Rules the build enforces:
 - **Settings storage.** Your hooks store the values; the shell will own storage
   once the schema reader lands.
 
-See [known debt](../architecture/system-layer.md#known-debt) for remaining shared architecture work.
+See [known debt](system-layer.md#known-debt) for remaining shared architecture work.
 
 ## Keeping frame code stable
 
@@ -170,7 +169,7 @@ checking replay, state and battery round trips. `retro_host` tests cover pitched
 and unaligned RGB565/XRGB8888/0RGB1555 conversion and rational pacing.
 The shared runner supplies the pause menu, Continue, Undo and backups.
 The conservative NES memory declaration is not a physical-console measurement.
-Do not enable NES in a shipping target before that measurement and plan B.
+Do not enable NES in a shipping target before that measurement.
 
 System extensions may supply environment values, special video composition,
 frame hooks, preparation/release, battery generation and opt-in RTC blobs.

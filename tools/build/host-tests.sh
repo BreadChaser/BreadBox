@@ -97,8 +97,8 @@ run shell-guard      python3 tools/architecture/shell-guard.py --strict
 run ownership-guard  python3 tools/architecture/ownership-guard.py --strict
 run ownership-guard-controls python3 tests/ownership/check.py
 run main-lifecycle python3 tests/main_lifecycle/check.py
-run cleanup-assertions python3 tests/cleanup_assertions/check.py
 run docs-current     python3 tests/docs_current/check.py
+run repo-hygiene     python3 tests/repo_hygiene/check.py
 run baseline-gate    bash tests/layout_baseline/run.sh
 run system-interface bash tests/system_iface/run.sh
 run system-conformance env BB_EXPERIMENTAL_NES=1 bash tests/system_conformance/run.sh

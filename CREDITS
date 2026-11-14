@@ -22,7 +22,7 @@ BreadBox room hands (assets/romfs/room/hands.bbh)
   https://sketchfab.com/3d-models/hand-low-poly-d6c802a74a174c8c805deb20186d1877
 
 BreadBox banner and icon (apps/breadbox/)
-  BreadClip round 12 "Lean" by BreadChaser, GPL-2.0-or-later. The banner name
+  BreadClip logo by BreadChaser, GPL-2.0-or-later. The banner name
   is set in Michroma by Vernon Adams, SIL OFL 1.1 (see tools/art/Michroma-OFL.txt);
   raster glyphs only. The banner audio is silent PCM.
 
@@ -37,7 +37,7 @@ Game Boy Advance: gpSP by Exophase and the libretro gpSP contributors
 (https://github.com/libretro/gpsp), GPLv2 family; see gba-core/COPYING.
 Open GBA BIOS by Normmatt and the VBA/VBA-M team, GPLv2; see gba-core/bios.
 
-BreadClip round 9 pick 01 room poster: BreadChaser, GPL-2.0-or-later.
+Room poster: BreadChaser, GPL-2.0-or-later.
 Archivo Black: Archivo Black Project Authors / Omnibus-Type, SIL OFL 1.1
 (see tools/art/ArchivoBlack-OFL.txt). Raster glyphs only; no runtime font file.
 

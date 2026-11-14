@@ -27,9 +27,9 @@ python3 -m venv /tmp/correct-sim/venv
 
 `BUILD_DIR` and `PSX3D_HOST_TOOLS` configure the build script. The Python command
 has matching `--build`/`--host-tools` arguments and `--states sh o3auto` filtering.
-The build script copies the worktree's core to a separate `core_capture` once;
+The build script copies the checkout's core to a separate `core_capture` once;
 remove that copy to pick up core changes affecting capture. Replayers always
-build from the current worktree. Raw `.gputrace` files and `.ppm` frames live
+build from the current checkout. Raw `.gputrace` files and `.ppm` frames live
 under `/tmp/correct-sim`; retain them for deterministic A/B replay.
 
 Each selected frame produces reference/PICA PNGs, an absolute RGB difference

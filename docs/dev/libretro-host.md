@@ -28,10 +28,10 @@ reacquires the core's backing RAM in case the restore changed its allocation.
 They do not choose paths, timestamps, Continue slots or history policy.
 
 `retro_ctr.c` connects audio.c, the pitched/unaligned RGB565, XRGB8888 and
-0RGB1555 texture converter, Original/Fit/Stretch and texture filtering. Its
-experimental runner has minimal safe battery/state files and APT flushing.
-It has no generic pause or Continue shell; the save service in plan B replaces
-that temporary file policy.
+0RGB1555 texture converter, Original/Fit/Stretch and texture filtering. The
+shared runner (`bb_retro_ctr_run`) also supplies the pause menu, Continue, Undo,
+backups and the HOME/sleep save barriers through the shared save service
+(`bb_retro_ctr_save_ops`; see [save-service.md](save-service.md)).
 
 GBA uses shared standard callbacks, input/audio accounting, frame execution,
 RAM adapters. Its fixed-rate rational clock keeps the original compact storage
@@ -47,4 +47,4 @@ remaining direct extension guards are generated from `retro-guards.json`.
 QuickNES is the optional third-system proof (`BB_EXPERIMENTAL_NES=1`). See
 `systems/nes/PROVENANCE.md` and `systems/nes/tests/ROMS.md`. Default BreadBox
 continues to register only PS1 and GBA. Its memory declarations are conservative
-smoke budgets, awaiting physical measurement and a complete pause/save shell.
+budgets that have not been measured on a console yet.

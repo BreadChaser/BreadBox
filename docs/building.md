@@ -34,7 +34,8 @@ Outputs are `build/3ds/BreadBox.{3dsx,elf,cia}`; `make cxi` also builds a
 deterministic executable container. CIA tickets are randomized. `make clean`
 cleans the frontend and the shared core. Frontend objects are isolated in
 `build/3ds/build-breadbox`. The shared application lives in `app/`, `platform/3ds/`, `include/breadbox/`, `assets/`
-and `build/3ds/`; `psx3d/vendor` keeps its name until the vendor step.
+and `build/3ds/`; `psx3d/vendor/` holds copies of citro2d's and citro3d's private `internal.h`
+headers, which the renderer and batching code include.
 
 `apps/breadbox.mk` selects packaging, object directories, the system list and the
 version header. `app/ui/app_policy.h` supplies compile-time names, SD
@@ -53,9 +54,11 @@ from old sketches.
 
 BreadBox has its own version sequence in `apps/breadbox/version.h`
 (`BB_VERSION`, `BB_BUILD`; a build script may still pass the old
-`-DPSX3D_BUILD=...`, which is accepted). The counter is
-`(major * 16 + minor) * 1024 + patch + 3`. `VERSION=N` overrides the counter for
-private test packages; it must fit uint16. Choose test versions at session time
+`-DPSX3D_BUILD=...`, which is accepted). `tools/build/title-version.py` turns it
+into the CIA title version: `(16 + 16*major + minor) * 1024 + patch*16 + 15`
+(0.9.0 = 25615, 0.9.1 = 25631, 1.0.0 = 32783; minor 0–15, patch 0–63). The last
+field is 15 for a release; 0–14 are that release's private test builds.
+`VERSION=N` overrides the counter for private test packages; it must fit uint16. Choose test versions at session time
 above the installed version and below the next planned release. Never downgrade
 or reuse a stale test counter for a live session.
 
@@ -90,7 +93,7 @@ scripts and pins all come from the accepted commit, not the candidate. A cached 
 stamp (commit, ELF digest, toolchain, make arguments) still matches. `BASELINE_JOBS`
 (default 3) sets its parallelism; a temporary reference is removed on exit. The
 recorded short `commit` must resolve to `commit_full` before either source is
-trusted. The gate never skips. It runs
+trusted. When a baseline is available, it runs
 
 - `compare.py`: core regions, symbols and core code words;
 - `check-pinned.py`: size, I-cache set and instruction words of every pinned
@@ -165,7 +168,7 @@ checks; renderer or dynarec changes need full scene/HLE gates. Speed claims
 require Old 3DS A/B/A measurements using the 13-heavy-scene mean, with individual
 regressions investigated. Simulator timing is not hardware FPS.
 
-The opt-in [remote developer interface](dev-control.md) and
-[recording tools](recorder.md) support controlled tests. Never publish private
+The opt-in [remote developer interface](dev/dev-control.md) and
+[recording tools](dev/dev-control.md#recording-and-exact-replay) support controlled tests. Never publish private
 tokens or game/BIOS files. Keep generated evidence, plans, and internal reports
 outside this repository. CI builds BreadBox and runs host and layout checks.
