@@ -11,6 +11,7 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include "../common/test_tmpdir.h"
 /* the later thread (bb_save.c): here and now */
 /* the later thread (bb_save.c): here and now, or held in order until run_queue (deferred) */
 static int deferred,nq;static struct {void (*fn)(void *);void *arg;} q[64];
@@ -34,7 +35,7 @@ extern bool playlog_poll_adoptions(void);
 extern u32 playlog_latest(void);
 extern bool playlog_import_psx3d(const char *);
 int main(void) {
- char dir[]="/tmp/bb-log-XXXXXX";assert(mkdtemp(dir));assert(!chdir(dir));
+ char dir[4096];assert(test_mkdtemp(dir, sizeof(dir), "bb-log"));assert(!chdir(dir));
  mkdir("sdmc:",0700);mkdir("sdmc:/3ds",0700);mkdir("sdmc:/3ds/BreadBox",0700);mkdir("sdmc:/3ds/BreadBox/saves",0700);
  assert(playlog_toggle_favourite("TEST"));
  playlog_adopt_key("TEST","gba-TEST-12345678");assert(playlog_favourite("gba-TEST-12345678"));

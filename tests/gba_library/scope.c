@@ -6,6 +6,10 @@ bool g_new3ds;
 bool room_show_hands;
 bool ps1_3d_available(void) {return g_3d_screen && g_new3ds;}
 bool bb_session_active(void) {return false;}
+/* Audio service substitutes, as in the current settings-tree fixture. */
+void sfx_play(int n){(void)n;} void sfx_now(int n){(void)n;} void sfx_default(int n){(void)n;}
+void sfx_cancel(void){} void sfx_flush(void){} void sfx_card_closes(void){}
+bool sfx_close_said(void){return false;}
 #include "../settings/navigation.c"
 int main(void) {
  register_options();g_new3ds=true;

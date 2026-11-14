@@ -1,7 +1,7 @@
 # Updates
 
 How BreadBox updates itself, for whoever publishes a release. What players see is
-in the [README](../README.md#updates).
+in the [README](getting-started.md#updates).
 
 ## What the app does
 

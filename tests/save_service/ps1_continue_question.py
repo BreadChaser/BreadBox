@@ -101,7 +101,7 @@ int main(void)
  return 0;
 }
 '''
-with tempfile.TemporaryDirectory(dir=Path.home() / '.cache') as td:
+with tempfile.TemporaryDirectory() as td:
     src = Path(td) / 'ps1.c'
     src.write_text(code)
     subprocess.run(['cc', '-std=gnu11', '-Wall', '-Wextra', '-Werror', '-Wno-unused-function', '-fsanitize=address,undefined', str(src), '-o', str(Path(td) / 'ps1')], check=True)

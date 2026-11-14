@@ -5,15 +5,25 @@
 # real worker threads. What each one executes is described in docs/building.md.
 #
 # Usage: bash tools/build/host-tests.sh [name-filter]
-# Needs: cc, python3, pkg-config, FreeType, libpng, libcurl, zlib, OpenSSL, fonts-dejavu,
+# Needs: cc, python3, pkg-config, FreeType, libpng, libcurl, zlib, OpenSSL,
 # ImageMagick (`magick` or `convert`). Logs go to $HOST_TEST_OUT (default: a temp dir).
+# Each group gets its own empty TMPDIR and XDG_CACHE_HOME under it and keeps its
+# temporary files there (tests/common/test_tmpdir.h for C); none writes to the home
+# folder. Text widths use the bundled tests/fonts/DejaVuSans.ttf, not a system font.
 set -uo pipefail
 cd "$(dirname "$0")/../.."
 out=${HOST_TEST_OUT:-$(mktemp -d "${TMPDIR:-/tmp}/psx3d-host-tests.XXXXXX")}
 mkdir -p "$out"
 if ! command -v magick >/dev/null 2>&1; then   # ImageMagick 6 only ships `convert`
 	mkdir -p "$out/bin"
-	printf '#!/bin/sh\nexec convert "$@"\n' > "$out/bin/magick"
+	cat > "$out/bin/magick" <<'SH'
+#!/bin/sh
+case "${1:-}" in
+identify) shift; exec identify "$@" ;;
+convert) shift ;;
+esac
+exec convert "$@"
+SH
 	chmod +x "$out/bin/magick"
 	export PATH="$out/bin:$PATH"
 fi
@@ -21,8 +31,7 @@ filter=${1:-}
 passed=0
 failed=()
 skipped=()
-# Exit 77 is a missing prerequisite, never a pass. Local opt-out is explicit.
-allow_skips=${HOST_TEST_ALLOW_SKIPS:-0}
+# Exit 77 is a missing prerequisite, never a pass.
 
 # The gcc-12 AddressSanitizer in the pinned image crashes at random (an endless stream of
 # "AddressSanitizer:DEADLYSIGNAL") on kernels with high-entropy ASLR (vm.mmap_rnd_bits=32:
@@ -37,11 +46,16 @@ run() { # run <name> <command...>
 	shift
 	[[ -z $filter || $name == *$filter* ]] || return 0
 	# A crashing sanitizer handler can loop forever: cap the log (100 MB) instead of the disk.
-	if (ulimit -f 204800; "${norandom[@]}" "$@") > "$out/$name.log" 2>&1; then
+	local scratch="$out/scratch/$name"
+	rm -rf "$scratch"; mkdir -p "$scratch/tmp" "$scratch/cache"
+	local rc=0
+	(ulimit -f 204800; export TMPDIR="$scratch/tmp" XDG_CACHE_HOME="$scratch/cache"
+		"${norandom[@]}" "$@") > "$out/$name.log" 2>&1 || rc=$?
+	rm -rf "$scratch"
+	if [[ $rc == 0 ]]; then
 		passed=$((passed + 1))
 		printf 'PASS %3ds  %s\n' $((SECONDS - start)) "$name"
 	else
-		local rc=$?
 		if [[ $rc == 77 ]]; then
 			skipped+=("$name")
 			printf "SKIP %3ds  %s\n" $((SECONDS - start)) "$name"
@@ -74,7 +88,7 @@ run room-refine python3 tests/room/refine.py
 run room-light-wiring python3 tests/room/light-wiring.py
 run ui-fit bash -c 'cc -std=gnu11 -Wall -Wextra -Werror -fsanitize=address,undefined -g -Iinclude/breadbox tests/ui_fit/check.c -o "$1/ui-fit" && "$1/ui-fit"' _ "$out"
 run ui-strings python3 tests/ui_fit/strings.py
-run welcome bash -c 'cc -std=gnu11 -Wall -Wextra -Werror -fsanitize=address,undefined -g -Iinclude/breadbox -Iapp/ui tests/welcome/check.c app/ui/welcome.c -o "$1/welcome" && "$1/welcome"' _ "$out"
+run welcome bash -c 'cc -D_GNU_SOURCE -std=gnu11 -Wall -Wextra -Werror -fsanitize=address,undefined -g -Iinclude/breadbox -Iapp/ui tests/welcome/check.c app/ui/welcome.c -o "$1/welcome" && "$1/welcome"' _ "$out"
 run ui-sound python3 tests/ui_sound/check.py
 run postcard-text python3 tests/postcards/text_fit.py
 run continue-card python3 tests/postcards/continue_card.py
@@ -98,8 +112,8 @@ run ownership-guard  python3 tools/architecture/ownership-guard.py --strict
 run ownership-guard-controls python3 tests/ownership/check.py
 run main-lifecycle python3 tests/main_lifecycle/check.py
 run docs-current     python3 tests/docs_current/check.py
+run build-contract   python3 tests/layout_baseline/build_contract.py
 run repo-hygiene     python3 tests/repo_hygiene/check.py
-run baseline-gate    bash tests/layout_baseline/run.sh
 run system-interface bash tests/system_iface/run.sh
 run system-conformance env BB_EXPERIMENTAL_NES=1 bash tests/system_conformance/run.sh
 run arena            bash tests/arena/run.sh
@@ -196,9 +210,10 @@ run pica-layout      env PICA_LAYOUT_CHECK_OUT="$out/pica-layout" bash tools/pic
 
 echo
 echo "$passed passed, ${#failed[@]} failed, ${#skipped[@]} skipped (logs: $out)"
+(( passed + ${#failed[@]} + ${#skipped[@]} )) || { echo "no host test group matches '$filter'" >&2; exit 2; }
 [[ ${#failed[@]} -eq 0 ]] || { echo "failed: ${failed[*]}"; exit 1; }
 
-if (( ${#skipped[@]} )) && [[ $allow_skips != 1 ]]; then
- echo "skipped suites fail this run: ${skipped[*]} (local opt-out: HOST_TEST_ALLOW_SKIPS=1)" >&2
+if (( ${#skipped[@]} )); then
+ echo "skipped suites fail this run: ${skipped[*]}" >&2
  exit 1
 fi

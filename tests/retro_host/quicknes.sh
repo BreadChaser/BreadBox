@@ -7,7 +7,7 @@ trap 'rm -rf "$out"' EXIT
 python3 systems/nes/tests/make-rom.py "$out/fixture.nes"
 # Reviewed source list and local build rules only (no downloaded scripts).
 make -s -C "$out" -f "$root/systems/nes/core/Makefile" CORE_DIR="$root/systems/nes/core" \
- CXX=c++ AR=ar 'FLAGS=-O2 -DNDEBUG -D__LIBRETRO__ -fno-rtti -fno-exceptions -DGIT_VERSION=\"26bb785\"' -j4 all
+ CXX=c++ AR=ar 'FLAGS=-std=gnu++20 -O2 -DNDEBUG -D__LIBRETRO__ -fno-rtti -fno-exceptions -DGIT_VERSION=\"26bb785\"' -j"${BB_BUILD_JOBS:-3}" all
 python3 tools/build/retro-bindings.py nes '' "$out/bindings.c"
 # A normal host process already ran these constructors at startup.
 python3 - "$out/bindings.c" <<'PYCODE'

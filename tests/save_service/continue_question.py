@@ -148,7 +148,7 @@ int main(int argc,char **argv)
  return 0;
 }
 '''
-with tempfile.TemporaryDirectory(dir=Path.home() / '.cache') as td:
+with tempfile.TemporaryDirectory() as td:
     td = Path(td)
     answers = re.search(r'enum \{ BB_CONTINUE_ASK[^;]*;\n#define BB_CONTINUE_BUTTONS[^\n]*\n', (root / 'app/ui/bb_pause.h').read_text())[0]
     (td / 'bb_pause_answers.h').write_text(answers)

@@ -21,6 +21,8 @@ build/3ds/Makefile reads <id>_CORE_INCLUDES and <id>_CORE_LIBS from the same fil
 from pathlib import Path
 import os, re, shlex, subprocess, sys, tempfile
 
+from jobs import make_parallelism
+
 ROOT = Path(__file__).resolve().parents[2]
 env = dict(os.environ)
 arm = Path(env.get('DEVKITARM', '/opt/devkitpro/devkitARM')) / 'bin' / 'arm-none-eabi-'
@@ -47,8 +49,9 @@ def build(system):
     core = ROOT / cfg['DIR']
     out = ROOT / 'build' / 'systems' / system
     out.mkdir(parents=True, exist_ok=True)
+    options, descriptors = make_parallelism(env)
     subprocess.run(['make', '-C', str(out), '-f', str(core / 'Makefile'), 'CORE_DIR=' + str(core),
-                    *cfg['MAKE'].split(), '-j4', 'all'], env=env, check=True)
+                    *cfg['MAKE'].split(), *options, 'all'], env=env, pass_fds=descriptors, check=True)
     raw = out / (system + '.raw.o')
     blob = out / (system + '_core_blob.o')
     archive = out / cfg['ARCHIVE']

@@ -24,17 +24,19 @@ tools/build/container.sh bash tools/build/ci.sh all
 ## Build targets
 
 ```sh
-make -j4                # BreadBox 3dsx and ELF
-make -j4 cia            # installable CIA (alias: make breadbox)
+make -j3                # BreadBox 3dsx and ELF
+make -j3 cia            # installable CIA (alias: make breadbox)
 make cxi BANNERTOOL=/path/to/bannertool MAKEROM=/path/to/makerom
 make BB_EXPERIMENTAL_NES=1   # adds the experimental QuickNES system
 ```
 
 Outputs are `build/3ds/BreadBox.{3dsx,elf,cia}`; `make cxi` also builds a
 deterministic executable container. CIA tickets are randomized. `make clean`
-cleans the frontend and the shared core. Frontend objects are isolated in
+cleans the frontend, the shared PS1 core and all generated `build/systems` cores,
+bindings and linker fragments. Frontend objects are isolated in
 `build/3ds/build-breadbox`. The shared application lives in `app/`, `platform/3ds/`, `include/breadbox/`, `assets/`
-and `build/3ds/`; `psx3d/vendor/` holds copies of citro2d's and citro3d's private `internal.h`
+and `build/3ds/`; vendored engines live in `core/`, `gba-core/` and
+`systems/nes/core/`. `psx3d/vendor/` holds copies of citro2d's and citro3d's private `internal.h`
 headers, which the renderer and batching code include.
 
 `apps/breadbox.mk` selects packaging, object directories, the system list and the
@@ -54,11 +56,15 @@ from old sketches.
 
 BreadBox has its own version sequence in `apps/breadbox/version.h`
 (`BB_VERSION`, `BB_BUILD`; a build script may still pass the old
-`-DPSX3D_BUILD=...`, which is accepted). `tools/build/title-version.py` turns it
-into the CIA title version: `(16 + 16*major + minor) * 1024 + patch*16 + 15`
-(0.9.0 = 25615, 0.9.1 = 25631, 1.0.0 = 32783; minor 0–15, patch 0–63). The last
-field is 15 for a release; 0–14 are that release's private test builds.
-`VERSION=N` overrides the counter for private test packages; it must fit uint16. Choose test versions at session time
+`-DPSX3D_BUILD=...`, which is accepted). The counter is
+`(16 + 16 * major + minor) * 1024 + patch * 16 + 15`: 0.9.0 is 25615,
+0.9.1 is 25631, and 1.0.0 is 32783. Minor is 0..15, patch is 0..63, and
+major is 0..2. The low four bits are 15 for releases; 0..14 are private
+counters below that release. Pre-0.9.0 counters were private too. Runtime
+displays (Share) recognize releases from 25615 onward; other counters display as
+`test build N`. `tools/build/title-version.py` generates the portable
+`include/breadbox/title_version.h` encoder/decoder/text (`header --check` verifies it). `VERSION=N` overrides the counter for
+private test packages; it must fit uint16. Choose test versions at session time
 above the installed version and below the next planned release. Never downgrade
 or reuse a stale test counter for a live session.
 
@@ -71,8 +77,7 @@ the repository root: RSF RomFS paths are relative to that directory.
 
 ```sh
 make host-tests
-bash tools/layout/check.sh
-bash tools/layout/baseline-check.sh     # core + pinned frame functions against the accepted BreadBox build (tools/layout/baseline.json)
+tools/build/container.sh bash tools/build/ci.sh layout  # build first; requires the qualified public reference
 python3 tools/layout/compare.py /path/to/baseline.elf build/3ds/BreadBox.elf
 python3 tools/layout/check-pinned.py /path/to/baseline.elf build/3ds/BreadBox.elf build/3ds/build-breadbox
 python3 tools/architecture/ownership-guard.py --strict   # shared code owns no system policy
@@ -80,30 +85,76 @@ python3 tools/architecture/ownership-guard.py --strict   # shared code owns no s
 
 ### Accepted-build baseline
 
-`tools/layout/baseline.json` names the BreadBox build every change is measured
-against: CIA 2650 (`ffbe4132`), the room + pause build installed and checked on
-the Old (hardware-tested, not a performance acceptance: its cold-start library
-stall was still open) and the SHA-256 of its `BreadBox.elf`. The ELF is a
-hardware artifact kept outside the repository; `baseline-check.sh` finds it
-through `BREADBOX_BASELINE_ELF` or the recorded path and refuses any other file.
-If neither source is available, the gate prints a clear skip unless
-`BASELINE_BUILD_REFERENCE=1` requests a reference rebuild from Git history. That
-rebuild uses the recorded output path and make arguments: core, blobs, linker
-scripts and pins all come from the accepted commit, not the candidate. A cached reference is reused only when its
-stamp (commit, ELF digest, toolchain, make arguments) still matches. `BASELINE_JOBS`
-(default 3) sets its parallelism; a temporary reference is removed on exit. The
-recorded short `commit` must resolve to `commit_full` before either source is
-trusted. When a baseline is available, it runs
+`tools/layout/baseline.json` preserves the original acceptance identity: CIA 2650,
+commit `ffbe4132ae9099ef355b7db5703498f31def59a2`, ELF SHA-256
+`84e79a1bea4043ce20bae23ea00d5ec50a1bb38f6a24f949326f2ea7334a7656`.
+It was installed and checked on Old 3DS; this was not a speed acceptance and its
+cold-start library stall was open. No new hardware acceptance is claimed here.
+
+The executable reference is now deliberately qualified from public 0.9.0 source,
+the `v0.9.0` tag commit `39148a3c0e2a84ec82ce4ff95a14e9369c1162bd`. Its pinned public archive,
+source epoch and build recipe are in `baseline.json`. The first link is a recorded maintainer-side check of private artifacts, outside
+public CI: qualification first checked the original 2650 ELF against the frozen release
+ELF recorded by `qualification_target_elf_sha256`, using every unchanged exact
+before/after decision in `accepted-2650.json`. All three gates then compared that
+frozen target against the public reconstruction with **no allowances**: sizes,
+cache offsets and instruction words match; only same-symbol literal addresses
+move. This preserves that lineage without exporting private Git history. Historical human notes are provenance, not required test inputs.
+`accepted-changes.json` now holds changes relative to this qualified public reference.
+Frozen frontend/system lists retain all original names and add surviving functions
+from the verified public reference's own objects (`freeze-public.py`). Their
+checksums are bound to its metadata; qualification cannot drop an old pin.
+
+From a clean clone of the public revision carrying these verification tools,
+run the complete verification with no private files:
+
+```sh
+git clone https://github.com/BreadChaser/BreadBox.git
+cd BreadBox
+tools/build/container.sh env BB_BUILD_JOBS=3 bash tools/build/ci.sh all
+```
+
+`ci.sh layout` always runs the reference comparison first. Missing or wrong
+references fail; there is no successful skip. By default `reference.py` fetches
+the public archive, checks its SHA-256, builds it in
+`artifacts/layout-reference/ref`, and verifies every loaded section plus the
+address/size/symbol table against the pinned identity digest. Debug directory
+paths are excluded. Identity tools and the reference build use `LC_ALL=C`:
+GNU nm orders equal-address symbols using locale collation, so the locale must
+be fixed too. No private commit resolution or home-directory artifact is
+needed. Loaded assertion strings include absolute source paths, so reference
+rebuilds use the recorded `/work/artifacts/layout-reference/ref` inside the pinned
+container; they do not discard those loaded bytes from the identity. The only reference-source edit replaces the old driver's hardcoded
+`-j4` with the requested limit; compiler inputs stay unchanged.
+
+An existing reference is reused only after identity verification. To forbid
+fetching/building, set `BASELINE_BUILD_REFERENCE=0`; a missing reference then
+fails. `BREADBOX_BASELINE_ELF` supplies a prebuilt **qualified public** reference
+and is verified identically. `LAYOUT_REFERENCE_OUT` can relocate an existing
+verified cache; rebuilding requires the recorded container path.
+`BASELINE_JOBS` defaults to `BB_BUILD_JOBS` (3). The standalone reference check
+is `bash tools/build/ci.sh baseline [CANDIDATE.elf]`.
+
+Local and CI builds default to three jobs in `ci.sh`; `BB_BUILD_JOBS=N` overrides
+that limit. Direct `make -jN` propagates its jobserver into system-core makes.
+The root build records `SOURCE_DATE_EPOCH`. When it changes, only
+`core/frontend/main.o` and `build/3ds/build-breadbox/clip.o` are invalidated;
+normal make dependencies rebuild their archives and links. Unrelated objects
+remain reusable. A host regression inventories every timestamp-macro source,
+so a new user must be added to this mapping.
+By default a standalone `core-blob.py` uses at most three jobs and half the
+available CPUs; `BB_BUILD_JOBS` can explicitly override that limit.
+Caches are disposable; `make clean` removes owned core/frontend outputs, while
+reference/download/CI artifacts under `artifacts/` remain explicit caches.
+
+The required comparisons are:
 
 - `compare.py`: core regions, symbols and core code words;
-- `check-pinned.py`: size, I-cache set and instruction words of every pinned
-  frontend frame function. Required names are the NEW objects' plus the frozen
-  `pinned-names.json`, so a baseline function that vanished from NEW fails; a name
-  absent from an image needs a reason in `pinned-missing.json`;
-- `check-system-pinned.py`: page offset, size and instruction words of every
-  system frame function and of the GBA core blob. Required systems, objects and
-  names are the union of the candidate's `frame-pins.txt` and the frozen
-  `system-pinned-names.json`: dropping a row, an object or a function fails.
+- `check-pinned.py`: size, I-cache set and instruction words of pinned frontend
+  functions, including the frozen names in `pinned-names.json` and explicit
+  absent-symbol explanations in `pinned-missing.json`;
+- `check-system-pinned.py`: frame functions and core blobs, including frozen
+  system/object names even when a candidate drops a pin row or object.
 
 Words count as relocations only when the value lands inside the same symbol's
 extent in both images, or in the same unnamed read-only block (same gap between
@@ -126,24 +177,24 @@ instruction/size flips, deleted baseline function, deleted pin row, pointer
 look-alike, GBA same-size flips, stale and drifted accepted changes, candidate
 re-records).
 
-Move the baseline forward only after the new build passed on hardware:
+A hardware baseline may move only after fresh hardware acceptance. Preserve its
+build/commit/ELF identity and limitations, qualify its public source recipe, and
+review all frozen-name and per-function changes. Never re-record from an
+unqualified candidate. `baseline_guard.py` continues to restrict `--record` to
+the original accepted hardware ELF; public-source qualification did not grant
+permission to erase the existing frozen name contract.
 
-1. copy its `BreadBox.elf` next to the old one and take its `sha256sum`;
-2. edit `tools/layout/baseline.json`: `build`, **both** `commit` (short) and
-   `commit_full` (`git rev-parse <commit>`), `sha256`, `default_path`,
-   `reference_elf` and `reference_make` (how that commit builds), `note`;
-3. re-record the frozen names **from the accepted ELF with its own objects**
-   (`check-pinned.py` / `check-system-pinned.py BASELINE.elf build/3ds/BreadBox.elf
-   BUILD_DIR --record`, run on the accepted commit's tree; they refuse any other
-   ELF) and review the name-list diff; never record from a candidate;
-4. empty `accepted-changes.json` (its entries are relative to the old baseline) and
-   trim `pinned-missing.json` to what the new pair needs.
+`make host-tests` requires no built ELF or reference download. Real-ELF
+baseline negative controls belong to `ci.sh layout`, which always enforces the
+reference comparison before its controls and stress builds. `BASELINE_META`
+overrides require `BB_LAYOUT_TEST=1` and are for negative controls only.
 
 Host suites need a C compiler, Python, FreeType, libpng, libcurl, zlib, OpenSSL,
-DejaVu fonts, ImageMagick, an ARM Linux cross compiler, and qemu-user. Logs go to
-`HOST_TEST_OUT` or a temporary directory. Skipped suites fail the gate; provide
-missing tools instead of treating skips as passes. `HOST_TEST_ALLOW_SKIPS=1` is
-an explicit local troubleshooting opt-out. Tests use substitutes for SDK and
+ImageMagick, an ARM Linux cross compiler, and qemu-user. Logs go to
+`HOST_TEST_OUT` or a temporary directory; each suite gets its own empty `TMPDIR`
+and `XDG_CACHE_HOME` there and never writes to your home folder. Text widths are
+measured with the bundled `tests/fonts/DejaVuSans.ttf`, not a system font. Skipped suites fail the gate; provide
+missing tools instead of treating skips as passes. Tests use substitutes for SDK and
 hardware services and cannot establish real GPU, audio, SD, or suspend behavior.
 The executable settings contract in [settings.md](settings.md) is consumed by
 the build and menu tests. Presets are validated by `tools/presets/check.py` and

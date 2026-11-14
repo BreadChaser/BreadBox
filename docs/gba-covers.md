@@ -1,6 +1,6 @@
 # Game Boy Advance box art (internals)
 
-The player-facing summary is in the [README](../README.md#getting-started).
+The player-facing summary is in the [getting started guide](getting-started.md).
 
 GBA box art uses the same cover worker, pause/drain transaction, HTTPS driver,
 Wi-Fi backoff, 14-day miss state and RGB565 256x256 `.cv2` textures as PS1.

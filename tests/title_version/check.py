@@ -3,6 +3,8 @@
 import importlib.util
 from pathlib import Path
 import struct
+import subprocess
+import os
 import tempfile
 import sys
 sys.dont_write_bytecode = True
@@ -31,7 +33,7 @@ class Versions(unittest.TestCase):
         # The first public release installs over every private test CIA the owner's consoles ran (all 16xxx,
         # the highest 16641 at the 0.9.0 release) and the header's version is the one packaged.
         self.assertGreater(v.encode('0.9.0'), 16641 + 1000)
-        self.assertEqual(v.header_version(ROOT / 'apps/breadbox/version.h'), '0.9.0')
+        self.assertEqual(v.header_version(ROOT / 'apps/breadbox/version.h'), '0.9.1')
 
     def test_no_alias_or_field_carry(self):
         for version in ['0.16.0', '3.0.0', '2.16.0', '0.0.64', '1.0.64',
@@ -63,6 +65,22 @@ class Versions(unittest.TestCase):
         for n in ['-1', '65536', '5.0', '', '05136']:
             with self.subTest(n=n), self.assertRaises(ValueError):
                 v.counter(n)
+
+    def test_portable_contract(self):
+        subprocess.run([sys.executable, str(ROOT / 'tools/build/title-version.py'), 'header', '--check'], check=True)
+        with tempfile.TemporaryDirectory() as tmp:
+            binary = Path(tmp) / 'portable'
+            subprocess.run([os.environ.get('CC', 'cc'), '-std=c99', '-Wall', '-Wextra', '-Werror',
+                            str(ROOT / 'tests/title_version/portable.c'), '-o', str(binary)], check=True)
+            subprocess.run([str(binary)], check=True)
+        for value in range(65536):
+            result = v.decode(value)
+            if value >= 25615 and value & 15 == 15:
+                self.assertEqual(v.encode('.'.join(map(str, result))), value)
+            else:
+                self.assertIsNone(result)
+        for value in (16641, 25600, 25614, 25616, 25630):
+            self.assertIsNone(v.decode(value))
 
     def test_real_tmd_offsets(self):
         # Nonaligned section sizes, all supported RSA/ECDSA signature layouts.

@@ -12,7 +12,7 @@ include apps/breadbox.mk
 .DEFAULT_GOAL := all
 
 # Builds the PCSX-ReARMed core as a static library, then the BreadBox app.
-.PHONY: all core app cia cxi clean sdk-check host-tests title-version-check
+.PHONY: all core app cia cxi clean sdk-check host-tests title-version-check source-epoch-check
 
 all: app
 
@@ -62,7 +62,10 @@ EXTERN_SYMS += $(UPLOAD_WRAP_SYMS) pica_drawn_blocks pica_drawn_tiles pica_rtt_d
 EXTERN_SYMS += pica_init pica_exit pica_game_begin pica_game_end pica_flush_vertices pica_frame_started pica_frame_ended \
 	pica_texmask pica_texmemo psx3d_skipgate pica_thread_call pica_thread_sync pica_state_lost pica_prepare_present pica_picture pica_stats pica_probe pica_debug pica_vertices pica_submit pica_prims pica_pmu pica_open_frame pica_async pica_double_buffer pica_wait_frame pica_frame_pending pica_dump_vram
 
-core:
+source-epoch-check:
+	+python3 tools/build/source-epoch.py
+
+core: source-epoch-check
 	$(MAKE) -C core -f Makefile.libretro platform=ctr CTR_GPU=pica EXTRA_EXTERN_SYMS="$(EXTERN_SYMS)" EXTRA_WRAP_SYMS="$(WRAP_SYMS)"
 
 # Presets and defaults.ini (docs/settings.md section 6): a changed default stops
@@ -74,7 +77,7 @@ CORE_SYSTEMS := $(patsubst systems/%/core.mk,%,$(wildcard $(SYSTEMS:%=systems/%/
 ifneq ($(CORE_SYSTEMS),)
 .PHONY: system-cores
 system-cores: core
-	python3 tools/build/core-blob.py $(CORE_SYSTEMS)
+	+python3 tools/build/core-blob.py $(CORE_SYSTEMS)
 	python3 tools/build/ps1-arena.py
 	python3 tools/build/system-linker.py $(SYSTEMS)
 app: system-cores
@@ -94,6 +97,7 @@ BANNERTOOL ?= bannertool
 VERSION ?= $(shell python3 tools/build/title-version.py encode $(APP_VERSION_HEADER))
 
 title-version-check:
+	@python3 tools/build/title-version.py header --check
 	@python3 tools/build/title-version.py check $(APP_VERSION_HEADER) '$(VERSION)'
 
 cia: app
@@ -115,6 +119,8 @@ cxi: cia
 clean:
 	$(MAKE) -C core -f Makefile.libretro platform=ctr CTR_GPU=pica EXTRA_EXTERN_SYMS="$(EXTERN_SYMS)" clean
 	$(MAKE) -C build/3ds clean
+	rm -rf build/systems
+	rm -f build/3ds/core-first-breadbox.ld build/3ds/$(APP_OUTPUT).cia build/3ds/$(APP_OUTPUT).cxi build/3ds/$(APP_OUTPUT).map build/3ds/$(APP_OUTPUT).smdh
 
 .PHONY: breadbox
 breadbox: cia

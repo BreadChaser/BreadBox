@@ -35,6 +35,7 @@ static bool durable,rtc_durable,poisoned;
  * game calls acts only on its own live session: a game whose begin was refused (a failed
  * final write of the last game is kept) never touches the other game's kept data. */
 static bool live;
+static bool cont_fresh,cont_hold;   /* the Continue point: see bb_save_pause_take */
 static bool captured;
 static bool sync_ok=true;   /* no writer thread: the last synchronous write's result (end_job) */
 static uint32_t durable_crc;
@@ -49,6 +50,7 @@ static bool battery(void **p)
  return ops && ops->battery && ops->battery(p,&n) && *p && n==ram_bytes;
 }
 static safe_format_t battery_format(void){return (safe_format_t){.size=ram_bytes};}
+#define ONLY_CURRENT (1u<<SAFE_BACKUP | 1u<<SAFE_TEMP)   /* safe_load skip bits */
 /* RTC records sit at odd offsets in the snapshot (after RAM and a flag byte).
  * Cores store whole words (gpSP: STM, which faults unaligned on the 3DS), so
  * ops only ever see this word-aligned copy. rtc_bytes<=244 (bb_save_begin). */
@@ -74,7 +76,10 @@ static bool persist_body(const void *snapshot)
  uint32_t crc=crc32(0,p,ram_bytes);
  if(!ram_bytes || (durable && crc==durable_crc))return true;
  safe_format_t fmt=battery_format();safe_info_t info;
- void *prior=durable?safe_load(battery_path,&fmt,0,&info):NULL;
+ /* The current file (never its backup in its place) goes to history before it becomes the backup;
+  * one the SD card cannot read stops the write. A damaged one is parked as .bad by safe_write. */
+ void *prior=durable?safe_load(battery_path,&fmt,ONLY_CURRENT,&info):NULL;
+ if(durable && !prior && info.outcome!=SAFE_ABSENT && info.outcome!=SAFE_DAMAGED)return false;
  if(prior && !history_add_quiet(key,HIST_SAVE,".sav",prior,ram_bytes)){free(prior);return false;}
  free(prior);
  if(!safe_write(battery_path,&fmt,p,true))return false;
@@ -134,16 +139,14 @@ static safe_format_t state_format(void)
 {return (safe_format_t){.size=sizeof(state_header)+core_bytes+ram_bytes,.head=sizeof(state_header),.valid=header_valid,.deep=payload_valid};}
 static bool slot_path(unsigned slot,char *p,size_t n)
 {return live && slot<=BB_SLOT_LAST && snprintf(p,n,"%s.state%u",state_base,slot)<(int)n;}
+/* A state may be there: the file, its backup or a good unfinished copy, or the SD card could not
+ * say (safe_stat). Continue discovery asks then: an unreadable Continue is never taken for none. */
 bool bb_save_exists(unsigned slot)
-{char p[512];struct stat st;return slot_path(slot,p,sizeof(p)) && !stat(p,&st);}
-/* Known to be missing: only "no such file" proves it. Any other stat error (an SD read error) is not
- * proof, so a postcard that may be there is never offered as free and written over. */
+{char p[512];safe_format_t fmt=state_format();return slot_path(slot,p,sizeof(p)) && safe_stat(p,&fmt,NULL);}
+/* Known to be missing: only "no such file" proves it (safe_name). Any other stat error (an SD read
+ * error) is not proof, so a postcard that may be there is never offered as free and written over. */
 bool bb_save_absent(unsigned slot)
-{
- char p[512];struct stat st;
- if(!slot_path(slot,p,sizeof(p)))return false;
- errno=0;return stat(p,&st) && errno==ENOENT;
-}
+{char p[512];return slot_path(slot,p,sizeof(p)) && safe_name(p,NULL)==SAFE_NAME_ABSENT;}
 static uint32_t slots_one_by_one(void)   /* unsure = used */
 {
  uint32_t present=0;
@@ -220,12 +223,12 @@ bool bb_save_picture(uint16_t *px,unsigned *w,unsigned *h)
 }
 bool bb_save_slot_info(unsigned slot,bb_slot_info *info,uint16_t *px)
 {
- char path[512],p[544];state_header h;thumb_header t;struct stat st;
+ char path[512],p[544];state_header h;thumb_header t;
  memset(info,0,sizeof(*info));
  if(!slot_path(slot,path,sizeof(path)))return false;
  snprintf(p,sizeof(p),"%s.bak",path);
- bool cur=!stat(path,&st);
- info->used=cur || !stat(p,&st);
+ safe_name_t at=safe_name(path,NULL);bool cur=at==SAFE_NAME_PRESENT;
+ info->used=at!=SAFE_NAME_ABSENT || safe_name(p,NULL)!=SAFE_NAME_ABSENT;   /* unsure = used */
  if(!cur)return true;
  FILE *f=fopen(path,"rb");bool ok=f && fread(&h,1,sizeof(h),f)==sizeof(h);if(f)fclose(f);
  if(!ok || memcmp(h.magic,state_magic(),8))return true;
@@ -241,10 +244,13 @@ bool bb_save_slot_info(unsigned slot,bb_slot_info *info,uint16_t *px)
 }
 bool bb_save_delete(unsigned slot)
 {
- char path[512],bak[520],thm[544],ext[16];struct stat st;
+ char path[512],bak[520],thm[544],ext[16];
  if(bb_slot_card((int)slot)<0 || !slot_path(slot,path,sizeof(path)))return false;
  snprintf(bak,sizeof(bak),"%s.bak",path);snprintf(thm,sizeof(thm),"%s.thm",path);snprintf(ext,sizeof(ext),".state%u",slot);
- bool cur=!stat(path,&st),old=!cur && !stat(bak,&st);
+ /* a postcard (or its backup) the SD card cannot answer for is never removed unseen by the backups */
+ safe_name_t at=safe_name(path,NULL),at_bak=at==SAFE_NAME_ABSENT?safe_name(bak,NULL):SAFE_NAME_ABSENT;
+ if(at==SAFE_NAME_UNREADABLE || at_bak==SAFE_NAME_UNREADABLE){notice("Could not delete: the SD card could not be read.");return false;}
+ bool cur=at==SAFE_NAME_PRESENT,old=at_bak==SAFE_NAME_PRESENT;
  /* Like PS1: the deleted state is moved to the backups, never just erased. */
  if((cur || old) && !history_adopt(key,HIST_DELETE,ext,cur?path:bak,NULL,bb_save_time(cur?path:bak,state_magic()),NULL)){
   notice("Could not delete: the save could not be moved to the backups.");return false;
@@ -287,7 +293,7 @@ bool bb_save_state(unsigned slot,bool save)
    * restore it after success AND partial failure, reacquiring relocated RAM. */
   ok=ok && !info.weak && payload_valid(h,fmt.size) && bb_save_flush();
   safe_format_t bf=battery_format();safe_info_t bi;
-  void *ram_save=ok && ram_bytes?safe_load(battery_path,&bf,0,&bi):NULL;
+  void *ram_save=ok && ram_bytes?safe_load(battery_path,&bf,ONLY_CURRENT,&bi):NULL;   /* just flushed: never an older copy */
   void *rtc=ok && rtc_bytes?malloc(rtc_bytes):NULL;
   if(ok && ((ram_bytes && !ram_save) || (rtc_bytes && !rtc)))ok=false;
   bool has_rtc=ok && rtc_bytes && ops->rtc_get(rtc,rtc_bytes);
@@ -302,6 +308,8 @@ bool bb_save_state(unsigned slot,bool save)
   }
   free(rtc);free(ram_save);
   if(ok && info.from!=SAFE_CURRENT)safe_repair(path,&fmt,h,info.from);
+  /* a Continue the SD card could not read stays: nothing makes a new one over it this session */
+  if(!ok && slot==BB_SLOT_CONTINUE && (info.outcome==SAFE_UNREADABLE || info.outcome==SAFE_NO_MEMORY))cont_hold=true;
  }
  free(h);
  if(!save && ok && config.restored)config.restored();
@@ -526,7 +534,6 @@ static state_job *state_take(unsigned slot,bool quiet)
  * hold: the Continue question is unanswered, or the player went back from it: nothing makes one. */
 static struct {bb_later_task task;state_job *job;} pause_cell[2];
 static state_job *pause_taken;
-static bool cont_fresh,cont_hold;
 static void pause_write(void *arg)
 {
  state_job *j=arg;
@@ -585,8 +592,8 @@ void bb_save_continue_hold(bool hold){cont_hold=hold;}
  * absent): it stays, and nothing makes a Continue point this session (hold). The caller does not start over. */
 static bool aside(const char *file,hist_kind_t kind,const char *thm)
 {
- struct stat st;
- if(stat(file,&st))return errno==ENOENT;
+ safe_name_t at=safe_name(file,NULL);
+ if(at!=SAFE_NAME_PRESENT)return at==SAFE_NAME_ABSENT;
  return history_adopt(key,kind,".state10",file,thm,bb_save_time(file,state_magic()),NULL);
 }
 bool bb_save_continue_aside(void)
@@ -857,6 +864,20 @@ static bool damaged_choice(const char *path,bool clock,void *ram)
  notice(clock?"The game clock starts over.":"Started with an empty game save.");
  return true;
 }
+/* No copy of a battery/clock file came back (safe_load's outcome): only "no such file" starts
+ * empty; a damaged one asks the player; a file the SD card could not read (or no memory) stops
+ * the game before anything can be written over it. */
+typedef enum {START_EMPTY,START_FAIL,START_DECLINED} start_t;
+static start_t start_without(const char *path,bool clock,void *ram,safe_outcome_t outcome)
+{
+ switch(outcome){
+ case SAFE_ABSENT:return START_EMPTY;
+ case SAFE_DAMAGED:return damaged_choice(path,clock,ram)?START_EMPTY:damage_error[0]?START_FAIL:START_DECLINED;
+ default:
+  {char line[96];snprintf(line,sizeof(line),"%s could not be read: not started",clock?"clock":"battery");save_log(line);}
+  return START_FAIL;
+ }
+}
 bool bb_save_begin(const bb_save_config *c,char *error,size_t cap)
 {
  damage_error[0]=0;
@@ -891,14 +912,12 @@ bool bb_save_begin(const bb_save_config *c,char *error,size_t cap)
    rtc_words v;memcpy(&v,(char *)p+8,rtc_bytes);bool ok=ops->rtc_set(&v,rtc_bytes);
    if(ok){memcpy(saved_rtc,p,fmt.size);rtc_durable=true;if(info.from!=SAFE_CURRENT)safe_repair(rtc_path,&fmt,p,info.from);}
    free(p);if(!ok)goto fail;
-  }else if(info.failed)goto fail;
-  else if(info.rejected && !damaged_choice(rtc_path,true,NULL)){if(damage_error[0])goto fail;goto declined;}
+  }else switch(start_without(rtc_path,true,NULL,info.outcome)){case START_FAIL:goto fail;case START_DECLINED:goto declined;default:break;}
  }
  if(ram_bytes){
   safe_format_t fmt=battery_format();safe_info_t info;void *p=safe_load(battery_path,&fmt,0,&info);
   if(p){memcpy(ram,p,ram_bytes);durable=true;if(info.from!=SAFE_CURRENT){safe_repair(battery_path,&fmt,p,info.from);notice("Battery save restored from backup.");}free(p);}
-  else if(info.failed)goto fail;
-  else if(info.rejected && !damaged_choice(battery_path,false,ram)){if(damage_error[0])goto fail;goto declined;}
+  else switch(start_without(battery_path,false,ram,info.outcome)){case START_FAIL:goto fail;case START_DECLINED:goto declined;default:break;}
   durable_crc=crc32(0,ram,ram_bytes);
  }
  writer=(ram_bytes || rtc_bytes)?save_writer_start(snapshot_bytes,persist,c->writer_core):NULL;

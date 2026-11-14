@@ -81,7 +81,7 @@ static Result svcFlushProcessDataCache(Handle h,uintptr_t at,size_t n){
 void gpsp_ctr_clear_cache(void){assert(flushes==icaches+1);icaches++;__builtin___clear_cache((char *)ndrc_bss,(char *)ndrc_bss+sizeof(ndrc_bss));}
 static Result svcCloseHandle(Handle h){assert(h==42);closes++;return 0;}
 /* No svcControlMemory fake: wrong protection API cannot link. */
-#include "../../app/ui/breadbox_arena.c"
+#include BB_ARENA_FIXTURE_SOURCE
 #ifndef LEGACY_HANDOFF
 #include "../../systems/ps1/exec.c"
 #define svcControlProcessMemory bb_ps1_exec_request

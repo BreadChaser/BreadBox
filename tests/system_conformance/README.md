@@ -11,6 +11,11 @@ The PS1 partial driver additionally requires ARM Linux GCC and qemu-arm
 GBA uses the real gpSP **native interpreter**, its bundled open BIOS and an
 original generated CC0 cartridge (`make-gba.py`). NES uses the real QuickNES
 core and the existing CC0 generator, now with an audible pulse channel.
+The NES harness explicitly selects GNU C++20, matching the pinned devkitARM
+compiler's default dialect. C++20 defines signed left shifts modulo the type
+width, including the audio delta shift; older host defaults (such as GCC 12's
+C++17) misclassify that operation. ASan/UBSan remain fully enabled; controls
+reject invalid shift counts and signed addition overflow.
 Generated ROMs, objects and save files live in a private temporary directory
 and are deleted on success or failure. No commercial ROM or external BIOS is
 used. `BB_CONFORMANCE_BUILD=/absolute/private/path` retains a local debug build

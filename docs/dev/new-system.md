@@ -100,8 +100,8 @@ Rules the build enforces:
 ## 4. Gates before a console sees it
 
 1. **PS1 core unchanged.** Adding a system must not move the PS1 core.
-   - `tools/layout/baseline-check.sh` compares the new ELF with the accepted
-     BreadBox build (`tools/layout/baseline.json`): core regions and core code
+   - `tools/layout/baseline-check.sh` compares the new ELF with the qualified
+     public BreadBox reference (`tools/layout/baseline.json`): core regions and core code
      words, the size and instructions of every pinned frame function, and the
      system frame pins. CI runs it.
 2. **BreadBox layout.** Run `tools/layout/check-pinned.py` and

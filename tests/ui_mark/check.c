@@ -27,9 +27,18 @@ int main(void)
 		for (float w = 2; w < 260; w += 7) {
 			float x0 = 54, x1 = x0 + w;
 			ui_mark_geo a, b;
+			memset(&a, 0xa5, sizeof(a)); memset(&b, 0x5a, sizeof(b));
 			ui_mark_layout(x0, x1, line, row, 1, &a);
 			ui_mark_layout(x0, x1, line, row, 1, &b);
-			assert(!memcmp(&a, &b, sizeof(a)));                      /* stable frame to frame */
+			/* Only active slices belong to the output contract; unused slots and
+			 * padding keep the deliberately different poison above. */
+			assert(a.variant == b.variant && a.n == b.n);
+			assert(a.top == b.top && a.bottom == b.bottom && a.tilt == b.tilt);
+			assert(a.x0 == b.x0 && a.x1 == b.x1);
+			for (int i = 0; i < a.n; i++) {
+				assert(a.s[i].x0 == b.s[i].x0 && a.s[i].x1 == b.s[i].x1);
+				assert(a.s[i].u0 == b.s[i].u0 && a.s[i].u1 == b.s[i].u1);
+			}
 			assert(a.variant == row % UI_MARK_VARIANTS);
 			assert(fabsf(a.x0 - (x0 - UI_MARK_BEFORE)) < 1e-3f);
 			assert(a.x1 >= x1 + UI_MARK_AFTER - 1e-3f && a.x1 - a.x0 >= UI_MARK_MIN_W - 1e-3f);

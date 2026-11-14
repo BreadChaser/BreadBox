@@ -40,6 +40,7 @@ bool bb_disc_is_ps1_chd(const char *path) { (void)path; return true; }
 #define SYSCLOCK_ARM11 268111856ULL
 #endif
 #include "../../../systems/ps1/library.c"
+#include "../../common/test_tmpdir.h"
 
 static int failures, checks;
 #define CHECK(c) do { checks++; if (!(c)) { failures++; \
@@ -281,8 +282,8 @@ static void test_playlist_hash(void)
 
 int main(void)
 {
-	char dir[] = "/tmp/bb-library-XXXXXX";
-	if (!mkdtemp(dir) || chdir(dir)) {
+	char dir[4096];
+	if (!test_mkdtemp(dir, sizeof(dir), "bb-library") || chdir(dir)) {
 		printf("no temp directory\n");
 		return 2;
 	}

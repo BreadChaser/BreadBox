@@ -21,6 +21,7 @@
 #include "share.h"
 #include "ui_motion.h"
 #include "breadbox_credits.h"
+#include "title_version.h"
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -49,13 +50,15 @@ static volatile u32 served_count;
 static Thread server_thread;
 static int listen_fd = -1;
 
-// Title version as the Makefile builds it: (major*16+minor)<<10 | patch+3.
-static const char *version_text(u16 v)
+// Is the file the build running here? An installed title compares its own
+// counter (a test build's too); a 3DSX can only compare release text.
+static bool same_as_running(u16 file_version, const char *file_text)
 {
-	static char s[16];
-	int p = (v & 15) - 3;
-	snprintf(s, sizeof(s), "%d.%d.%d", (v >> 10) / 16, (v >> 10) % 16, p < 0 ? 0 : p);
-	return s;
+	u64 self = SELF_TITLE;
+	AM_TitleInfo running;
+	if (!envIsHomebrew() && R_SUCCEEDED(AM_GetTitleInfo(MEDIATYPE_SD, 1, &self, &running)))
+		return running.version == file_version;
+	return !strcmp(file_text, BB_VERSION);
 }
 
 // AM reads the CIA's own title ID and version: only a real PSX3D CIA is served.
@@ -77,8 +80,10 @@ static bool find_cia(void)
 		    R_SUCCEEDED(FSFILE_GetSize(h, &bytes)) && bytes) {
 			snprintf(cia_path, sizeof(cia_path), "%s", cia_paths[i]);
 			cia_size = bytes;
-			snprintf(cia_note, sizeof(cia_note), "" APP_NAME " %s%s", version_text(info.version),
-			         strcmp(version_text(info.version), BB_VERSION) ? ". This file differs from the version running here" : "");
+			char version[24];
+			bb_title_version_text(version, sizeof(version), info.version);
+			snprintf(cia_note, sizeof(cia_note), "" APP_NAME " %s%s", version,
+			         same_as_running(info.version, version) ? "" : ". This file differs from the version running here");
 		}
 		FSFILE_Close(h);
 	}

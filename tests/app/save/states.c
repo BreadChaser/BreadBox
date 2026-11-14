@@ -16,6 +16,8 @@
 #include <stdarg.h>
 #include <limits.h>
 #include <stdio.h>
+#include <unistd.h>
+#include "../../common/test_tmpdir.h"
 
 struct PcsxSaveFuncs SaveFuncs;
 PcsxConfig Config;
@@ -394,16 +396,18 @@ static void trailer(void)
 		CHECK(__wrap_retro_serialize(again, STATE_SIZE));
 		const state_trailer_t *t2 = state_trailer(again, STATE_SIZE, NULL);
 		CHECK(t2 && t2->id != first);
-		FILE *f = fopen("/tmp/psx3d-states-info.bin", "wb");
+		char info[4096];
+		snprintf(info, sizeof(info), "%s/psx3d-states-info-%ld.bin", test_tmp_base(), (long)getpid());
+		FILE *f = fopen(info, "wb");
 		fwrite(again, 1, STATE_SIZE, f);
 		fclose(f);
 		unsigned reason, saved, id;
-		CHECK(state_file_info("/tmp/psx3d-states-info.bin", &reason, &saved, &id) && id == t2->id && saved == t2->saved);
-		f = fopen("/tmp/psx3d-states-info.bin", "wb");
+		CHECK(state_file_info(info, &reason, &saved, &id) && id == t2->id && saved == t2->saved);
+		f = fopen(info, "wb");
 		fwrite(good, 1, 1000, f);   // no trailer
 		fclose(f);
-		CHECK(!state_file_info("/tmp/psx3d-states-info.bin", &reason, &saved, &id) && !id && !saved);
-		remove("/tmp/psx3d-states-info.bin");
+		CHECK(!state_file_info(info, &reason, &saved, &id) && !id && !saved);
+		remove(info);
 		free(again);
 		t = state_trailer(good, STATE_SIZE, &crc_ok);
 	}

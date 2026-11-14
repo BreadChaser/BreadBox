@@ -6,6 +6,8 @@ from contextlib import nullcontext
 r=Path(__file__).resolve().parents[2]
 def run(args, **kw): subprocess.run(list(map(str,args)),check=True,**kw)
 resource.setrlimit(resource.RLIMIT_CORE,(0,0))
+jobs=os.environ.get('BB_BUILD_JOBS','3')
+assert jobs.isdecimal() and int(jobs)>0
 sid=sys.argv[1]
 if sid not in ('gba','nes'): raise SystemExit('No host runtime driver for '+sid)
 build=os.environ.get('BB_CONFORMANCE_BUILD')
@@ -18,12 +20,13 @@ with (nullcontext(build) if build else tempfile.TemporaryDirectory(prefix='bb-co
  san='-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer'
  if sid=='gba':
   run(['make','-s','-C',p,'-f',r/'gba-core/Makefile','CORE_DIR='+str(r/'gba-core'),'platform=unix','HAVE_DYNAREC=0','CPU_ARCH=',
-       'OPTIMIZE=-O1 -g','EXTRA_CFLAGS='+san,'LDFLAGS='+san,'SHARED=-shared','-j4'])
+       'OPTIMIZE=-O1 -g','EXTRA_CFLAGS='+san,'LDFLAGS='+san,'SHARED=-shared','-j'+jobs])
   lib=p/'gpsp_libretro.so';rom=p/'fixture.gba'
   run([sys.executable,r/'tests/system_conformance/make-gba.py',rom])
  else:
+  run([sys.executable,r/'tests/system_conformance/dialect.py',p])
   run(['make','-s','-C',p,'-f',r/'systems/nes/core/Makefile','CORE_DIR='+str(r/'systems/nes/core'),'CXX=c++','AR=ar',
-       'FLAGS=-O1 -g -DNDEBUG -fPIC -DNO_UNALIGNED_ACCESS -D__LIBRETRO__ -fno-rtti -fno-exceptions -DGIT_VERSION=\\"26bb785\\" '+san,'-j4'])
+       'FLAGS=-std=gnu++20 -O1 -g -DNDEBUG -fPIC -DNO_UNALIGNED_ACCESS -D__LIBRETRO__ -fno-rtti -fno-exceptions -DGIT_VERSION=\\"26bb785\\" '+san,'-j'+jobs])
   lib=p/'quicknes.so';rom=p/'fixture.nes'
   run(['c++','-shared',*san.split(),'-Wl,--whole-archive',p/'quicknes_libretro_ctr.a','-Wl,--no-whole-archive','-o',lib])
   run([sys.executable,r/'systems/nes/tests/make-rom.py',rom])

@@ -130,7 +130,7 @@ def production(tree):
     prog = prog.replace('INSTALL', c_literal(credits, r'(static const char \*const install_pages\[\]\s*=\s*\{.*?\n\};)', 'install pages'))
     c_literal(pause_inc, r'(over_failed\?UI_CONTINUE_OVER_FAILED:NULL)', 'the Continue question\'s red foot (its ui_words.h words)')
     prog = prog.replace('START_OVER_TEXT', c_literal(pause, r'ui_confirm_action\("Start over\?",("(?:[^"\\]|\\.)*")', 'the Start over question'))
-    with tempfile.TemporaryDirectory(dir=Path.home() / '.cache') as td:
+    with tempfile.TemporaryDirectory() as td:
         c = Path(td) / 'strings.c'
         c.write_text(prog)
         subprocess.run(['cc', '-std=gnu11', '-Wall', '-Werror', '-I' + str(tree / 'include/breadbox'), '-I' + str(tree / 'apps/breadbox'),
@@ -173,7 +173,7 @@ def failures(tree):
 
 def negative_control():
     """One oversized production string in a copy of the sources must fail the suite."""
-    with tempfile.TemporaryDirectory(dir=Path.home() / '.cache') as td:
+    with tempfile.TemporaryDirectory() as td:
         tree = Path(td)
         for d in ('include/breadbox', 'apps/breadbox', 'app/ui/components'):
             shutil.copytree(root / d, tree / d)

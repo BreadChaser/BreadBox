@@ -19,7 +19,6 @@ are adapted to match the 3DS. Production sources are never rewritten in place.
   repeat; every frame's RAM/GPR/CP2 digest and cycle count must match.
 
 Missing tools return SKIP (77). tools/build/host-tests.sh rejects any skipped
-suite by default; HOST_TEST_ALLOW_SKIPS=1 explicitly allows a local partial run.
-CI installs the prerequisites and forces skips to fail. These are correctness
+suite. CI installs the prerequisites and forces skips to fail. These are correctness
 checks, not a model of real PICA rendering, Old 3DS cache behavior, or threads.
 The ROM-based 13-heavy/6-standard/68-HLE gate remains an additional local gate.

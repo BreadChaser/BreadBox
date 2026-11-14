@@ -5,9 +5,7 @@
 #include "bb_final.h"
 #include "bb_save.h"
 bool breadbox_import_busy(void){return false;}
-static bool open_fail,allocation_fail;
-FILE *__real_fopen(const char *,const char *);
-FILE *__wrap_fopen(const char *p,const char *m){return open_fail && strchr(m,'w')?NULL:__real_fopen(p,m);}
+static bool allocation_fail;   /* open_fail and the fopen wrapper: cards.c */
 void *__real_malloc(size_t);void *__real_calloc(size_t,size_t);
 void *__wrap_malloc(size_t n){return allocation_fail?NULL:__real_malloc(n);}
 void *__wrap_calloc(size_t n,size_t z){return allocation_fail?NULL:__real_calloc(n,z);}
@@ -53,5 +51,18 @@ int main(void)
  char label[600];assert(cards_trouble(label,sizeof(label))==CARD_TROUBLE_MEMORY);
  cards_accept();pattern(ram,9);pattern(Mcd2Data,11);assert(cards_save_now()==CARD_WRITE_CLEAN);
  assert(access("oom.srm",F_OK) && access("oom2.mcd",F_OK));allocation_fail=false;cards_end();
- puts("PS1 all card modes: open/write/close/rename failures, core destruction/retry, exact header bytes, allocation refusal PASS");return 0;
+ /* Review A finding 1: Try again after the card file changed its header (VGS -> DexDrive) with no
+  * memory for the bigger image: nothing is written past the old one, the card stays locked; with
+  * memory again it loads (ASan). */
+ assert(!mkdir("header-retry",0700) && !chdir("header-retry"));history_set_root("hist");
+ put_card("card2.mcd",64,31);cards_begin("game.srm");char retry_path[]="card2.mcd";
+ sd_err.name="card2.mcd";sd_err.error=EIO;sd_err.on=ON_OPEN;__wrap_LoadMcd(2,retry_path);sd_err.name=NULL;
+ assert(cards_trouble(label,sizeof(label))==CARD_TROUBLE_MEMORY);
+ put_card("card2.mcd",3904,33);
+ allocation_fail=true;assert(!cards_retry());allocation_fail=false;
+ assert(cards_trouble(label,sizeof(label))!=CARD_TROUBLE_NONE);
+ unsigned char want[CARD];pattern(want,33);
+ assert(cards_retry() && !memcmp(Mcd2Data,want,CARD));verify("card2.mcd",33,3904);
+ cards_end();assert(!chdir(".."));
+ puts("PS1 all card modes: open/write/close/rename failures, core destruction/retry, exact header bytes, allocation refusal, header change on retry without memory PASS");return 0;
 }

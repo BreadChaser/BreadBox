@@ -5,6 +5,7 @@
 | palm_single.svg | "Palm Tree" by Algot Runeman (runeman.org) | CC0 |
 | palm_bushy.svg, palms_pair_a.png, palms_pair_b.png | palm tree silhouettes | CC0 |
 | Michroma-Regular.ttf | Michroma by Vernon Adams | SIL OFL 1.1 (Michroma-OFL.txt) |
+| tests/fonts/DejaVuSans.ttf (host tests only, not shipped) | DejaVu Sans 2.37 by the DejaVu fonts team, from Bitstream Vera (Bitstream, Inc.) and Arev (Tavmjong Bah) | Bitstream Vera and Arev font licenses ([license](../../tests/fonts/LICENSE-DejaVu.txt)) |
 
 ## BreadClip logo
 
@@ -24,7 +25,10 @@ SIL OFL 1.1 ([license](ArchivoBlack-OFL.txt)).
 [Dreamstale](https://www.flaticon.com/authors/dreamstale) from
 [Flaticon](https://www.flaticon.com), used under the Flaticon free licence
 (attribution required). Credit: "Icons by Dreamstale from Flaticon". They are
-**not** covered by PSX3D's GPL licence and are not for reuse outside PSX3D.
+**not** covered by BreadBox's GPL licence. Reuse requires compliance with the
+[Flaticon license terms](https://www.flaticon.com/legal#nav-flaticon): retain
+the required author/Flaticon attribution, and do not redistribute the icons
+as standalone assets or an icon collection.
 Only the icons the app draws ship, as small alpha masks (`tools/icons/icons.tsv`
 lists each one; `tools/icons/fetch.sh` and `pack.py` rebuild the file from the
 originals, which are not in the repository).

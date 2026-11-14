@@ -6,7 +6,7 @@ The required names are the union of the NEW objects' pinned functions and pinned
 the list frozen from the accepted baseline (--record rewrites it from NEW objects found in
 BASE). A name absent from either image fails unless pinned-missing.json lists it with a
 reason; a function only in NEW has no baseline code and is reported as new."""
-import collections, json, os, re, subprocess, sys
+import collections, json, os, subprocess, sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import accepted, baseline_guard, compare, hotcode
@@ -15,9 +15,8 @@ base, new, build = [a for a in sys.argv[1:] if not a.startswith('--')][:3]
 record = '--record' in sys.argv
 if record: baseline_guard.require_accepted(base)
 ld = open(build + '/../core-first.ld').read()
-objs = sorted({'audio','audio_resample','audio_tsm','display','emu','gamecfg',
- 'gpu_cache','gpustereo','gpustereo_core','input','libui','picadirect',
- 'renderqueue','statsview','ui','ps1_controls','ui_play_controls','uploadskip','video','widescreen'})
+from pin_contract import FRONTEND_OBJECTS, frontend_names
+objs = sorted(FRONTEND_OBJECTS)
 # Local C names can repeat (e.g. statsview.c and cheats.c both have parse).
 # Retain all definitions instead of silently comparing the last unrelated one.
 def syms(elf):
@@ -26,16 +25,6 @@ def syms(elf):
         p = l.split()
         if len(p) == 3 and p[1] in 'tT': out[p[2]].add(int(p[0], 16))
     return out
-def defined(obj):
-    out = set()
-    for l in subprocess.run([NM, f'{build}/{obj}.o'], capture_output=True, text=True, check=True).stdout.splitlines():
-        p = l.split()
-        if len(p) == 3 and p[1] in 'tT': out.add(p[2])
-    # Cold helpers are deliberately outside the per-frame contract. Use the
-    # object's section table, not a hand-maintained list of function names.
-    table = subprocess.check_output([NM.replace('nm', 'objdump'), '-t', f'{build}/{obj}.o'], text=True)
-    cold = {l.split()[-1] for l in table.splitlines() if '.psx3d_cold.text' in l}
-    return out - cold
 b, n = syms(base), syms(new)
 bad = total = 0
 allow_missing = json.loads(Path(os.environ.get('PINNED_MISSING') or Path(__file__).with_name('pinned-missing.json')).read_text())['names']
@@ -53,12 +42,7 @@ used_accept = set()
 frame_names = set()
 recorded = {}
 for o in sorted(set(objs) | set(frozen)):
-    names = defined(o) if (Path(build) / f'{o}.o').exists() else set()
-    # Partial shared-UI objects: only explicitly selected per-frame primitives
-    # belong to this block; the rest remain movable menu code.
-    if o in ('ui', 'libui', 'gpustereo_core'):
-        blocks=re.findall(r'\b'+o+r'\.o\(([^)]*)\)',ld)
-        names &= {name for block in blocks for name in re.findall(r'\.text\.(?:unlikely\.)?([a-z_0-9.]+)',block)}
+    names = frontend_names(build, o, ld)
     if record:
         recorded[o] = sorted(s for s in names if s in b or s in allow_missing)
         continue

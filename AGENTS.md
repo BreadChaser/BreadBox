@@ -17,7 +17,7 @@ one-time import from `sdmc:/3ds/PSX3D` remain live BreadBox compatibility code.
   the folder picker's shallow look for games in the 3DS's own root folders.
   `welcome.c` is the first-launch welcome's flag (`welcome` in config.ini) and
   words; `home_welcome.inc` tours the room with it (`bb_welcome_open()` for
-  Settings > Help; dev `ui welcome`). `place_cards.c`: the room cards' lines.
+  Settings > About > Welcome; dev `ui welcome`). `place_cards.c`: the room cards' lines.
 - `app/settings/`: the Settings pages (one list per page, a page stack; adapters own the rows);
   `app/ui/ui_mark.c` the selection highlighter (`ui_mark.h`, masks from `tools/ui/mark_masks.py`);
   `app/ui/ui_font.c` where the loaded fonts' letters stand (`UI_PAPER_TOP` puts text on ruled lines with any font; test `tests/text_baseline`);
@@ -34,6 +34,12 @@ one-time import from `sdmc:/3ds/PSX3D` remain live BreadBox compatibility code.
   holds the words every system says alike (postcards), defines only.
   `bb_registry.h` declares the registry; `tools/build/systems-table.py` generates
   its table from `SYSTEMS` in `apps/breadbox.mk`.
+  `tools/build/title-version.py` generates `include/breadbox/title_version.h`
+  (encode/decode/text); Share shows CIA versions with it (test `share-room`).
+  `source-epoch.py` invalidates timestamp-bearing objects when the epoch changes;
+  `jobs.py` preserves caller jobserver tokens and bounds standalone core builds.
+  `tests/layout_baseline/build_contract.py` checks these build contracts;
+  real-ELF controls in `check.py` run in the CI layout stage.
 - `app/ui/room_*.c`: the room main menu (`room_bbr.c` portable BBR v3 tables,
   styles, camera and library case; `room_scene.c` GPU draw and final dither pass;
   `room_walls.c`/`room_board.c` the poster and corkboard). Themes are room styles
@@ -63,15 +69,22 @@ bash tests/save_service/run.sh
 bash tests/app/save/run.sh
 bash tests/update/run.sh
 python3 tests/main_lifecycle/check.py
-bash tools/layout/check.sh
-bash tools/layout/baseline-check.sh
 python3 tools/architecture/ownership-guard.py --strict
+tools/build/container.sh bash tools/build/ci.sh layout   # both layout gates, after a build
+tools/build/container.sh bash tools/build/ci.sh all      # exactly what GitHub CI runs
 ```
 
 Old 3DS code placement affects performance: `build/3ds/core-first.ld` pins the
 core and frame functions. Keep both layout gates passing; accept intentional
 changes per function in `tools/layout/accepted-changes.json`, never by moving
-the baseline. Mark cold menus/saves `PSX3D_COLD` (`cold_code.h`). Speed claims
+the reference. The original build-2650 acceptance identity remains in `baseline.json`;
+`reference.py` verifies/rebuilds the qualified public-source reference;
+`pin_contract.py` shares pin discovery with checks and `freeze-public.py` extends
+original names only from that verified reference.
+`accepted-2650.json` retains the exact qualification lineage.
+`function-diff.py BASE.elf NEW.elf` lists every function whose code differs
+(run in the container; same path, epoch and commit for both builds).
+Mark cold menus/saves `PSX3D_COLD` (`cold_code.h`). Speed claims
 require Old hardware. Shared code holds no system policy; adapters own it.
 UI uses shared components/tokens and American English.
 See `docs/building.md`, `docs/dev/save-service.md`, `docs/auto-update.md`.

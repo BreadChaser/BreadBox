@@ -29,13 +29,13 @@ tool() { # tool <name>: clone the repository at the locked commit
 tool makerom
 # Pinned upstream has a macro/enum collision that corrupts title versions.
 patch -d "$src/makerom" -p0 < "$here/makerom-version-fix.patch"
-make -C "$src/makerom/makerom" deps -j"$(nproc)" >/dev/null
-make -C "$src/makerom/makerom" -j"$(nproc)" >/dev/null
+make -C "$src/makerom/makerom" deps -j"${BB_BUILD_JOBS:-3}" >/dev/null
+make -C "$src/makerom/makerom" -j"${BB_BUILD_JOBS:-3}" >/dev/null
 install -m 755 "$src/makerom/makerom/bin/makerom" "$prefix/bin/makerom"
 
 tool bannertool
 git -C "$src/bannertool" submodule update --init -q   # buildtools, pinned by the gitlink
-make -C "$src/bannertool" -j"$(nproc)" >/dev/null
+make -C "$src/bannertool" -j"${BB_BUILD_JOBS:-3}" >/dev/null
 install -m 755 "$src/bannertool/output/linux-x86_64/bannertool" "$prefix/bin/bannertool"
 
 # Both exit non-zero when run without arguments; this only shows that they start.

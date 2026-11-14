@@ -217,7 +217,16 @@ charWidthInfo_s *C2D_FontGetCharWidthInfo(C2D_Font f,int index)
 void C2D_TextGetDimensions(C2D_Text *t,float sx,float sy,float *w,float *h)
 {
  float width=0;
- for(const char *p=t->text;*p;p++) width+=C2D_FontGetCharWidthInfo(t->font,*p)->charWidth;
+ /* Citro2D consumes Unicode codepoints, not the bytes of a UTF-8 string. */
+ for(const unsigned char *p=(const unsigned char *)t->text;*p;) {
+  u32 ch=*p++;
+  unsigned extra=ch<0x80?0:(ch&0xe0)==0xc0?1:(ch&0xf0)==0xe0?2:(ch&0xf8)==0xf0?3:0;
+  if(extra) {
+   ch &= (1u<<(6-extra))-1;
+   for(unsigned i=0;i<extra;i++) { assert((*p&0xc0)==0x80); ch=(ch<<6)|(*p++&0x3f); }
+  }
+  width+=C2D_FontGetCharWidthInfo(t->font,C2D_FontGlyphIndexFromCodePoint(t->font,ch))->charWidth;
+ }
  if(w)*w=width*sx;
  if(h)*h=30*sy;
 }

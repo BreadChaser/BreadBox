@@ -16,6 +16,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <utime.h>
+#include "../../common/test_tmpdir.h"
 
 static int failures, checks;
 static char ctx[120];
@@ -65,8 +66,8 @@ static long ring_total(void)
 
 int main(void)
 {
-	char dir[] = "/tmp/psx3d-history-XXXXXX";
-	if (!mkdtemp(dir) || chdir(dir)) return 2;
+	char dir[4096];
+	if (!test_mkdtemp(dir, sizeof(dir), "psx3d-history") || chdir(dir)) return 2;
 	history_set_root("h");
 	hist_entry_t e[64], got;
 

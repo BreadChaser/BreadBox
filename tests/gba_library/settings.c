@@ -7,12 +7,13 @@
 #include <string.h>
 #include "gba_settings.h"
 #include "gba_touch.h"
+#include "../common/test_tmpdir.h"
 extern bool gba_touch_overridden(unsigned);
 static int side;
 int control_side(void){return side;}
 void control_side_set(int v){side=!!v;}
 int main(void) {
- char dir[]="/tmp/bb-gba-settings-XXXXXX";assert(mkdtemp(dir));assert(!chdir(dir));
+ char dir[4096];assert(test_mkdtemp(dir, sizeof(dir), "bb-gba-settings"));assert(!chdir(dir));
  mkdir("sdmc:",0700);mkdir("sdmc:/3ds",0700);mkdir("sdmc:/3ds/BreadBox",0700);
  gba_settings_load();assert(gba_settings.screen_size==1 && gba_settings.stereo && gba_settings.rewind);
  gba_settings_set(0,-1);assert(gba_settings.screen_size==0);

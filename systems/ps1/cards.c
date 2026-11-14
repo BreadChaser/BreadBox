@@ -123,9 +123,10 @@ static void card_pin_if_emptied(const card_hist_t *h, const void *old, const voi
 #define CARD_RETRY_MS (30 * 1000)   // a failed memory card write is tried again
 
 // A memory card file into data: its best good copy, repaired when it came
-// from the backup. Damaged without a good copy (CARD_DAMAGED), or no memory
-// to read it (CARD_UNREAD): data keeps the empty card the core made, the card
-// is locked (never written over) and cards_trouble() reports it.
+// from the backup. Damaged without a good copy (CARD_DAMAGED), or a copy the
+// SD card could not read or no memory to read it (CARD_UNREAD): data keeps the
+// empty card the core made, the card is locked (never written over) and
+// cards_trouble() reports it. Only "no such file" is a new card (CARD_OK).
 typedef enum { CARD_OK, CARD_UNSAVED, CARD_UNREAD, CARD_DAMAGED } card_load_t;
 static card_load_t card_load(const char *path, void *data, size_t size, const char *label)
 {
@@ -133,15 +134,17 @@ static card_load_t card_load(const char *path, void *data, size_t size, const ch
 	safe_info_t info;
 	void *card = safe_load(path, &fmt, 0, &info);
 	if (!card) {
-		if (info.failed) {   // never write over a card we could not read
-			log_printf("%s %s: no memory to read it\n", label, path);
-			return CARD_UNREAD;
-		}
-		if (info.rejected) {
+		switch (info.outcome) {
+		case SAFE_ABSENT:
+			return CARD_OK;
+		case SAFE_DAMAGED:
 			log_printf("%s %s damaged, no good copy\n", label, path);
 			return CARD_DAMAGED;
+		default:   // never write over a card we could not read
+			log_printf("%s %s: could not be read (%s)\n", label, path,
+				info.outcome == SAFE_NO_MEMORY ? "no memory" : "SD card error");
+			return CARD_UNREAD;
 		}
-		return CARD_OK;
 	}
 	memcpy(data, card, size);
 	free(card);
@@ -269,16 +272,47 @@ static struct {
 	card_hist_t hist;
 } core_card[2];
 
-static long size_of(const char *path)
+static bool card_size_known(long n)   // a raw card, or one with a header (DexDrive, VGS)
 {
-	struct stat st;
-	return stat(path, &st) == 0 ? (long)st.st_size : -1;
+	return n == CORE_CARD_SIZE || (n > 0 && card_prefix((size_t)n));
+}
+
+/* Its format from the first copy whose size is a card's (the file, else a complete backup after a
+ * cut), then the card. Only when no copy can be sized and one could not be read is the card left
+ * unread (locked): a guessed format could refuse a good copy. The image is replaced before the
+ * format changes (a retry after the file changed); without memory the old one and the lock stay. */
+static card_load_t core_card_load(typeof(core_card[0]) *c, const char *label)
+{
+	long sz = -1, n = -1;
+	char bak[PATH_LEN + 8];
+	snprintf(bak, sizeof(bak), "%s.bak", c->path);
+	safe_name_t at = safe_name(c->path, &sz), at_bak = SAFE_NAME_ABSENT;
+	size_t prefix = 0;
+	if (at == SAFE_NAME_PRESENT && card_size_known(sz))
+		prefix = card_prefix((size_t)sz);
+	else if ((at_bak = safe_name(bak, &n)) == SAFE_NAME_PRESENT && card_size_known(n))
+		prefix = card_prefix((size_t)n);
+	else if (at == SAFE_NAME_UNREADABLE || at_bak == SAFE_NAME_UNREADABLE) {
+		log_printf("%s %s: could not be read (SD card error)\n", label, c->path);
+		return CARD_UNREAD;
+	}
+	if (prefix != c->prefix || (prefix && !c->image)) {
+		u8 *image = prefix ? calloc(1, CORE_CARD_SIZE + prefix) : NULL;
+		if (prefix && !image)
+			return CARD_UNREAD;
+		free(c->image);
+		c->image = image;
+		c->prefix = prefix;
+	}
+	card_load_t r = card_load(c->path, c->image ? c->image : c->data, CORE_CARD_SIZE + c->prefix, label);
+	if (c->image && (r == CARD_OK || r == CARD_UNSAVED))
+		memcpy(c->data, c->image + c->prefix, CORE_CARD_SIZE);
+	return r;
 }
 
 void __wrap_LoadMcd(int mcd, char *str)
 {
 	typeof(core_card[0]) *c = mcd == 1 || mcd == 2 ? &core_card[mcd - 1] : NULL;
-	long sz = str && *str ? size_of(str) : -1;
 	if (c) {
 		free(c->shadow);free(c->image);
 		memset(c, 0, sizeof(*c));
@@ -290,13 +324,8 @@ void __wrap_LoadMcd(int mcd, char *str)
 	snprintf(c->path, sizeof(c->path), "%s", str);
 	c->data = (u8 *)(mcd == 1 ? Mcd1Data : Mcd2Data);   // the core's empty card until loaded
 	card_hist_init(&c->hist, c->path);
-	/* Infer a header from the current file, or a complete backup after a cut. */
- c->prefix=card_prefix(sz>0?(size_t)sz:0);
- if(!c->prefix){char bak[PATH_LEN+8];snprintf(bak,sizeof(bak),"%s.bak",c->path);long n=size_of(bak);c->prefix=card_prefix(n>0?(size_t)n:0);}
- size_t bytes=CORE_CARD_SIZE+c->prefix;
- c->image=c->prefix?calloc(1,bytes):NULL;
- card_load_t r=c->prefix && !c->image?CARD_UNREAD:card_load(c->path,c->image?c->image:c->data,bytes,mcd==1?"memory card 1":"memory card 2");
- if(c->image)memcpy(c->data,c->image+c->prefix,CORE_CARD_SIZE);
+	card_load_t r = core_card_load(c, mcd == 1 ? "memory card 1" : "memory card 2");
+	size_t bytes = CORE_CARD_SIZE + c->prefix;
 	c->trouble = trouble_of(r);
 	c->locked = c->trouble != CARD_TROUBLE_NONE;
 	c->dirty = r == CARD_UNSAVED;
@@ -304,7 +333,7 @@ void __wrap_LoadMcd(int mcd, char *str)
 	if (c->shadow)
 		memcpy(c->shadow,c->image?c->image:c->data,bytes);
 	else { c->locked = true; c->trouble = CARD_TROUBLE_MEMORY; }
-	if (sz >= 0 && !c->locked)
+	if (safe_name(c->path, NULL) == SAFE_NAME_PRESENT && !c->locked)
 		card_session_copy(&c->hist,c->image?c->image:c->data,bytes);
 	c->on = true;
 	str[0] = 0;               // the core's Config.McdN: memory only from now on
@@ -377,17 +406,22 @@ bool cards_retry(void)
 		typeof(core_card[0]) *c = &core_card[i];
 		if (!c->on || !c->trouble)
 			continue;
-  size_t bytes=CORE_CARD_SIZE+c->prefix;
-  if(!c->shadow)c->shadow=malloc(bytes);
-  if(c->prefix && !c->image)c->image=calloc(1,bytes);
-  card_load_t r=(!c->shadow || (c->prefix && !c->image))?CARD_UNREAD:
-   card_load(c->path,c->image?c->image:c->data,bytes,i?"memory card 2":"memory card 1");
-  if(c->image)memcpy(c->data,c->image+c->prefix,CORE_CARD_SIZE);
+		size_t had = c->prefix;
+		card_load_t r = core_card_load(c, i ? "memory card 2" : "memory card 1");
+		size_t bytes = CORE_CARD_SIZE + c->prefix;
+		if (c->shadow && had != c->prefix) {   // its header was found only now
+			free(c->shadow);
+			c->shadow = NULL;
+		}
+		if (!c->shadow)
+			c->shadow = malloc(bytes);
+		if (!c->shadow)
+			r = CARD_UNREAD;
 		c->trouble = trouble_of(r);
 		c->locked = c->trouble != CARD_TROUBLE_NONE;
 		c->dirty = r == CARD_UNSAVED;
-		if (!c->locked && c->shadow)
-			memcpy(c->shadow+c->prefix, c->data, CORE_CARD_SIZE);
+		if (!c->locked)   // what the SD card holds now
+			memcpy(c->shadow, c->image ? c->image : c->data, bytes);
 	}
 	char dummy[8];
 	return cards_trouble(dummy, sizeof(dummy)) == CARD_TROUBLE_NONE;

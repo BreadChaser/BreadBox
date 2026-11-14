@@ -13,6 +13,7 @@
 #include "clip.h"
 #include "history.h"
 #include <dirent.h>
+#include <errno.h>
 #include <time.h>
 #include <assert.h>
 #include <stdarg.h>
@@ -21,6 +22,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include "../../common/test_tmpdir.h"
 
 #define CARD (128 * 1024)
 static unsigned char ram[CARD];             // the core's SAVE_RAM (card 1)
@@ -44,6 +46,34 @@ void emu_osd_alert(const char *text) { emu_osd(text); alerts++; }
 void __real_LoadMcd(int mcd, char *str) { (void)mcd; real_loads++; snprintf(real_path, sizeof(real_path), "%s", str ? str : "(null)"); }
 void __wrap_LoadMcd(int mcd, char *str);
 
+// an SD card error on one file (run.sh links -Wl,--wrap=stat,--wrap=fopen)
+enum { ON_STAT = 1, ON_OPEN = 2, ON_READ = 4 };
+static struct { const char *name; int error; unsigned on; } sd_err;
+static bool open_fail;   // every open for writing fails (cards_ownership.c)
+static bool fd_is(FILE *f, const char *name)
+{
+	char link[64], got[700];
+	snprintf(link, sizeof(link), "/proc/self/fd/%d", fileno(f));
+	ssize_t n = readlink(link, got, sizeof(got) - 1);
+	if (n <= 0) return false;
+	got[n] = 0;
+	size_t k = strlen(name);
+	return (size_t)n > k && got[n - k - 1] == '/' && !strcmp(got + n - k, name);
+}
+int __real_stat(const char *path, struct stat *st);
+int __wrap_stat(const char *path, struct stat *st)
+{
+	if (sd_err.name && (sd_err.on & ON_STAT) && !strcmp(path, sd_err.name)) { errno = sd_err.error; return -1; }
+	return __real_stat(path, st);
+}
+FILE *__real_fopen(const char *path, const char *mode);
+FILE *__wrap_fopen(const char *path, const char *mode)
+{
+	if (sd_err.name && (sd_err.on & ON_OPEN) && mode[0] == 'r' && !strcmp(path, sd_err.name)) { errno = sd_err.error; return NULL; }
+	if (open_fail && strchr(mode, 'w')) { errno = ENOSPC; return NULL; }
+	return __real_fopen(path, mode);
+}
+
 // safefile.c's fault hooks (SAFEFILE_TEST)
 static int write_fail, rename_fail_all, close_fail;
 int safe_test_rename(const char *from, const char *to)
@@ -52,7 +82,11 @@ int safe_test_rename(const char *from, const char *to)
 	return rename(from, to);
 }
 size_t safe_test_fwrite(const void *p, size_t size, size_t n, FILE *f) { return write_fail ? 0 : fwrite(p, size, n, f); }
-size_t safe_test_fread(void *p, size_t size, size_t n, FILE *f) { return fread(p, size, n, f); }
+size_t safe_test_fread(void *p, size_t size, size_t n, FILE *f)
+{
+	if (sd_err.name && (sd_err.on & ON_READ) && fd_is(f, sd_err.name)) { errno = sd_err.error; return 0; }
+	return fread(p, size, n, f);
+}
 int safe_test_fclose(FILE *f) { int rc=fclose(f);return close_fail?-1:rc; }
 
 // the PS1 checksums: byte 127 of the header and directory frames
@@ -498,13 +532,148 @@ static void card2(void)
 	CHECK(!strcmp(real_path, "none"));
 }
 
+// Harsh review 0.9.0 finding 1: an SD card error while a card is read (stat, open or read; EIO or
+// EACCES) is never a new empty card. The card is reported and locked: nothing the game does is
+// written over the file, not even after "play on"; once the card answers, Try again loads it.
+static void sd_errors(void)
+{
+	static const unsigned kinds[] = { ON_STAT, ON_OPEN, ON_STAT | ON_OPEN, ON_READ };
+	static const int errors[] = { EIO, EACCES };
+	unsigned char a[CARD], b[CARD], empty[CARD];
+	pattern(a, 11);
+	pattern(b, 13);
+	blank(empty);
+	char label[600], path[600];
+	for (int e = 0; e < 2; e++)
+		for (int k = 0; k < 4; k++) {
+			reset();
+			snprintf(ctx, sizeof(ctx), "card 1 SD error %d kind %u", errors[e], kinds[k]);
+			put("game.srm", a, CARD);
+			sd_err.name = "game.srm"; sd_err.error = errors[e]; sd_err.on = kinds[k];
+			cards_begin("game.srm");
+			CHECK(cards_trouble(label, sizeof(label)) == CARD_TROUBLE_MEMORY && !memcmp(ram, empty, CARD));
+			memcpy(ram, b, CARD);
+			CHECK(!cards_check());
+			cards_accept();   // "play without saving": still never written over
+			CHECK(!cards_check() && cards_save_now() != CARD_WRITE_SAVED);
+			sd_err.name = NULL;
+			CHECK(file_is("game.srm", a) && size_of("game.srm.bak") < 0 && size_of("game.srm.bad") < 0);
+			// the card answers again: the next game start reads it
+			cards_end();
+			cards_begin("game.srm");
+			CHECK(cards_trouble(label, sizeof(label)) == CARD_TROUBLE_NONE && !memcmp(ram, a, CARD));
+
+			reset();
+			snprintf(ctx, sizeof(ctx), "card 2 SD error %d kind %u", errors[e], kinds[k]);
+			put("card2.mcd", a, CARD);
+			cards_begin("game.srm");
+			sd_err.name = "card2.mcd"; sd_err.error = errors[e]; sd_err.on = kinds[k];
+			snprintf(path, sizeof(path), "card2.mcd");
+			__wrap_LoadMcd(2, path);
+			CHECK(cards_trouble(label, sizeof(label)) == CARD_TROUBLE_MEMORY && !memcmp(Mcd2Data, empty, CARD));
+			memcpy(Mcd2Data, b, CARD);
+			CHECK(!cards_check());
+			CHECK(!cards_retry());   // still erring: still locked
+			sd_err.name = NULL;
+			CHECK(file_is("card2.mcd", a) && size_of("card2.mcd.bak") < 0);
+			CHECK(cards_retry() && !memcmp(Mcd2Data, a, CARD));   // Try again, the card answers
+		}
+}
+
+// A core card file with a header (prefix 64: VGS, 3904: DexDrive; 0: raw) around pattern seed.
+static unsigned char *card_file(size_t prefix, int seed)
+{
+	unsigned char *f = calloc(1, CARD + prefix);
+	for (size_t i = 0; i < prefix; i++) f[i] = (unsigned char)(i % 251);
+	pattern(f + prefix, seed);
+	return f;
+}
+static void put_card(const char *path, size_t prefix, int seed)
+{
+	unsigned char *f = card_file(prefix, seed);
+	put(path, f, CARD + prefix);
+	free(f);
+}
+
+// Review A findings 1 and 4 (ASan): Try again after the card file changed its format (header
+// sizes both ways, raw and header) never writes past the image; a valid card is never refused
+// because its other copy (file or backup) cannot be sized; each fallback direction loads.
+static void card_formats(void)
+{
+	static const size_t prefixes[] = { 0, 64, 3904 };
+	unsigned char want[CARD], other[CARD];
+	pattern(want, 21);
+	pattern(other, 23);
+	char path[600], label[600];
+	for (int from = 0; from < 3; from++)
+		for (int to = 0; to < 3; to++) {
+			if (from == to) continue;
+			reset();
+			snprintf(ctx, sizeof(ctx), "retry after the format changed: prefix %zu -> %zu", prefixes[from], prefixes[to]);
+			put_card("card2.mcd", prefixes[from], 23);
+			cards_begin("game.srm");
+			sd_err.name = "card2.mcd"; sd_err.error = EIO; sd_err.on = ON_OPEN;
+			snprintf(path, sizeof(path), "card2.mcd");
+			__wrap_LoadMcd(2, path);
+			CHECK(cards_trouble(label, sizeof(label)) == CARD_TROUBLE_MEMORY);
+			sd_err.name = NULL;
+			put_card("card2.mcd", prefixes[to], 21);
+			CHECK(cards_retry() && !memcmp(Mcd2Data, want, CARD));
+			memcpy(Mcd2Data, other, CARD);
+			CHECK(cards_check());   // written in its new format, header kept
+			unsigned char *expect = card_file(prefixes[to], 23);
+			FILE *f = fopen("card2.mcd", "rb");
+			unsigned char *got = malloc(CARD + 3904 + 1);
+			size_t n = f ? fread(got, 1, CARD + 3904 + 1, f) : 0;
+			if (f) fclose(f);
+			CHECK(n == CARD + prefixes[to] && !memcmp(got, expect, n));
+			free(got);
+			free(expect);
+		}
+	for (int p = 0; p < 3; p++) {
+		// a valid card beside a backup the SD card cannot stat: the card loads
+		reset();
+		snprintf(ctx, sizeof(ctx), "valid card (prefix %zu), backup stat error", prefixes[p]);
+		put_card("card2.mcd", prefixes[p], 21);
+		put_card("card2.mcd.bak", prefixes[p], 23);
+		cards_begin("game.srm");
+		sd_err.name = "card2.mcd.bak"; sd_err.error = EIO; sd_err.on = ON_STAT;
+		snprintf(path, sizeof(path), "card2.mcd");
+		__wrap_LoadMcd(2, path);
+		sd_err.name = NULL;
+		CHECK(cards_trouble(label, sizeof(label)) == CARD_TROUBLE_NONE && !memcmp(Mcd2Data, want, CARD));
+		// a card file the SD card cannot stat beside a valid backup: the backup loads, the file
+		// stays at its name (never set aside while it cannot be read)
+		reset();
+		snprintf(ctx, sizeof(ctx), "card stat error (prefix %zu), valid backup", prefixes[p]);
+		put_card("card2.mcd", prefixes[p], 23);
+		put_card("card2.mcd.bak", prefixes[p], 21);
+		cards_begin("game.srm");
+		sd_err.name = "card2.mcd"; sd_err.error = EIO; sd_err.on = ON_STAT;
+		snprintf(path, sizeof(path), "card2.mcd");
+		__wrap_LoadMcd(2, path);
+		CHECK(cards_trouble(label, sizeof(label)) == CARD_TROUBLE_NONE && !memcmp(Mcd2Data, want, CARD));
+		sd_err.name = NULL;
+		unsigned char *expect = card_file(prefixes[p], 23);
+		FILE *f = fopen("card2.mcd", "rb");
+		unsigned char *got = malloc(CARD + 3904 + 1);
+		size_t n = f ? fread(got, 1, CARD + 3904 + 1, f) : 0;
+		if (f) fclose(f);
+		CHECK(n == CARD + prefixes[p] && !memcmp(got, expect, n) && size_of("card2.mcd.bad") < 0);
+		free(got);
+		free(expect);
+	}
+}
+
 int main(void)
 {
-	char dir[] = "/tmp/psx3d-cards-XXXXXX";
-	if (!mkdtemp(dir) || chdir(dir)) return 2;
+	char dir[4096];
+	if (!test_mkdtemp(dir, sizeof(dir), "psx3d-cards") || chdir(dir)) return 2;
 	history_set_root("hist");
 	card1();
 	card2();
+	sd_errors();
+	card_formats();
 	reset();
 	remove("game.srm.bad");
 	rmdir("hist");

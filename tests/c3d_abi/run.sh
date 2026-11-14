@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Compiles and runs tests/c3d_abi/check.c with an ARM Linux cross compiler under qemu-user.
 # -fshort-enums matches devkitARM's enum size. Missing prerequisites return 77;
-# the suite runner rejects skipped suites unless HOST_TEST_ALLOW_SKIPS=1.
+# the suite runner rejects every skipped suite.
 set -euo pipefail
 repo=$(cd "$(dirname "$0")/../.." && pwd)
 cc=${ARM_LINUX_CC:-arm-linux-gnueabihf-gcc}

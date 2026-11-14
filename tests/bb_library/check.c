@@ -104,6 +104,7 @@ static void *library_calloc(size_t n,size_t bytes)
 }
 #define calloc library_calloc
 #include "../../systems/ps1/library.c"
+#include "../common/test_tmpdir.h"
 #undef calloc
 static char *rows_text(void)
 {
@@ -175,7 +176,7 @@ static void put(const char *root, const char *rel, const char *text)
 
 #define CHECK(c) do {if(!(c)) {fprintf(stderr,"FAIL %d: %s\n",__LINE__,#c);return 1;}}while(0)
 int main(void) {
- char tmp[]="/tmp/bb-library-XXXXXX";CHECK(mkdtemp(tmp));CHECK(!chdir(tmp));
+ char tmp[4096];CHECK(test_mkdtemp(tmp, sizeof(tmp), "bb-library"));CHECK(!chdir(tmp));
  mkdirs(PSX3D_DIR);
  const char *root="sdmc:/roms";
  strcpy(g_cfg.games_dir,root);

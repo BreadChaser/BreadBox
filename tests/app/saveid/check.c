@@ -37,6 +37,7 @@ void log_printf(const char *fmt, ...)
 }
 
 #include "../../../systems/ps1/saveid.c"
+#include "../../common/test_tmpdir.h"
 
 static int failures, checks;
 static const char *ctx = "";
@@ -701,8 +702,8 @@ static void fail_closed(void)
 
 int main(void)
 {
-	char dir[] = "/tmp/saveid-XXXXXX";
-	if (!mkdtemp(dir) || chdir(dir))
+	char dir[4096];
+	if (!test_mkdtemp(dir, sizeof(dir), "saveid") || chdir(dir))
 		return 2;
 	reviewer();
 	generic_names();

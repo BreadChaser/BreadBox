@@ -16,7 +16,7 @@ loop=fn('share_about_run');loop=loop[loop.index('{')+1:loop.index('\n\treturn;\n
 state=s[s.index('static uint8_t qr['):s.index('static void draw_top')]
 items=s[s.index('enum { SHARE_RELEASE'):s.index('// Runs until B')]
 # Test the actual find_cia function against AM/FS stubs, not a rewritten policy.
-find=s[s.index('static const char *version_text'):s.index('static bool lan_ok')]
+find=s[s.index('// Is the file the build running here?'):s.index('static bool lan_ok')]
 code=r'''
 #include <assert.h>
 #include <math.h>
@@ -27,6 +27,7 @@ code=r'''
 #include "share.h"
 #include "ui_motion.h"
 #include "qrcode.h"
+#include "title_version.h"
 typedef unsigned u32;typedef unsigned short u16;typedef unsigned long long u64;typedef int Handle;
 #define KEY_A 1u
 #define KEY_B 2u
@@ -35,7 +36,7 @@ typedef unsigned u32;typedef unsigned short u16;typedef unsigned long long u64;t
 #define KEY_DOWN 16u
 #define SYSCLOCK_ARM11 1000000ULL
 #define APP_NAME "BreadBox"
-#define BB_VERSION "0.0.0"
+#define BB_VERSION "0.9.1"
 #define SELF_TITLE 17
 #define RELEASE_URL "https://github.com/BreadChaser/BreadBox/releases/latest/download/BreadBox.cia"
 #define MEDIATYPE_SD 0
@@ -46,13 +47,16 @@ typedef unsigned u32;typedef unsigned short u16;typedef unsigned long long u64;t
 #define R_FAILED(r) ((r)<0)
 #define R_SUCCEEDED(r) ((r)>=0)
 typedef struct {u64 titleID;u16 version;} AM_TitleEntry;
-static int files,invalid,opens,closes;
+typedef struct {u64 titleID;u64 size;u16 version;} AM_TitleInfo;
+static int files,invalid,opens,closes,homebrew;static u16 cia_version=3,running_version=25631;
 static const char *const cia_paths[]={"sdmc:/cias/BreadBox.cia"};
 static char cia_path[64],cia_note[160],url[64]="http://localhost:8080/BreadBox.cia";static u64 cia_size;
 static int amInit(void){return 0;}static void amExit(void){}
 static int fsMakePath(int t,const char *s){(void)t;(void)s;return 0;}
 static int FSUSER_OpenFileDirectly(Handle *h,int a,int b,int c,int d,int e){(void)a;(void)b;(void)c;(void)d;(void)e;opens++;*h=1;return files?0:-1;}
-static int AM_GetCiaFileInfo(int a,AM_TitleEntry *i,Handle h){(void)a;(void)h;i->titleID=invalid?99:SELF_TITLE;i->version=3;return 0;}
+static int AM_GetCiaFileInfo(int a,AM_TitleEntry *i,Handle h){(void)a;(void)h;i->titleID=invalid?99:SELF_TITLE;i->version=cia_version;return 0;}
+static bool envIsHomebrew(void){return homebrew;}
+static int AM_GetTitleInfo(int m,unsigned n,u64 *ids,AM_TitleInfo *t){assert(m==MEDIATYPE_SD && n==1 && *ids==SELF_TITLE);t->titleID=*ids;t->version=running_version;return 0;}
 static int FSFILE_GetSize(Handle h,u64 *n){(void)h;*n=123;return 0;}
 static void FSFILE_Close(Handle h){(void)h;closes++;}
 typedef struct {bool init;} flist_t;
@@ -140,7 +144,30 @@ int main(void){
  int probes=opens;scenario=5;frame=paints=0;clock_tick=1;alive=true;serving=false;starts=0;
  share_about_run(true);assert(share_n==3 && !starts && opens==probes && !serving);
  files=1;invalid=1;assert(!find_cia() && strstr(cia_note,"Invalid or mismatched"));assert(opens>=closes);
- free(data);puts("Share production loop PASS: camera .65s/pose/reversal, 600 stable QR frames, missing/invalid CIA, QR back/X stop, HOME-close entry/dialog");
+ // The CIA's title version as Share words it (tools/build/title-version.py; old decoder said 1.9.12).
+ static const struct {u16 v;const char *note;} versions[]={
+  {25631,"BreadBox 0.9.1"},
+  {25615,"BreadBox 0.9.0. This file differs from the version running here"},
+  {32783,"BreadBox 1.0.0. This file differs from the version running here"},
+  {25616,"BreadBox test build 25616. This file differs from the version running here"},
+  {25630,"BreadBox test build 25630. This file differs from the version running here"},
+  {16642,"BreadBox test build 16642. This file differs from the version running here"}};
+ // A test build compares counters: its own file is the same, the release file is not.
+ static const struct {u16 running,v;int homebrew;const char *note;} test_builds[]={
+  {25620,25620,0,"BreadBox test build 25620"},
+  {25620,25631,0,"BreadBox 0.9.1. This file differs from the version running here"},
+  {25620,25620,1,"BreadBox test build 25620. This file differs from the version running here"},
+  {25620,25631,1,"BreadBox 0.9.1"}};
+ invalid=0;
+ for(unsigned k=0;k<sizeof versions/sizeof versions[0];k++){
+  cia_version=versions[k].v;assert(find_cia());
+  if(strcmp(cia_note,versions[k].note)){fprintf(stderr,"Share version %u: got '%s', want '%s'\n",versions[k].v,cia_note,versions[k].note);abort();}
+ }
+ for(unsigned k=0;k<sizeof test_builds/sizeof test_builds[0];k++){
+  running_version=test_builds[k].running;cia_version=test_builds[k].v;homebrew=test_builds[k].homebrew;assert(find_cia());
+  if(strcmp(cia_note,test_builds[k].note)){fprintf(stderr,"Share on test build %u, file %u, 3dsx %d: got '%s', want '%s'\n",test_builds[k].running,test_builds[k].v,test_builds[k].homebrew,cia_note,test_builds[k].note);abort();}
+ }
+ free(data);puts("Share production loop PASS: camera .65s/pose/reversal, 600 stable QR frames, missing/invalid CIA, CIA version text 0.9.0/0.9.1/1.0.0/test builds, QR back/X stop, HOME-close entry/dialog");
 }
 '''
 with tempfile.TemporaryDirectory(prefix='share-room-',dir=os.environ.get('TMPDIR')) as tmp:

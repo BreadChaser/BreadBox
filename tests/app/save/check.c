@@ -13,6 +13,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include "../../common/test_tmpdir.h"
 
 #define SIZE (128 * 1024 + 7)   // not a multiple of the write chunk
 static unsigned char A[SIZE], B[SIZE], C[SIZE];
@@ -28,7 +29,7 @@ static struct {
 	long write_budget;   // >= 0: bytes fwrite may still write (full card)
 	int fwrite_zero;     // the n-th fwrite (1-based) writes nothing
 	int fclose_fail;     // the n-th fclose (1-based) reports an error
-	bool fclose_all;     // every fclose reports an error
+	bool fclose_tmp;     // every fclose of a <name>.tmp reports an error
 	int rename_fail;     // the n-th rename (1-based) fails
 	int fread_fail;      // the n-th fread (1-based) comes back short
 	int writes, closes, renames, reads;
@@ -60,10 +61,18 @@ size_t safe_test_fread(void *p, size_t size, size_t n, FILE *f)
 	if (++fault.reads == fault.fread_fail) return n ? n - 1 : 0;
 	return fread(p, size, n, f);
 }
+static bool is_tmp(FILE *f)
+{
+	char link[64], name[600];
+	snprintf(link, sizeof(link), "/proc/self/fd/%d", fileno(f));
+	ssize_t n = readlink(link, name, sizeof(name) - 1);
+	return n > 4 && (name[n] = 0, !strcmp(name + n - 4, ".tmp"));
+}
 int safe_test_fclose(FILE *f)
 {
+	bool tmp = fault.fclose_tmp && is_tmp(f);
 	int r = fclose(f);
-	return ++fault.closes == fault.fclose_fail || fault.fclose_all ? EOF : r;
+	return ++fault.closes == fault.fclose_fail || tmp ? EOF : r;
 }
 
 // ---------------------------------------------------------------- helpers
@@ -206,7 +215,7 @@ static void write_faults(void)
 			snprintf(ctx, sizeof(ctx), "%s %d", mode == 0 ? "short write" : mode == 1 ? "full card" : "close fails", n);
 			if (mode == 0) fault.fwrite_zero = n;
 			if (mode == 1) fault.write_budget = (long)(n - 1) * 40000;
-			if (mode == 2) fault.fclose_all = n <= 2;   // reads ignore it, the write must not
+			if (mode == 2) fault.fclose_tmp = n <= 2;   // the new copy's close (a read's: io_errors.c)
 			bool done = safe_write("card", &FMT, B, true);
 			bool fails = mode == 0 ? n <= 3 : mode == 1 ? true : n <= 2;
 			if (fails) {
@@ -306,7 +315,8 @@ static void reads(void)
 	clean();
 	put_ext(".tmp", B, SIZE);
 	snprintf(ctx, sizeof(ctx), "sole tmp");
-	CHECK(safe_stat("card", &FMT, NULL) && load(0, &info) == 'B' && info.from == SAFE_TEMP);
+	time_t mt = 0;
+	CHECK(safe_stat("card", &FMT, &mt) && mt != 0 && load(0, &info) == 'B' && info.from == SAFE_TEMP);
 }
 
 static void repairs(void)
@@ -560,8 +570,8 @@ static void text_crashes(void)
 
 int main(void)
 {
-	char dir[] = "/tmp/psx3d-save-XXXXXX";
-	if (!mkdtemp(dir) || chdir(dir)) return 2;
+	char dir[4096];
+	if (!test_mkdtemp(dir, sizeof(dir), "psx3d-save") || chdir(dir)) return 2;
 	for (int i = 0; i < SIZE; i++) {
 		A[i] = (unsigned char)(i * 7 + 1);
 		B[i] = (unsigned char)(i * 13 + 5);

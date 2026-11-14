@@ -2,7 +2,7 @@
 set -euo pipefail
 root=$(cd "$(dirname "$0")/../.." && pwd)
 export PSX3D_TITLE_FONT="$root/tests/app/host/Michroma-Regular.ttf"
-export PSX3D_BODY_FONT="$(fc-match -f '%{file}' 'DejaVu Sans')"
+export PSX3D_BODY_FONT="$root/tests/fonts/DejaVuSans.ttf"
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 python3 "$root/tests/settings_b/share-top.py" > "$tmp/share-top.inc"

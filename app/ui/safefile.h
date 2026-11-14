@@ -33,11 +33,28 @@ typedef struct {
 	void *ctx;
 } safe_format_t;
 
+// One name on the SD card. Only "no such file" (ENOENT) proves ABSENT; any
+// other metadata, open, read or close error is UNREADABLE: the file may be
+// there and good, so nothing may take its place or start without it.
+typedef enum { SAFE_NAME_ABSENT, SAFE_NAME_PRESENT, SAFE_NAME_UNREADABLE } safe_name_t;
+safe_name_t safe_name(const char *path, long *size);
+
+// What safe_load found. Only SAFE_ABSENT may start an empty save; SAFE_DAMAGED
+// may ask the player; SAFE_UNREADABLE and SAFE_NO_MEMORY mean nothing is known.
+typedef enum {
+	SAFE_LOADED,       // a copy was returned (from, weak)
+	SAFE_ABSENT,       // every copy tried answered "no such file"
+	SAFE_DAMAGED,      // copies were read and none is usable
+	SAFE_UNREADABLE,   // a copy could not be read, and none read is good
+	SAFE_NO_MEMORY,    // no memory to read it
+} safe_outcome_t;
+
 typedef struct {
+	safe_outcome_t outcome;
 	safe_source_t from;   // where the returned copy came from
-	bool rejected;        // a copy was there but damaged (or could not be read)
-	bool failed;          // no memory to read it: nothing is known
+	bool rejected;        // a copy was there but damaged or unreadable
 	bool weak;            // the returned copy fails deep(): there is no better one
+	bool failed;          // outcome is SAFE_UNREADABLE or SAFE_NO_MEMORY (older callers)
 } safe_info_t;
 
 // Write size = fmt->size bytes. keep_backup: a good current version stays as
@@ -54,15 +71,19 @@ void safe_recover(const char *path);
 // The best good copy, in a new buffer of fmt->size bytes (NULL: none). Tries
 // <name>, then <name>.bak, then <name>.tmp (the first weak copy if none is
 // good), minus the sources in skip (bits
-// 1 << SAFE_CURRENT etc., for copies the caller could not use). Nothing on the
-// SD card changes.
+// 1 << SAFE_CURRENT etc., for copies the caller could not use). A copy that
+// could not be read is passed over only for a good copy after it; a weak copy
+// is never chosen over one that could not be read. Nothing on the SD card
+// changes. info->outcome says why nothing came back.
 void *safe_load(const char *path, const safe_format_t *fmt, unsigned skip, safe_info_t *info);
 // After loading from <name>.bak or <name>.tmp (from): make <name> a good copy
 // again. The source copy is never rewritten or removed first: a .tmp is
-// renamed into place, a .bak is copied. A damaged <name> becomes <name>.bad.
+// renamed into place, a .bak is copied. A damaged <name> becomes <name>.bad;
+// one the SD card cannot read whole stays where it is (false: not repaired).
 bool safe_repair(const char *path, const safe_format_t *fmt, const void *data, safe_source_t from);
 // A save is there: <name> or its backup, or a good <name>.tmp (a first save
-// cut off before it was put in place). *mtime: its time.
+// cut off before it was put in place), or the SD card could not say (only "no
+// such file" is no save). *mtime: its time, 0 when unknown.
 bool safe_stat(const char *path, const safe_format_t *fmt, time_t *mtime);
 // Delete <name>, its backup and any leftover temp file (a .bad stays)
 void safe_remove(const char *path);

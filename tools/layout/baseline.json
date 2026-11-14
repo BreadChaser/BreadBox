@@ -2,10 +2,24 @@
   "build": 2650,
   "commit": "ffbe4132",
   "commit_full": "ffbe4132ae9099ef355b7db5703498f31def59a2",
-  "reference_elf": "psx3d/BreadBox.elf",
-  "reference_make": "APP=breadbox",
   "branch": "ui/room-port",
   "note": "BreadBox.elf of CIA 2650 (room + pause tag menu), installed and hardware-checked on the Old 3DS 2026-10-31: ten library cycles, PS1/GBA saves. NOT a performance acceptance: the 4.9 s cold-start library stall on the Old was still open (BB-2650-REPORT.md). Matching its addresses says nothing about Old CPU speed of later builds. Replaces the PSX3D byte-identity gate; a later build becomes the baseline only after hardware acceptance.",
   "sha256": "84e79a1bea4043ce20bae23ea00d5ec50a1bb38f6a24f949326f2ea7334a7656",
-  "default_path": ""
+  "public_reference": {
+    "commit": "39148a3c0e2a84ec82ce4ff95a14e9369c1162bd",
+    "tree": "72bde77fc3151d9650849d19742eb8ac2450fc4f",
+    "url": "https://codeload.github.com/BreadChaser/BreadBox/tar.gz/39148a3c0e2a84ec82ce4ff95a14e9369c1162bd",
+    "archive_sha256": "1e80f30ff59de3b7bdc3ea70d8c31bfb1043c21550dc2439c4251dd8edfa6ba3",
+    "source_date_epoch": 1794611649,
+    "build_root": "/work/artifacts/layout-reference/ref",
+    "elf": "build/3ds/BreadBox.elf",
+    "identity_sha256": "c120e090b35d13e0c6fdb4b303abeb2dd3c36df2dd96e2d97976f9631008e886",
+    "qualification_sha256": "f131665111b8f93bf06a903d1d693685b0cd5c6506d21f439d385f8a1defc5ff",
+    "note": "Public 0.9.0 source qualified through the unchanged exact target of every accepted-2650.json entry (qualification_target_elf_sha256), then all three gates with no allowances against the public reconstruction. Same size/page offsets and zero changed instruction words; literal references can move. This is a source-reproducible layout reference, not a new hardware or speed acceptance. Original build/commit/ELF SHA and limitations above are retained. Only the old build driver nested -j4 is replaced with the requested job limit; no compiler input changes. The original-to-release link is a recorded maintainer-side check of private artifacts, outside public CI; public source-to-pinned-identity reconstruction is independently reproducible. The pin is the v0.9.0 tag commit; its build differs from the first qualified reconstruction only in the embedded commit text (.rodata.frontend), and tools/layout/function-diff.py finds all 7378 functions unchanged.",
+    "frozen_names": {
+      "pinned-names.json": "4b3bf8e8535a66a3b2b80ac80cb92cf09824098684918614737babb6e9b41412",
+      "system-pinned-names.json": "cbde93ee36f9f59720c3f8c4f3da7983db0c9dedd47f1ecd02617a4c45abb8ec"
+    },
+    "qualification_target_elf_sha256": "aeeeef5a42d034e8ff4caa1be2c42dcb895b0b9d06129e91b0735cd9e62d1b0f"
+  }
 }

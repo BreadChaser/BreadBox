@@ -14,9 +14,13 @@ progress = progress[:progress.index('\n}\n')]
 lines = re.findall(r'"((?:[^"\\]|\\.)*)"', table) + re.findall(r'return "((?:[^"\\]|\\.)*)"', body) + \
     [re.sub(r'%u%%', '100%', t) for t in re.findall(r'"((?:[^"\\]|\\.)*)"', progress)]
 wide=set('mwMWDOQGCNHUABKRV');narrow=set("iltfjr.,' I:;-!|")
-width=lambda t: sum(1.35 if c in wide else 0.55 if c in narrow else 1.0 for c in t)
-bad = [l for l in lines if width(l) > 23.0 or re.search(r'\((network|hash|manifest|install|SD card)\)|\bAM\b|SHA|CIA|Last check', l)]
+# Exact twentieth units keep the calibrated boundary identical across Python
+# versions (sum() gained compensated floating-point summation in Python 3.12).
+width=lambda t: sum(27 if c in wide else 11 if c in narrow else 20 for c in t)
+assert width("No connection. Check Wi-Fi") == 460
+assert width("Bad download. Try tomorrow") == 467
+bad = [l for l in lines if width(l) > 460 or re.search(r'\((network|hash|manifest|install|SD card)\)|\bAM\b|SHA|CIA|Last check', l)]
 for l in bad:
-    print('too wide or technical:', repr(l), round(width(l), 1))
+    print('too wide or technical:', repr(l), round(width(l) / 20, 1))
 print('update lines: %d, %s' % (len(lines), 'FAIL' if bad else 'PASS'))
 sys.exit(1 if bad or len(lines) < 18 else 0)

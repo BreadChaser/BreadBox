@@ -10,6 +10,12 @@ cc -O1 -DINLINE=inline -ffunction-sections -fdata-sections -Wl,--gc-sections \
 "$tmp/battery"
 python3 tests/arena/entry-guard.py
 
-cc -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined -Itests/app/host/skip -Iapp/ui -Iinclude/breadbox -Iplatform/3ds -Itests/arena/fakes -Icore/frontend/3ds tests/arena/sdk.c -o "$tmp/sdk"
+# Keep the generated-size dependency private to this fixture. A symlink keeps
+# the production source verbatim while resolving its relative generated include
+# beneath this temporary tree; no target artifacts or shared headers are written.
+mkdir -p "$tmp/app/ui" "$tmp/build/systems"
+ln -s "$PWD/app/ui/breadbox_arena.c" "$tmp/app/ui/breadbox_arena.c"
+printf '%s\n' '#define BB_EXEC_BYTES ((unsigned)sizeof(ndrc_bss))' > "$tmp/build/systems/arena-size.h"
+cc -DBB_ARENA_FIXTURE_SOURCE=\"$tmp/app/ui/breadbox_arena.c\" -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined -Itests/app/host/skip -Iapp/ui -Iinclude/breadbox -Iplatform/3ds -Itests/arena/fakes -Icore/frontend/3ds tests/arena/sdk.c -o "$tmp/sdk"
 "$tmp/sdk"
 echo "PASS production CTR arena SVC boundary"

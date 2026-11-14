@@ -6,7 +6,7 @@ trap 'rm -rf "$test_tmp"' EXIT
 export PSX3D_MOCKUPS="${PSX3D_MOCKUPS:-$repo_root/psx3d/docs/bottom-screen}"
 mkdir -p "$PSX3D_MOCKUPS"
 export PSX3D_TITLE_FONT="$repo_root/tests/app/host/Michroma-Regular.ttf"
-export PSX3D_BODY_FONT=$(fc-match -f '%{file}' 'DejaVu Sans')
+export PSX3D_BODY_FONT="$repo_root/tests/fonts/DejaVuSans.ttf"
 cat > "$test_tmp/fonts.conf" <<EOF
 <?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig><include>/etc/fonts/fonts.conf</include><dir>$repo_root/tests/app/host</dir></fontconfig>
 EOF

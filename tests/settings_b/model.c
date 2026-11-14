@@ -423,6 +423,16 @@ int main(void){
  assert(!FT_Set_Pixel_Sizes(title_face,0,30));assert(!FT_Set_Pixel_Sizes(body_face,0,30));
  assert(!strcmp(bb_settings_source_name(BB_SOURCE_RECOMMENDED),"Recommended"));
  assert(!strcmp(bb_settings_source_name(BB_SOURCE_ALL),"All systems"));
+ /* Measure actual Unicode glyphs in the SDK substitute, including the middle
+    dot used by scope paths. Byte-wise measurement must fail these controls. */
+ const char *utf8[]={"A", "\xc2\xb7", "\xc3\xa9", "\xe2\x86\x92", "\xf0\x9f\x8d\x9e"};
+ const u32 points[]={65,183,233,8594,127838};
+ for(unsigned i=0;i<sizeof(points)/sizeof(*points);i++) {
+  C2D_Text text; C2D_TextParse(&text,NULL,utf8[i]);float measured;
+  C2D_TextGetDimensions(&text,.5f,.5f,&measured,NULL);
+  float expected=.5f*C2D_FontGetCharWidthInfo(NULL,C2D_FontGlyphIndexFromCodePoint(NULL,points[i]))->charWidth;
+  assert(fabsf(measured-expected)<.001f);
+ }
  tree_checks();navigation_checks();
  state.depth=1;state.levels[0].page=PAGE_TOP;state.rows=calloc(SETTINGS_ROWS,sizeof(*state.rows));active=true;
  assert(settings_ui_debug_key("debug-on")&&settings_ui_debug_capture());

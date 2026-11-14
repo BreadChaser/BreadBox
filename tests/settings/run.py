@@ -22,7 +22,7 @@ with tempfile.TemporaryDirectory() as tmp:
                     str(root/'tests/settings/navigation.c'), str(root/'tests/app/host/breadbox_stubs.c'), str(root/'systems/ps1/clip.c'), str(root/'app/ui/safefile.c'), str(root/'tools/input-replay/mock-core.c'), *flags, '-lz', '-lm', '-o', str(tmp/'check')], check=True)
     env = dict(os.environ, PSX3D_MOCKUPS=str(out),
                PSX3D_TITLE_FONT=str(root/'tests/app/host/Michroma-Regular.ttf'),
-               PSX3D_BODY_FONT=subprocess.check_output(['fc-match', '-f', '%{file}', 'DejaVu Sans'], text=True))
+               PSX3D_BODY_FONT=str(root/'tests/fonts/DejaVuSans.ttf'))
     subprocess.run([str(tmp/'check')], cwd=tmp, env=env, check=True)
     subprocess.run(['cc', '-std=gnu11', '-g', '-Wall', '-Wextra', '-fsanitize=address,undefined',
                     '-I'+str(root/'tests/app/host'), '-I'+str(root/'app/ui'),'-I'+str(root/'include/breadbox'),'-I'+str(root/'platform/3ds'), '-I'+str(root/'systems/ps1'),

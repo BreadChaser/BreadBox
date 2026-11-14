@@ -10,7 +10,7 @@ cc -std=gnu11 -Wall -Wextra -Werror -fsanitize=address,undefined -g -DSAFEFILE_T
   "$repo_root/app/ui/safefile.c" -o "$tmp/check"
 cc -std=gnu11 -Wall -Wextra -Werror -Wno-format-truncation -fsanitize=address,undefined -g -DSAFEFILE_TEST \
   -include "$repo_root/tests/app/save/host.h" -I"$repo_root/tests/app/host" -I"$repo_root/app/ui" -I"$repo_root/include/breadbox" -I"$repo_root/platform/3ds" \
-  -I"$repo_root/core/deps/libretro-common/include" "$repo_root/tests/app/save/cards.c" \
+  -I"$repo_root/core/deps/libretro-common/include" "$repo_root/tests/app/save/cards.c" -Wl,--wrap=stat,--wrap=fopen \
   "$repo_root/systems/ps1/cards.c" "$repo_root/app/ui/bb_final.c" "$repo_root/app/ui/safefile.c" "$repo_root/app/ui/history.c" -o "$tmp/cards"
 "$tmp/cards"
 cc -std=gnu11 -O1 -Wall -Wextra -Wno-sign-compare -Werror -fsanitize=address,undefined -g \
@@ -22,13 +22,18 @@ cc -std=gnu11 -Wall -Wextra -Werror -fsanitize=address,undefined -g -DSAFEFILE_T
 "$tmp/history"
 python3 "$repo_root/tests/app/save/mutations.py"
 "$tmp/check"
+# harsh review 0.9.0 finding 1: SD errors on <name>/.bak/.tmp are never absence
+cc -std=gnu11 -Wall -Wextra -Werror -fsanitize=address,undefined -g -DSAFEFILE_TEST -Wl,--wrap=stat,--wrap=fopen \
+  -I"$repo_root/app/ui" -I"$repo_root/include/breadbox" -I"$repo_root/platform/3ds" "$repo_root/tests/app/save/io_errors.c" \
+  "$repo_root/app/ui/safefile.c" -o "$tmp/io-errors"
+"$tmp/io-errors"
 cc -std=gnu11 -O2 -Wall -Wextra -Werror -fsanitize=address,undefined -g \
   "$repo_root/tests/app/save/thumb.c" -o "$tmp/thumb"
 "$tmp/thumb"
 
 cc -std=gnu11 -Wall -Wextra -Werror -Wno-format-truncation -fsanitize=address,undefined -g -Wno-misleading-indentation -DSAFEFILE_TEST -DSAVE_WRITER_TEST -pthread -I"$repo_root/tests/gba_saves" \
  -include "$repo_root/tests/app/save/host.h" -I"$repo_root/tests/app/host" -I"$repo_root/app/ui" -I"$repo_root/include/breadbox" -I"$repo_root/platform/3ds" \
- -I"$repo_root/core/deps/libretro-common/include" "$repo_root/tests/app/save/cards_ownership.c" -Wl,--wrap=fopen,--wrap=malloc,--wrap=calloc \
+ -I"$repo_root/core/deps/libretro-common/include" "$repo_root/tests/app/save/cards_ownership.c" -Wl,--wrap=fopen,--wrap=stat,--wrap=malloc,--wrap=calloc \
  "$repo_root/systems/ps1/cards.c" "$repo_root/app/ui/bb_final.c" "$repo_root/app/ui/safefile.c" "$repo_root/app/ui/history.c" "$repo_root/app/ui/bb_save.c" "$repo_root/app/ui/save_writer.c" -lz -o "$tmp/final-cards"
 TMPDIR="$tmp" "$tmp/final-cards"
 

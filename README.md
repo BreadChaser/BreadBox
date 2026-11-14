@@ -16,6 +16,7 @@
 
 <p align="center">
   <a href="#install">Install</a> ·
+  <a href="docs/getting-started.md">Guide</a> ·
   <a href="#controls">Controls</a> ·
   <a href="#performance">Performance</a> ·
   <a href="#faq">FAQ</a> ·
@@ -45,7 +46,7 @@ and brings your PSX3D saves over on first start.
 All screenshots were taken on real consoles.
 
 > [!NOTE]
-> BreadBox 0.9.0 is a public beta. Most games play well, but demanding
+> BreadBox 0.9.1 is a public beta. Most games play well, but demanding
 > PlayStation games run slower on the Old 3DS, and some games have drawing
 > problems. See [Performance](#performance) and [Known issues](#known-issues).
 
@@ -91,77 +92,28 @@ custom firmware, and your own game files.
 2. Copy your games to a folder on the SD card, for example `sdmc:/roms/`.
 3. Start **BreadBox** from the HOME Menu. The welcome tour finds your games folder.
 
-After that, BreadBox updates itself (see [Updates](#updates)). A `.3dsx` for the
+After that, BreadBox updates itself over Wi-Fi. A `.3dsx` for the
 Homebrew Launcher is on the [release page](https://github.com/BreadChaser/BreadBox/releases/latest);
 it does not update itself.
 
-**Coming from PSX3D?** Install BreadBox next to it. See [Moving from PSX3D](#moving-from-psx3d).
+**Coming from PSX3D?** Install BreadBox next to it; your saves come over on first start. See [Moving from PSX3D](docs/moving-from-psx3d.md).
 
 ## Getting started
 
-**Games.** Put all your games under one folder, such as `sdmc:/roms/`. Subfolders
-are fine, and so is a mix of systems in one folder. BreadBox looks in common
-places by itself; to use another folder, pick it in **Settings → Collection →
-Games folder**. Each start shows your Collection at once and checks the card for
-new, removed and renamed games in the background. Hold **Y** at the bookcase to
-check right away.
+Put your games under one folder on the SD card, such as `sdmc:/roms/`.
+Subfolders and a mix of systems are fine. BreadBox finds the folder, checks it
+for new games at every start, and downloads box art by itself.
 
 | System | Files |
 |---|---|
-| PlayStation | `.cue/.bin`, `.chd`, `.pbp`, `.iso`, `.img`, `.mdf`, and `.m3u` for multi-disc games |
-| Game Boy Advance | `.gba`, and `.zip` with exactly one game inside (extract `.7z` first; rename `.agb` files to `.gba`) |
+| PlayStation | `.cue/.bin`, `.chd`, `.pbp`, `.iso`, `.img`, `.mdf`, `.m3u` |
+| Game Boy Advance | `.gba`, or a `.zip` with one game inside |
 
-Keep `.cue` files next to the tracks they name. A zipped Game Boy Advance game is
-unpacked when you play it, so leave about 32 MB free on the SD card. Games over
-32 MB don't start.
+No BIOS files are needed. Your saves and settings live in `sdmc:/3ds/BreadBox/`.
 
-**BIOS.** Not needed. If you have a real BIOS, copy it to `sdmc:/3ds/BreadBox/bios/`
-and BreadBox uses it: for PlayStation `scph5500.bin`, `scph5501.bin`,
-`scph5502.bin`, `scph1001.bin`, `scph7001.bin`, `scph101.bin` or
-`psxonpsp660.bin`; for Game Boy Advance `gba_bios.bin`.
-
-**Box art** downloads automatically, matched by file name, disc serial or
-cartridge code. To use your own picture, add a PNG named like the game file
-(up to 4096 pixels wide and high; it is scaled to fit): for PlayStation in `sdmc:/3ds/BreadBox/covers/` (for multi-disc
-games, name it after disc 1), for Game Boy Advance next to the game or in
-`sdmc:/3ds/BreadBox/covers/gba/`. Your picture wins over the download.
-
-**Your files** live in `sdmc:/3ds/BreadBox/`:
-
-| Folder or file | What it holds |
-|---|---|
-| `saves/` | Memory cards and Game Boy Advance battery saves |
-| `states/` | Postcards (save states) and Continue |
-| `backups/` | Save backups |
-| `config.ini`, `games/` | Your settings |
-| `covers/` | Downloaded box art |
-| `bios/` | Optional BIOS files |
-| `log.txt` | What happened last session (older ones: `log.1.txt` to `log.4.txt`) |
-
-Back up this folder before you install a test build.
-
-### Moving from PSX3D
-
-On its first start, BreadBox copies from `sdmc:/3ds/PSX3D/` your memory cards,
-postcards (save states and Continue) with their pictures, per-game settings,
-cheats, BIOS files and play history. If BreadBox has no settings of its own yet,
-it also takes PSX3D's app settings. A notice says how many files came over.
-
-It is a one-way copy: PSX3D's files are never changed, and what you play in
-BreadBox does not go back to PSX3D. Both apps can stay installed. PSX3D numbered
-its save slots from 0 and BreadBox numbers postcards from 1, so PSX3D slot 0 is
-postcard 1. **Settings → Collection → Import again from PSX3D** copies anything
-new. Details: [Moving from PSX3D](docs/moving-from-psx3d.md).
-
-### Updates
-
-BreadBox checks for a new version from the room when it starts, about once a
-day while it sits idle, and when the 3DS wakes up if the last check was over an
-hour ago. It never checks during a
-game. With **Automatic** (the default), a short countdown runs before the update
-installs, and any button puts it off. **Settings → Updates** switches to
-**Ask first** or **Off**, and **Check now** looks right away. The tested
-settings for PlayStation games also update by themselves from the room.
+More in the guides: [games, BIOS, box art and your files](docs/getting-started.md) ·
+[moving from PSX3D](docs/moving-from-psx3d.md) ·
+[updates](docs/getting-started.md#updates)
 
 ## Controls
 
@@ -183,78 +135,25 @@ settings for PlayStation games also update by themselves from the room.
 Buttons can be changed per system in **Settings → Systems**, and the fast
 forward and rewind shortcuts in **Settings → Customize**. The Old 3DS shows L2
 and R2 on the touch screen in PlayStation games, plus a right stick in analog
-games.
-
-## Settings
-
-Open Settings in the room to change things for all games, or from
-the pause menu to change only the game you are playing. A value set for one game
-says so, and **X** puts it back to the system's value.
-
-| Page | What's there |
-|---|---|
-| Customize | Room style (Day or Night), fast forward and rewind shortcuts, which side the touch buttons sit on (New 3DS) |
-| Systems | Picture, controls, saves and cheats for PlayStation and for Game Boy Advance; PlayStation also has an Advanced page for speed and compatibility |
-| Collection | Your games folder, and Import again from PSX3D |
-| Updates | Automatic, Ask first or Off, and Check now |
-| About | Credits, licenses, how to install BreadBox, and the welcome tour |
-
-Tested PlayStation games get their recommended settings for your console
-automatically, so most players never need Advanced.
+games. Open Settings in the room to change things for all games, or from the
+pause menu for only the game you are playing.
 
 ## Performance
 
-Measured on real consoles with BreadBox 0.9.0, in the scenes listed in
-[docs/performance.md](docs/performance.md). Speed: 100% = full speed. FPS: new pictures shown per second.
-— = not measured for this release. That page also has the method and the
-frameskip-off numbers.
+Measured on a real Old 3DS with BreadBox 0.9.0, Auto frameskip, in each game's
+heaviest saved scene. 100% is full speed. The New 3DS is faster and has not
+been measured game by game yet.
 
-### PlayStation
+| PlayStation | Speed | | Game Boy Advance | Speed |
+|---|---:|---|---|---:|
+| Symphony of the Night | 100% | | Kirby: Nightmare in Dream Land | 100% |
+| Final Fantasy VII | 100% | | Pokémon Emerald | 100% |
+| Crash Bandicoot 2 | 99% | | Mario Kart: Super Circuit | 100% |
+| Tekken 3 | 98% | | Golden Sun | 92% |
+| Crash Team Racing | 96% | | Mario Golf: Advance Tour | 80% |
+| Gran Turismo 2 | 64% | | Doom | 60% |
 
-In the measured scenes, most games run at or near full speed on the Old 3DS with
-Auto frameskip; demanding 3D games, such as racing games, run slower there.
-
-<details>
-<summary>Speed per game</summary>
-
-| Game | Old 3DS (Auto frameskip) | New 3DS |
-|---|---:|---:|
-| Symphony of the Night | 100% / 56.8 | — |
-| Final Fantasy VII (battle) | 100% / 15.2 | — |
-| Klonoa | 100% / 23.0 | — |
-| Crash Bandicoot | 98% / 17.9 | — |
-| Crash Bandicoot 2 | 99% / 18.0 | — |
-| Crash Team Racing | 96% / 15.2 | — |
-| Ridge Racer Type 4 | 95% / 20.4 | — |
-| Tekken 3 | 98% / 15.2 | — |
-| Silent Hill (three scenes) | 96–100% / 12.0–12.1 | — |
-| Gran Turismo 2 (Arcade) | 64% / 12.1 | — |
-| Need for Speed: High Stakes | 38% / 11.0 | — |
-
-</details>
-
-### Game Boy Advance
-
-Most games we measured run at full speed on the Old 3DS; a few demanding ones
-run slower there.
-
-<details>
-<summary>Speed per game</summary>
-
-| Game | Old 3DS | New 3DS |
-|---|---:|---:|
-| Kirby: Nightmare in Dream Land | 100% / 60.0 | — |
-| Pokémon Emerald (intro) | 100% / 60.0 | — |
-| Mario Kart: Super Circuit (race) | 100% / 37.5 | — |
-| Classic NES Series: Excitebike (race) | 100% / 30.0 | — |
-| Star Wars: Flight of the Falcon (in flight) | 98% / 28.3 | — |
-| Golden Sun (intro) | 92% / 23.9 | — |
-| Mario Golf: Advance Tour (town) | 80% / 19.7 | — |
-| Doom (first level) | 60% / 17.3 | — |
-
-</details>
-
-BreadBox 0.9.0 has not been measured on the New 3DS game by game yet.
+Every measured game, the scenes and the method: [docs/performance.md](docs/performance.md).
 
 ## Known issues
 

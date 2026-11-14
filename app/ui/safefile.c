@@ -104,43 +104,70 @@ static void name_with(char *out, size_t len, const char *path, const char *ext)
 	snprintf(out, len, "%s%s", path, ext);
 }
 
-static long file_size(const char *path)
+safe_name_t safe_name(const char *path, long *size)
 {
 	struct stat st;
-	return stat(path, &st) == 0 ? (long)st.st_size : -1;
+	errno = 0;
+	if (stat(path, &st) == 0) {
+		if (size)
+			*size = (long)st.st_size;
+		return SAFE_NAME_PRESENT;
+	}
+	return errno == ENOENT ? SAFE_NAME_ABSENT : SAFE_NAME_UNREADABLE;
 }
 
-#define GOOD 2
-#define WEAK 1
+// One copy: GOOD (read into data if given), WEAK (passes the header check but
+// not fmt->deep), ABSENT (the SD card said "no such file"), DAMAGED (read, and
+// not a copy: wrong size or content) or UNREADABLE (an SD error on the way).
+typedef enum { ABSENT, GOOD, WEAK, DAMAGED, UNREADABLE } copy_t;
+static bool usable(copy_t c) { return c == GOOD || c == WEAK; }
 
-// GOOD: path is a good copy (read into data if given), WEAK: it passes the
-// header check but not fmt->deep, 0: no such file, -1: there but damaged or
-// unreadable
-static int read_good(const char *path, const safe_format_t *fmt, void *data)
+static copy_t read_copy(const char *path, const safe_format_t *fmt, void *data)
 {
 	FILE *f = fopen(path, "rb");
 	if (!f)
-		return file_size(path) < 0 ? 0 : -1;
+		return safe_name(path, NULL) == SAFE_NAME_ABSENT ? ABSENT : UNREADABLE;
 	unsigned char head[HEAD_MAX];
 	void *whole = data;
 	if (!whole && fmt->deep)   // the deep check needs everything
 		whole = malloc(fmt->size);
 	size_t want = whole ? fmt->size : (fmt->head < fmt->size ? fmt->head : fmt->size);
-	bool ok = fmt->head <= HEAD_MAX && file_size(path) == (long)fmt->size;
-	if (ok && whole)
-		ok = fread(whole, 1, want, f) == want && fgetc(f) == EOF;
-	else if (ok)
-		ok = fread(head, 1, want, f) == want;
-	fclose_at(f,path);
-	if (ok && fmt->valid && fmt->head)
-		ok = fmt->valid(whole ? whole : head);
-	int r = ok ? GOOD : -1;
+	long size = -1;
+	copy_t r = safe_name(path, &size) != SAFE_NAME_PRESENT ? UNREADABLE :
+		fmt->head > HEAD_MAX || size != (long)fmt->size ? DAMAGED : GOOD;
+	// stat gave the exact size: a short read, a byte past it or an error at its
+	// end (EOF alone does not tell) is the card's error
+	if (r == GOOD && !(fread(whole ? whole : head, 1, want, f) == want && (!whole || fgetc(f) == EOF) && !ferror(f)))
+		r = UNREADABLE;
+	if (fclose_at(f,path) && r == GOOD)
+		r = UNREADABLE;
+	if (r == GOOD && fmt->valid && fmt->head && !fmt->valid(whole ? whole : head))
+		r = DAMAGED;
 	// no memory for the deep check: can't call it good
-	if (ok && fmt->deep && !(whole && fmt->deep(whole, fmt->size)))
+	if (r == GOOD && fmt->deep && !(whole && fmt->deep(whole, fmt->size)))
 		r = WEAK;
 	if (whole != data)
 		free(whole);
 	return r;
+}
+
+// The whole file reads back without an SD error (its content is not judged):
+// GOOD, ABSENT or UNREADABLE. Asked before a file whose bytes nobody else keeps
+// is deleted or moved aside (retire, repair, rescue); never in the frame code.
+static copy_t read_through(const char *path)
+{
+	FILE *f = fopen(path, "rb");
+	if (!f)
+		return safe_name(path, NULL) == SAFE_NAME_ABSENT ? ABSENT : UNREADABLE;
+	unsigned char buf[4096];
+	long size = -1, got = 0;
+	bool ok = safe_name(path, &size) == SAFE_NAME_PRESENT;
+	for (size_t n; ok && (n = fread(buf, 1, sizeof(buf), f)) > 0;)
+		got += (long)n;
+	ok = ok && !ferror(f) && got == size;
+	if (fclose_at(f, path))
+		ok = false;
+	return ok ? GOOD : UNREADABLE;
 }
 
 static bool write_tmp(const char *tmp, const void *data, size_t size)
@@ -155,18 +182,8 @@ static bool write_tmp(const char *tmp, const void *data, size_t size)
 	}
 	if (fclose_at(f,tmp))
 		ok = false;
-	return ok && file_size(tmp) == (long)size;
-}
-
-// true: nothing is at path (the SD card answered "not there"); false with
-// errno: there, or the card could not tell (callers then stop)
-static bool absent(const char *path)
-{
-	struct stat st;
-	errno = 0;
-	if (!stat(path, &st))
-		return false;
-	return errno == ENOENT;
+	long written = -1;
+	return ok && safe_name(tmp, &written) == SAFE_NAME_PRESENT && written == (long)size;
 }
 
 // A damaged file makes room: renamed to the first free <file>.bad, .bad2 ...
@@ -175,43 +192,72 @@ static bool absent(const char *path)
 bool safe_park(const char *path)
 {
 	char bad[544];
-	if (absent(path))
-		return true;
-	if (errno)   // there must be no doubt that it is there
-		return false;
+	safe_name_t at = safe_name(path, NULL);
+	if (at != SAFE_NAME_PRESENT)   // there must be no doubt that it is there
+		return at == SAFE_NAME_ABSENT;
 	for (unsigned n = 1; n < 100; n++) {
 		if (n == 1)
 			name_with(bad, sizeof(bad), path, ".bad");
 		else
 			snprintf(bad, sizeof(bad), "%s.bad%u", path, n);
-		if (!absent(bad)) {
-			if (errno)
-				return false;
+		safe_name_t taken = safe_name(bad, NULL);
+		if (taken == SAFE_NAME_UNREADABLE)
+			return false;
+		if (taken == SAFE_NAME_PRESENT)
 			continue;
-		}
 		STEP();   // the name is free: a cut here leaves the file in place
 		return rename(path, bad) == 0;
 	}
 	return false;
 }
 
-// the backup is about to be replaced: the history may take it first
-static void retire(const char *bak, const safe_format_t *fmt)
+// <name> is set aside for a good copy only when it reads back whole: a copy the
+// SD card cannot read may be the newest one and stays at its name.
+static bool park_readable(const char *path)
 {
-	if (fmt && fmt->retire && file_size(bak) >= 0)
+	return read_through(path) != UNREADABLE && safe_park(path);
+}
+
+// the backup is about to be replaced: the history may take it first; what it
+// leaves is deleted only once it has read back whole (an old copy that the SD
+// card cannot read may be the last one of those bytes). false: it stays, and
+// nothing goes on.
+static bool retire(const char *bak, const safe_format_t *fmt)
+{
+	safe_name_t at = safe_name(bak, NULL);
+	if (at == SAFE_NAME_UNREADABLE)
+		return false;
+	if (at == SAFE_NAME_PRESENT && fmt && fmt->retire) {
 		fmt->retire(bak, fmt->ctx);
+		at = safe_name(bak, NULL);
+		if (at == SAFE_NAME_UNREADABLE)
+			return false;
+	}
+	if (at == SAFE_NAME_ABSENT)
+		return true;
+	if (read_through(bak) != GOOD)
+		return false;
 	remove(bak);
+	return true;
 }
 
 // steps 2-5: <name>.tmp is complete. fmt NULL: a text file (no backup kept).
+// A <name> or .bak the SD card cannot answer for stops it: nothing is moved.
 static bool put_in_place(const char *path, const char *tmp, const char *bak, const safe_format_t *fmt)
 {
 	bool moved = false;
-	if (file_size(path) >= 0) {
-		int cur = fmt ? read_good(path, fmt, NULL) : GOOD;
+	safe_name_t at = safe_name(path, NULL);
+	if (at == SAFE_NAME_UNREADABLE)
+		return false;
+	if (at == SAFE_NAME_PRESENT) {
+		copy_t cur = fmt ? read_copy(path, fmt, NULL) : GOOD;
+		copy_t old = cur == WEAK ? read_copy(bak, fmt, NULL) : ABSENT;
+		if (cur == UNREADABLE || old == UNREADABLE)
+			return false;
 		// a weak <name> never pushes a good backup out
-		if (cur == GOOD || (cur == WEAK && read_good(bak, fmt, NULL) != GOOD)) {
-			retire(bak, fmt);
+		if (cur == GOOD || (cur == WEAK && old != GOOD)) {
+			if (!retire(bak, fmt))
+				return false;
 			STEP();
 			if (rename(path, bak))
 				return false;
@@ -236,14 +282,20 @@ static bool put_in_place(const char *path, const char *tmp, const char *bak, con
 // repair): put it in place before anything writes a new .tmp over it
 // A damaged leftover .tmp beside a damaged <name> is kept (.tmp.bad), not
 // written over.
+// A .tmp the SD card cannot read may be that copy: it stops the write
+// (writing the new .tmp would truncate it).
+// A <name> the SD card cannot read is never set aside for it either.
 static bool rescue_tmp(const char *path, const char *tmp, const char *bak, const safe_format_t *fmt)
 {
-	if (read_good(path, fmt, NULL) > 0 || read_good(bak, fmt, NULL) > 0)
+	copy_t cur = read_copy(path, fmt, NULL);
+	if (usable(cur) || usable(read_copy(bak, fmt, NULL)))
 		return true;
-	int t = read_good(tmp, fmt, NULL);
-	if (t <= 0)
-		return t == 0 || safe_park(tmp);
-	return safe_park(path) && rename(tmp, path) == 0;
+	copy_t t = read_copy(tmp, fmt, NULL);
+	if (t == ABSENT || t == UNREADABLE)
+		return t == ABSENT;
+	if (t == DAMAGED)
+		return safe_park(tmp);
+	return cur != UNREADABLE && park_readable(path) && rename(tmp, path) == 0;
 }
 
 // After a failed put_in_place: the complete .tmp goes only while <name> is
@@ -288,7 +340,7 @@ static bool reads_back(const char *tmp, const void *data, size_t size)
 		ok = fread(buf, 1, n, f) == n && !memcmp(buf, (const char *)data + at, n);
 	}
 	if (f) {
-		ok = ok && fgetc(f) == EOF;
+		ok = ok && fgetc(f) == EOF && !ferror(f);
 		if (fclose_at(f, tmp))
 			ok = false;
 	}
@@ -306,7 +358,7 @@ bool safe_restore(const char *path, const safe_format_t *fmt, const void *data,
 	if (!safe_park(tmp))
 		return false;
 	STEP();
-	if (read_good(bak, fmt, NULL) != GOOD && !safe_park(bak))
+	if (read_copy(bak, fmt, NULL) != GOOD && !safe_park(bak))
 		return false;
 	STEP();
 	if (!write_tmp(tmp, data, fmt->size) || !reads_back(tmp, data, fmt->size)) {
@@ -314,7 +366,12 @@ bool safe_restore(const char *path, const safe_format_t *fmt, const void *data,
 		return false;
 	}
 	STEP();
-	if (aside && file_size(path) >= 0) {   // the caller keeps <name> somewhere else
+	safe_name_t at = safe_name(path, NULL);
+	if (at == SAFE_NAME_UNREADABLE) {
+		drop_tmp(path, tmp);
+		return false;
+	}
+	if (aside && at == SAFE_NAME_PRESENT) {   // the caller keeps <name> somewhere else
 		if (!aside(path, ctx)) {
 			drop_tmp(path, tmp);
 			return false;
@@ -381,9 +438,10 @@ void safe_recover(const char *path)
 	// A text .tmp is never recovery input. With a primary present, leave any
 	// abandoned tmp for safe_begin to truncate: probing/removing an absent tmp
 	// can take >150 ms on SD, and cover readers call recovery repeatedly.
-	if (file_size(path) >= 0)
+	safe_name_t at = safe_name(path, NULL);
+	if (at == SAFE_NAME_PRESENT)
 		return;
-	if (errno != ENOENT && errno != ENOTDIR) {
+	if (at == SAFE_NAME_UNREADABLE && errno != ENOTDIR) {
 		int error = errno;
 #ifdef __3DS__
 		log_printf("safe_recover: stopped path=%s errno=%d\n", path, error);
@@ -393,7 +451,7 @@ void safe_recover(const char *path)
 		errno = error;
 		return;
 	}
-	if (file_size(bak) < 0 || rename(bak, path))
+	if (safe_name(bak, NULL) != SAFE_NAME_PRESENT || rename(bak, path))
 		return;
 	remove(tmp);
 }
@@ -437,40 +495,44 @@ void *safe_load(const char *path, const safe_format_t *fmt, unsigned skip, safe_
 	safe_info_t dummy;
 	if (!info)
 		info = &dummy;
-	info->from = SAFE_NONE;
-	info->rejected = info->failed = info->weak = false;
+	*info = (safe_info_t){ .outcome = SAFE_NO_MEMORY, .from = SAFE_NONE, .failed = true };
 	void *buf = fmt->size ? malloc(fmt->size) : NULL;
-	if (!buf) {
-		info->failed = true;
+	if (!buf)
 		return NULL;
-	}
 	int weak = SAFE_NONE;   // the first weak copy: used if none is good
+	bool damaged = false, unreadable = false;
 	for (int s = SAFE_CURRENT; s <= SAFE_TEMP; s++) {
 		char name[528];
 		if (skip & (1u << s))
 			continue;
 		name_with(name, sizeof(name), path, ext[s]);
-		int r = read_good(name, fmt, buf);   // only a good copy is returned
+		copy_t r = read_copy(name, fmt, buf);   // only a good copy is returned
 		if (r == GOOD) {
-			info->from = (safe_source_t)s;
-			info->rejected |= weak != SAFE_NONE;
+			*info = (safe_info_t){ .outcome = SAFE_LOADED, .from = (safe_source_t)s,
+				.rejected = damaged || unreadable || weak != SAFE_NONE };
 			return buf;
 		}
 		if (r == WEAK && weak == SAFE_NONE)
 			weak = s;
-		else if (r != 0)
-			info->rejected = true;
+		else if (r != ABSENT) {
+			damaged |= r != UNREADABLE;
+			unreadable |= r == UNREADABLE;
+		}
 	}
-	if (weak != SAFE_NONE) {
+	// a copy that could not be read may be the good one: no weak copy over it
+	if (weak != SAFE_NONE && !unreadable) {
 		char name[528];
 		name_with(name, sizeof(name), path, ext[weak]);
-		if (read_good(name, fmt, buf) == WEAK) {
-			info->from = (safe_source_t)weak;
-			info->weak = true;
+		copy_t r = read_copy(name, fmt, buf);
+		if (r == WEAK) {
+			*info = (safe_info_t){ .outcome = SAFE_LOADED, .from = (safe_source_t)weak, .rejected = damaged, .weak = true };
 			return buf;
 		}
-		info->rejected = true;
+		unreadable |= r == UNREADABLE;
 	}
+	damaged |= weak != SAFE_NONE;
+	*info = (safe_info_t){ .outcome = unreadable ? SAFE_UNREADABLE : damaged ? SAFE_DAMAGED : SAFE_ABSENT,
+		.from = SAFE_NONE, .rejected = damaged || unreadable, .failed = unreadable };
 	free(buf);
 	return NULL;
 }
@@ -480,7 +542,7 @@ bool safe_repair(const char *path, const safe_format_t *fmt, const void *data, s
 	char src[528];
 	if (from == SAFE_TEMP) {
 		name_with(src, sizeof(src), path, ".tmp");
-		if (!safe_park(path))
+		if (!park_readable(path))
 			return false;
 		STEP();
 		return rename(src, path) == 0;
@@ -489,7 +551,7 @@ bool safe_repair(const char *path, const safe_format_t *fmt, const void *data, s
 		return false;
 	// the .bak stays as it is; the copy is staged under its own name
 	name_with(src, sizeof(src), path, ".rep");
-	if (!write_tmp(src, data, fmt->size) || !safe_park(path)) {
+	if (!write_tmp(src, data, fmt->size) || !park_readable(path)) {
 		remove(src);
 		return false;
 	}
@@ -505,18 +567,25 @@ bool safe_stat(const char *path, const safe_format_t *fmt, time_t *mtime)
 {
 	char other[528];
 	struct stat st;
+	bool unsure = false;
+	errno = 0;
 	bool found = stat(path, &st) == 0;
+	unsure |= !found && errno != ENOENT;
 	if (!found) {
 		name_with(other, sizeof(other), path, ".bak");
+		errno = 0;
 		found = stat(other, &st) == 0;
+		unsure |= !found && errno != ENOENT;
 	}
 	if (!found) {
 		name_with(other, sizeof(other), path, ".tmp");
-		found = read_good(other, fmt, NULL) > 0 && stat(other, &st) == 0;
+		copy_t t = read_copy(other, fmt, NULL);
+		found = usable(t) && stat(other, &st) == 0;
+		unsure |= !found && t != ABSENT && t != DAMAGED;
 	}
-	if (found && mtime)
-		*mtime = st.st_mtime;
-	return found;
+	if (mtime)
+		*mtime = found ? st.st_mtime : 0;
+	return found || unsure;
 }
 
 void safe_remove(const char *path)

@@ -40,7 +40,7 @@ void bb_save_on_damage(int (*ask)(const bb_save_damage *));
 #define BB_THUMB_BYTES (32+BB_THUMB_MAX_W*BB_THUMB_MAX_H*2)
 /* One slot as the slot browser shows it, read once when it opens. */
 typedef struct {
- bool used;            /* a state (or its backup) exists */
+ bool used;            /* a state (or its backup) exists, or the SD card could not say */
  uint32_t saved;       /* unix time, 0 = unknown */
  uint32_t played;      /* seconds of play time when it was saved, 0 = unknown */
  unsigned w,h;         /* picture size, 0 = none */
@@ -56,6 +56,8 @@ bool bb_save_delete(unsigned slot);
 /* Worker read of the last durable snapshot; never joins the save writer. */
 bool bb_save_continue_read(const bb_system_t *,const bb_content_id *,uint32_t *saved,bool (*cancel)(void *),void *arg);
 bool bb_save_continue(const bb_system_t *,const bb_content_id *,uint32_t *saved);
+/* Loads the battery and clock. Only "no such file" starts them empty; a damaged one asks
+ * (bb_save_on_damage); one the SD card cannot read (or no memory) fails with an error. */
 bool bb_save_begin(const bb_save_config *,char *error,size_t cap);
 void bb_save_invalidate(void);
 bool bb_save_runnable(void); /* false after partial restore: stop core, no further frames/writes */

@@ -222,7 +222,7 @@ int main(int argc,char **argv)
 #define cards_question real_cards_question
 #include "card_question.c"
 '''
-with tempfile.TemporaryDirectory(dir=Path.home() / '.cache') as td:
+with tempfile.TemporaryDirectory() as td:
     td = Path(td)
     src = td / 'ps1_back.c'
     src.write_text(code)
@@ -231,7 +231,7 @@ with tempfile.TemporaryDirectory(dir=Path.home() / '.cache') as td:
                         '-fsanitize=address,undefined', '-DSAFEFILE_TEST', '-include', 'tests/app/save/host.h', '-Itests/app/save',
                         '-Itests/app/host', '-Isystems/ps1', '-Iapp/ui', '-Iinclude/breadbox', '-Iplatform/3ds', '-Icore/deps/libretro-common/include',
                         str(src), 'systems/ps1/cards.c', 'app/ui/bb_final.c', 'app/ui/safefile.c', 'app/ui/history.c',
-                        '-o', str(td / 'ps1_back')], cwd=root)
+                        '-Wl,--wrap=stat,--wrap=fopen', '-o', str(td / 'ps1_back')], cwd=root)   # cards.c test: SD error hooks
     if r.returncode:
         sys.exit('ps1_back: the launch section did not compile')
     if subprocess.run([str(td / 'ps1_back'), str(td / 'sd')]).returncode:

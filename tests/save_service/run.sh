@@ -87,3 +87,10 @@ cc -std=gnu11 -g -Wall -Wextra -Werror -Wno-unused-function -Wno-misleading-inde
  app/ui/bb_save.c app/ui/bb_final.c app/ui/save_writer.c app/ui/safefile.c app/ui/history.c -lz -o "$out/foreign-cuts"
 mkdir "$out/foreign-cuts-sd"
 "$out/foreign-cuts" "$out/foreign-cuts-sd"
+# harsh review 0.9.0 finding 1: SD read errors on the battery/backup/sole tmp/clock are never "no save"
+cc -std=gnu11 -g -Wall -Wextra -Werror -Wno-unused-function -Wno-misleading-indentation \
+ -DSAVE_WRITER_TEST -fsanitize=address,undefined -pthread -Wl,--wrap=stat,--wrap=fopen,--wrap=fread,--wrap=fclose,--wrap=rename \
+ -Iapp/ui -Iinclude/breadbox -Iplatform/3ds -Itests/gba_saves tests/save_service/read_errors.c \
+ app/ui/bb_save.c app/ui/bb_final.c app/ui/save_writer.c app/ui/safefile.c app/ui/history.c -lz -o "$out/read-errors"
+mkdir "$out/read-errors-sd"
+"$out/read-errors" "$out/read-errors-sd"
