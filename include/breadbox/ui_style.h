@@ -770,11 +770,14 @@
 #define UI_CARD_Z_PAPER 0.3f
 #define UI_CARD_Z_RULE 0.32f
 #define UI_CARD_Z_SELECT 0.34f
+#define UI_CARD_Z_NOTICE_LINE 0.37f   // the notice's own ruled line, over its strip (UI_CARD_Z_SELECT + .02)
 #define UI_CARD_Z_CLIP 0.5f
 #define UI_CARD_SUN_STEP 0.7853982f
 #define UI_CARD_NUDGE 2               // the selected row's text drifts right
-#define UI_CARD_NOTICE_H UI_PAPER_LINE   // the notice line along the foot: its text on the last ruled line
+#define UI_CARD_NOTICE_H UI_PAPER_LINE   // the notice strip along the foot (it covers the last ruled line; the text stands on UI_CARD_NOTICE_LINE)
 #define UI_CARD_NOTICE_SIZE UI_TEXT_FLOOR
+#define UI_CARD_FOOT_MARGIN 5         // paper under the notice's baseline: its descenders (3.5 px at the floor) stay on the card
+#define UI_CARD_NOTICE_LINE (UI_CARD_Y + UI_CARD_H - UI_CARD_FOOT_MARGIN)   // the notice's baseline, inside the card; the rows keep their grid
 // The selection highlighter (ui_mark.h): a yellow marker stroke multiplied over the paper, from a little left
 // of the row's text to a little past it (or past the value's arrow), on the text's x-height.
 #define UI_MARK_BEFORE 4              // starts this far left of the label

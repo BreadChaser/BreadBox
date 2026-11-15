@@ -170,7 +170,7 @@ static void body_surfaces(void)
 		sizes("settings/pause card row label", UI_CARD_ROW_SIZE, UI_TEXT_FLOOR, line, false);
 		sizes("settings/pause card row value", UI_CARD_VALUE_SIZE, UI_TEXT_FLOOR, line, false);
 	}
-	float notice = UI_CARD_Y + UI_CARD_H - UI_CARD_NOTICE_H + UI_CARD_NOTICE_H - 1;
+	float notice = UI_CARD_NOTICE_LINE;
 	sizes("settings/pause card notice", UI_CARD_NOTICE_SIZE, UI_TEXT_FLOOR, notice, false);
 	sizes("card eyebrow on the red rule", UI_TEXT_FLOOR, UI_TEXT_FLOOR, UI_CARD_RULE_Y, false);
 	sizes("room card eyebrow on the red rule", UI_TEXT_FLOOR, UI_TEXT_FLOOR, UI_ROOM_RULE_Y, false);

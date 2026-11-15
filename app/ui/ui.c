@@ -1974,10 +1974,10 @@ PSX3D_COLD void ui_card_draw(const flist_t *f, int n, int sel, void (*row)(int, 
 			UI_CARD_SCROLLBAR_W, UI_CARD_ROWS * UI_CARD_ROW * UI_CARD_ROWS / (float)n, theme_alpha(th->scrollbar, (int)(UI_METRIC_255 * pause_progress)));
 	if (card->notice && card->notice[UI_METRIC_0]) {
 		float ny = cy + ch - UI_CARD_NOTICE_H;
-		C2D_DrawRectSolid(cx + UI_METRIC_1, ny, UI_CARD_Z_SELECT + UI_METRIC_0_02F, cw - UI_METRIC_2, UI_CARD_NOTICE_H - UI_METRIC_1, p.edge);
+		ui_card_notice_strip(cx + UI_METRIC_1, ny, UI_CARD_Z_SELECT + UI_METRIC_0_02F, cw - UI_METRIC_2, UI_CARD_NOTICE_H - UI_METRIC_1, p.edge, p.lines);   // the strip and the line its text stands on (card_notice.c)
 		float nsize;
 		const char *notice = ui_fit_ex(NULL, card->notice, UI_CARD_NOTICE_SIZE, UI_TEXT_FLOOR, right - UI_CARD_TEXT_X, &nsize);
-		ui_text_ex(NULL, UI_CARD_TEXT_X, UI_PAPER_TOP(ny + UI_CARD_NOTICE_H - UI_METRIC_1, nsize), nsize, calm ? p.ink : p.stamp, UI_METRIC_0, notice);   // on the last line
+		ui_text_ex(NULL, UI_CARD_TEXT_X, UI_PAPER_TOP(ny + UI_CARD_NOTICE_H - UI_CARD_FOOT_MARGIN, nsize), nsize, calm ? p.ink : p.stamp, UI_METRIC_0, notice);   // on the strip's own line, clear of the card's foot
 	}
 	// the paper clip: two loops
 	rring(UI_CARD_CLIP_X, UI_CARD_CLIP_Y, UI_CARD_CLIP_W, UI_CARD_CLIP_H, UI_CARD_CLIP_W / UI_METRIC_2, UI_CARD_CLIP_LINE, p.soft, p.paper, UI_CARD_Z_CLIP);

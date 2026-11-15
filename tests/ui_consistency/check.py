@@ -8,7 +8,7 @@ shell=[root/d for d in ('app/ui','app/settings','app/services','platform/3ds','i
 sources=lambda ext:sorted(p for d in shell for p in d.glob('*'+ext))+sorted((root/'systems').glob('*/*'+ext))
 # Rendering a game frame/backdrop/asset is distinct from drawing frontend UI.
 # Hashes make these exceptions closed to new drawing without explicit review.
-exceptions={'video.c','scene.c','icons.c','ui_mark.c','statsview.c','stereo.c','shelf_scene.c','room_scene.c'}
+exceptions={'card_notice.c','video.c','scene.c','icons.c','ui_mark.c','statsview.c','stereo.c','shelf_scene.c','room_scene.c'}
 lex=re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|//[^\n]*|/\*[\s\S]*?\*/')
 def clean(s):return lex.sub(lambda m:' ' if m[0][0]=='"' or m[0][0]=="'" else '\n'*m[0].count('\n'),s)
 primitive=re.compile(r'\b(?:C2D_Draw\w+|ui_text(?:_ex|_wrap|_pixels)?|ui_rect|ui_help_panel|icons_draw|ui_star|ui_menu_header|ui_bar_draw|flist_draw(?:_sections)?)\s*\(')

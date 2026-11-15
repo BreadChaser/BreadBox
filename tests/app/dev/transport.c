@@ -184,6 +184,7 @@ static struct { char games_dir[PATH_LEN]; } g_cfg __attribute__((unused));
 #include "../../../platform/3ds/devnet.c"
 int main(void)
 {
+	if (getenv("DEV_TEST_NO_TOKEN")) dev_token[0] = 0;   // the tokenless-server case (client_test.py: NoToken)
 	/* The worker must never share a core with the main thread at a lower priority (a game that
 	   cannot sleep would starve every `shot`): system core when granted, core 2 on a New 3DS
 	   without it (emulator), above main only on an Old 3DS without it. */

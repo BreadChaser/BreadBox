@@ -2,6 +2,12 @@
 
 What changed in each release, newest first. A few lines each; details are in the docs.
 
+## v0.9.2 (public beta)
+
+- Fixed: PlayStation games in .chd files are found again and start.
+- Settings > Updates always opens and says why updates are off.
+- Long error messages now fit the screen.
+
 ## v0.9.1 (public beta)
 
 - Fixed: an SD card read error can no longer make BreadBox lose or overwrite a save.

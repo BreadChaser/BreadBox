@@ -527,7 +527,7 @@ static bool ps1_image_at(const char *path, int depth)
   }
   fclose(list); return valid;
  }
- if (!strcasecmp(e, ".chd")) return bb_disc_is_ps1_chd(path);
+ if (!strcasecmp(e, ".chd")) return bb_disc_chd_kind(path) != BB_DISC_OTHER;   /* an unreadable CHD is the core's to judge */
 	FILE *f = fopen(path, "rb");
 	if (!f)
         return false;

@@ -47,7 +47,6 @@ int bb_remote_slot=-1, bb_remote_stereo=-1;
 #include <sys/stat.h>
 
 bool dev_remote, dev_bench;
-extern const char *dev_remote_source;
 char dev_token[96], dev_update_url[256];
 static bool exiting, load_pending, change, running, state_failed, command_loading, updated;
 /* The game now running was started by a remote load/batch (not from the library). */
@@ -209,7 +208,6 @@ static void publish_status(void)
 	p += sprintf(p, ",\"auto_floor\":%d,\"defaults\":%d", game_auto_floor(), defaults_version());
 	p += sprintf(p, ",\"fsmart\":\"new\"");
 	p += sprintf(p, ",\"remote_game\":%s", remote_game ? "true" : "false");
-	p += sprintf(p, ",\"remote_source\":\"%s\"", dev_remote_source);
 	p += sprintf(p, ",\"wsbundle\":\"%s\",\"wsscreen\":%d,\"ws_identity\":\"%s\"", sw_wsbundle ? "on" : "off", running ? config_screen_mode() : sw_wsscreen, ws_identity());
 	p += sprintf(p, ",\"version\":\"%s\",\"rttcache\":\"%s\"", BB_VERSION, sw_gldbg & PICA_DEBUG_NO_REGION_CACHE ? "old" : "new");
 	p += sprintf(p, ",\"preset\":\"%s\",\"preset_version\":%d,\"preset_pack\":%d", game_preset_source(),

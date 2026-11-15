@@ -25,9 +25,12 @@ int main(void)
 		/* capitals (UI_PAPER_CAP) stand inside the band, above the line */
 		assert(line - UI_PAPER_CAP >= band && UI_PAPER_MARK_Y(line) > band && UI_PAPER_MARK_Y(line) < line);
 	}
-	/* the notice's line is the last ruled line, on the card's foot */
-	float notice = UI_CARD_Y + UI_CARD_H - UI_CARD_NOTICE_H + UI_CARD_NOTICE_H - 1;
-	assert(notice == UI_CARD_RULE_Y + (UI_CARD_ROWS + 1) * UI_PAPER_LINE && notice < UI_CARD_Y + UI_CARD_H);
+	/* the notice's strip (UI_CARD_NOTICE_H, along the foot) covers the last ruled line; its text stands on its own line
+	   inside the card: the descenders (below the baseline, at most the rest of the 30 px cell, letters at 24 of 30 at the
+	   floor) end on the paper, the card ends above the bar (which starts at 200), and the line clears the last row's text */
+	float notice = UI_CARD_NOTICE_LINE, last_row = UI_CARD_RULE_Y + UI_CARD_ROWS * UI_PAPER_LINE;
+	assert(notice + (30 - 24) * UI_TEXT_FLOOR <= UI_CARD_Y + UI_CARD_H && UI_CARD_Y + UI_CARD_H < 200);
+	assert(notice > UI_CARD_Y + UI_CARD_H - UI_CARD_NOTICE_H + UI_PAPER_CAP && notice - last_row >= UI_PAPER_CAP + 6);
 	/* the highlighter's stroke (ui_mark.h) stays clear of the line above's text and of the next row's capitals */
 	assert(UI_MARK_ABOVE < UI_PAPER_LINE && UI_MARK_HEIGHT - UI_MARK_ABOVE + 1 < UI_PAPER_LINE - UI_PAPER_CAP);
 	assert(UI_CARD_TEXT_X == UI_CARD_MARGIN_X + UI_PAPER_MARGIN_GAP);

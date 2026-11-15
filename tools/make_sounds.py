@@ -107,7 +107,12 @@ def breath(dur, vol, lo, hi, attack, release):
     return vol * x / np.abs(x).max() * e
 
 
+# The retired menu tones (move, select, back) drew random numbers here: a reverb before `big` and two
+# breaths after it. Drawing them still keeps the stream, so launch.pcm and music.pcm come out as shipped.
+reverb_ir(1.2, damp_hz=4500)
 big = reverb_ir(3.5, damp_hz=3500, predelay=0.03)
+rng.normal(0, 1, int(SR * 0.08))
+rng.normal(0, 1, int(SR * 0.3))
 
 # launch: a slow shimmering swell (Cmaj9) with a rising breath, no bells
 dur = 2.2

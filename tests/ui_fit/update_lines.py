@@ -9,9 +9,11 @@ src = (Path(__file__).resolve().parents[2] / 'app/services/update.c').read_text(
 table = re.search(r'update_status_text\[\]=\{(.*?)\};', src, re.S).group(1)
 body = src[src.index('static const char *update_settings_status(void)\n{'):]
 body = body[:body.index('\n}\n')]
+why = src[src.index('static const char *update_unavailable(void)\n{'):]
+why = why[:why.index('\n}\n')]
 progress = src[src.index('static bool update_progress_text('):]
 progress = progress[:progress.index('\n}\n')]
-lines = re.findall(r'"((?:[^"\\]|\\.)*)"', table) + re.findall(r'return "((?:[^"\\]|\\.)*)"', body) + \
+lines = re.findall(r'"((?:[^"\\]|\\.)*)"', table) + re.findall(r'return "((?:[^"\\]|\\.)*)"', body + why) + \
     [re.sub(r'%u%%', '100%', t) for t in re.findall(r'"((?:[^"\\]|\\.)*)"', progress)]
 wide=set('mwMWDOQGCNHUABKRV');narrow=set("iltfjr.,' I:;-!|")
 # Exact twentieth units keep the calibrated boundary identical across Python

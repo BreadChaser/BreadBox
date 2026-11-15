@@ -26,6 +26,9 @@ BreadBox banner and icon (apps/breadbox/)
   is set in Michroma by Vernon Adams, SIL OFL 1.1 (see tools/art/Michroma-OFL.txt);
   raster glyphs only. The banner audio is silent PCM.
 
+BreadBox menu music and launch sound (assets/romfs/sfx/music.pcm, launch.pcm)
+  Synthesized by tools/make_sounds.py, by BreadChaser, GPL-2.0-or-later.
+
 BreadBox menu sounds (assets/romfs/sfx: every file but launch.pcm and music.pcm)
   Paper recordings by Joseph Sardin (BigSoundBank, https://bigsoundbank.com),
   Kenney (https://kenney.nl) and OwlishMedia (https://opengameart.org), all

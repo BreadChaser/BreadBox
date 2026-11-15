@@ -46,7 +46,7 @@ generic. Content identity keys are `<system>:<key>` and are stable on disk.
   `emu.c::run_game`, `covers.c`, and `main()`.
 - `UI_METRIC_<n>` names still encode visual roles by number and should become
   semantic names.
-- The developer remote is included in the build but ships disabled by default. It also reads the legacy `sdmc:/3ds/PSX3D/switches.txt` when the BreadBox switches file is absent; see [developer controls](dev-control.md).
+- The developer remote is included in the build but ships disabled by default. Only `sdmc:/3ds/BreadBox/switches.txt` enables it; see [developer controls](dev-control.md).
 
 ## Shared runtime behavior
 

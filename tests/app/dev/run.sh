@@ -3,8 +3,7 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/../../.." && pwd)
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
-cc -std=gnu11 -Wall -Wextra -Werror -fsanitize=address,undefined -I"$ROOT/app/ui" -I"$ROOT/include/breadbox" -I"$ROOT/platform/3ds" "$ROOT/tests/app/dev/fallback.c" -o "$TMP/fallback"
-(cd "$TMP" && ./fallback)
+python3 "$ROOT/tests/app/dev/switch_file.py"
 cc -D_GNU_SOURCE -std=gnu11 -Wall -Wextra -Werror -Wno-format-truncation -fsanitize=address,undefined \
   -I"$ROOT/core/deps/libretro-common/include" -g "$ROOT/tests/app/dev/check.c" -I"$ROOT/tests/app/host/skip" -I"$ROOT/app/ui" -I"$ROOT/include/breadbox" -I"$ROOT/platform/3ds" "$ROOT/systems/ps1/clip.c" "$ROOT/systems/ps1/benchstate.c" "$ROOT/tools/input-replay/mock-core.c" -lz -o "$TMP/check"
 (cd "$TMP" && ./check)

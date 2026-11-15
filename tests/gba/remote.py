@@ -8,7 +8,6 @@ stubs='''
 #include "bb_registry.h"
 static bool room_diag;
 void room_pace_diagnostic(void){room_diag=true;}
-const char *dev_remote_source="breadbox";
 bool gba_active(void) {return false;}
 bool gba_debug_key(const char *s) {(void)s;return false;}
 bool gba_debug_state(int slot,bool save) {(void)slot;(void)save;return true;}

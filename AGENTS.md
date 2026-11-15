@@ -19,6 +19,7 @@ one-time import from `sdmc:/3ds/PSX3D` remain live BreadBox compatibility code.
   words; `home_welcome.inc` tours the room with it (`bb_welcome_open()` for
   Settings > About > Welcome; dev `ui welcome`). `place_cards.c`: the room cards' lines.
 - `app/settings/`: the Settings pages (one list per page, a page stack; adapters own the rows);
+  `app/ui/card_notice.c` the card notice's strip and ruled line (its own file: `ui.o`'s cold code sits right ahead of the GBA save dialogs, so growth there moves them);
   `app/ui/ui_mark.c` the selection highlighter (`ui_mark.h`, masks from `tools/ui/mark_masks.py`);
   `app/ui/ui_font.c` where the loaded fonts' letters stand (`UI_PAPER_TOP` puts text on ruled lines with any font; test `tests/text_baseline`);
   `app/services/`: updater and sharing.

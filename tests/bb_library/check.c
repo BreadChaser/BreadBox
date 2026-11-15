@@ -66,7 +66,8 @@ bb_index_status_t bb_index_status(void){return busy?BB_INDEX_SCANNING:terminal;}
 bool bb_index_complete(void) {return !busy && terminal==BB_INDEX_COMPLETE;}
 const char *bb_index_root(void) {return g_cfg.games_dir;}
 void bb_index_start(const char *r,bool refresh) {(void)r;if(refresh)gen++;}
-bool bb_disc_is_ps1_chd(const char *p) {(void)p;return false;}
+#include "../../app/ui/bb_disc.h"
+bb_disc_kind bb_disc_chd_kind(const char *p) {(void)p;return BB_DISC_OTHER;}
 bool aptMainLoop(void) {static int turns;assert(++turns<10000);return true;}
 bool aptShouldClose(void) {return false;}
 void dev_tick_keys(void) {}

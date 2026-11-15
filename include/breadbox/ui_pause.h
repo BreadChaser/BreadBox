@@ -63,6 +63,9 @@ void ui_card_notice_calm(void);
 
 void ui_card_update(flist_t *f, int sel, int n);
 void ui_card_draw(const flist_t *f, int n, int sel, void (*row)(int, void *, ui_card_row_t *), void *ud, const ui_card_t *card);
+// The notice's strip and the ruled line its text stands on (card_notice.c): the arguments of C2D_DrawRectSolid for the
+// strip, then the line's colour.
+void ui_card_notice_strip(float x, float y, float z, float w, float h, u32 color, u32 lines);
 u32 ui_card_input(const flist_t *f, int n, int *sel, u32 keys);   /* the list's keys, touch on the card's own rows */
 bool ui_card_title_hit(void);                                    /* the touch is on the card's header row (title) */
 bool ui_card_row_cut(const ui_card_row_t *r);                    /* the card cuts this focused row ("...") */

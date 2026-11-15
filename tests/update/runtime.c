@@ -177,7 +177,8 @@ static u32 held;u32 input_keys_held(void){return held;}
 void input_poll(void){}
 u32 input_keys_down(void){assert(key_index<8);return keys[key_index++];}
 void ui_swap_enter(void){}
-void sfx_play(int e){(void)e;}
+static int sfx_errors;
+void sfx_play(int e){if(e==SFX_ERROR)sfx_errors++;}
 void sfx_cancel(void){}
 u32 ui_swap_keys(u32 k,u32 mask){(void)mask;return k;}
 u32 ui_card_input(const flist_t *f,int n,int *sel,u32 k){(void)f;if(k&KEY_DOWN)*sel=(*sel+1)%n;return k;}
@@ -273,7 +274,7 @@ int main(int argc,char **argv)
 #else
  assert(!bb_update_tick() && !queued);
 #endif
- diagnostic=false;accept_queue=false;queued=0;update_initialized=false;
+ diagnostic=false;accept_queue=false;queued=0;update_initialized=false;update_prefs_loaded=1;   /* the updater has started and read its preference */
  sink header={0};char h2[]="HTTP/2 206\r\n",h3[]="HTTP/3 503\r\n";
  assert(update_header(h2,1,sizeof(h2)-1,&header)==sizeof(h2)-1 && header.response==206);
  assert(update_header(h3,1,sizeof(h3)-1,&header)==sizeof(h3)-1 && header.response==503);
@@ -653,6 +654,44 @@ int main(int argc,char **argv)
   /* second frame: the tap on tab 1 (Check) is A on "Check now"; third frame B leaves */
   bb_update_settings();assert(update_check_now && key_index==3);
   tap_tab=-1;update_check_now=false;accept_queue=false;update_explicit_check=false;update_approved=false;
+  /* (6) Settings > Updates always opens and says why the updater cannot run; Check now answers with that
+   * line and starts nothing, and a preference that was not loaded is never written. */
+  {
+   unsigned prefs=update_prefs_loaded;bool init=update_initialized;before=queued;update_preference=0;update_prefs_loaded=0;update_initialized=false;accept_queue=true;
+   diagnostic=dev_bench=true;   /* the developer remote is on: the updater never started, and the screen must not start it */
+   keys[0]=KEY_DOWN;keys[1]=KEY_A;keys[2]=KEY_B;key_index=0;sfx_errors=0;bb_update_settings();
+   assert(key_index==3 && sfx_errors==1 && !update_check_now && queued==before && !update_initialized);   /* opened, ran to B, Check now refused, nothing queued */
+   accept_queue=false;update_initialized=true;
+   assert(!strcmp(update_card_notice(),"Off while remote is on") && !strcmp(update_settings_status(),"Off while remote is on") && !update_line_bad);
+   keys[0]=KEY_RIGHT;keys[1]=KEY_A;keys[2]=KEY_B;key_index=0;sfx_errors=0;bb_update_settings();
+   assert(key_index==3 && sfx_errors==2 && update_preference==0);   /* Install: nothing written */
+   assert(!strcmp(update_card_notice(),"Off while remote is on"));
+   diagnostic=dev_bench=false;homebrew=true;   /* started from the Homebrew Launcher */
+   assert(!strcmp(update_card_notice(),"Needs the installed app"));
+   update_prefs_loaded=1;keys[0]=KEY_DOWN;keys[1]=KEY_A;keys[2]=KEY_B;key_index=0;sfx_errors=0;bb_update_settings();
+   assert(key_index==3 && sfx_errors==1 && !update_check_now && !update_explicit_pending && queued==before);
+   assert(!strcmp(update_card_notice(),"Needs the installed app"));
+   homebrew=false;update_prefs_loaded=0;   /* the updater is still starting */
+   assert(!strcmp(update_card_notice(),"Starting...") && !strcmp(update_settings_status(),"Starting..."));
+   update_initialized=false;accept_queue=true;keys[0]=KEY_B;key_index=0;bb_update_settings();   /* the screen starts it itself */
+   assert(update_initialized && queued==before+1 && queued_fn==update_initialize_job);
+   update_job_busy=0;accept_queue=false;
+   update_prefs_loaded=1;   /* ready: the normal card, no standing line */
+   assert(!update_unavailable() && !strcmp(update_card_notice(),""));
+   keys[0]=KEY_DOWN;keys[1]=KEY_A;keys[2]=KEY_B;key_index=0;sfx_errors=0;bb_update_settings();assert(update_check_now && !sfx_errors);
+   update_check_now=update_explicit_pending=false;
+   /* the updater disabled itself (self-test, or the old update could not be cleared): Check now says why and never
+    * waits on a check that cannot start */
+   unsigned asked=queued;update_explicit_check=update_approved=false;
+   for(unsigned status=11;status<=13;status+=2){
+    unsigned saved=update_status;update_crypto_disabled=true;update_status=status;
+    keys[0]=KEY_DOWN;keys[1]=KEY_A;keys[2]=KEY_B;key_index=0;sfx_errors=0;bb_update_settings();
+    assert(key_index==3 && sfx_errors==1 && !update_check_now && !update_explicit_pending && queued==asked);
+    assert(!strcmp(update_card_notice(),update_status_text[status]) && update_line_bad);
+    update_crypto_disabled=false;update_status=saved;
+   }
+   update_prefs_loaded=prefs;update_initialized=init;queued=before;
+  }
   puts("PASS: updater UI policy: worker completion acquired before its phase, staging refuses other phases, consent before any progress, Later, progress %, one retry policy in Settings, developer guard, READY only in the room, footer taps");
  }
  update_network_close();

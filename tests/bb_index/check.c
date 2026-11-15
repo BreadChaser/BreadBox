@@ -51,8 +51,27 @@ static void wait_done(void)
     for(int i=0;bb_index_busy() && i<1000;i++){bb_index_poll(true);usleep(10000);}
     assert(!bb_index_busy());
 }
+#include "bb_system.h"
+extern bb_probe_result bb_ps1_probe(const bb_probe_input *,bb_entry *);
+extern unsigned test_chd_reads;
+/* Issue #1: only a readable CHD that is another console's disc is refused; one the check cannot
+ * read stays listed; a bare name (folder discovery) is never opened. */
+static void chd_scan_mapping(void)
+{
+    static const struct {const char *path;bb_probe_result want;unsigned reads;} cases[]={
+        {"sdmc:/roms/ps1/game.chd",BB_PROBE_YES,1},{"sdmc:/roms/ps1/other.chd",BB_PROBE_NO,1},
+        {"sdmc:/roms/ps1/unread.chd",BB_PROBE_MAYBE,1},{"game.chd",BB_PROBE_MAYBE,0},{"other.CHD",BB_PROBE_MAYBE,0},
+        {"sdmc:/roms/ps1/game.cue",BB_PROBE_YES,0},{"sdmc:/roms/ps1/game.bin",BB_PROBE_MAYBE,0}};
+    for(unsigned i=0;i<sizeof(cases)/sizeof(*cases);i++) {
+        const char *name=strrchr(cases[i].path,'/');name=name?name+1:cases[i].path;
+        bb_probe_input in={.path=cases[i].path,.name=name};bb_entry e={0};unsigned before=test_chd_reads;
+        assert(bb_ps1_probe(&in,&e)==cases[i].want);
+        assert(test_chd_reads-before==cases[i].reads);
+    }
+}
 int main(int argc,char **argv)
 {
+    chd_scan_mapping();
     ui_thread=pthread_self();
     assert(!bb_index_defer(deferred_read,&deferred_done));
     assert(bb_index_background_start());

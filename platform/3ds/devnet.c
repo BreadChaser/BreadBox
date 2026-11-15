@@ -974,15 +974,16 @@ static void serve_client(int fd)
 		return;
 	}
 	line[used - 1] = 0;
-	char *command = line;
-	if (dev_token[0]) {
-		size_t n = strlen(dev_token);
-		if (strncmp(line, dev_token, n) || line[n] != ' ') {
-			send_json(fd, "{\"error\":\"unauthorized\"}");
-			return;
-		}
-		command = line + n + 1;
+	if (!dev_token[0]) {   // never answer without a token, whatever opened the port
+		send_json(fd, "{\"error\":\"unauthorized\"}");
+		return;
 	}
+	size_t n = strlen(dev_token);
+	if (strncmp(line, dev_token, n) || line[n] != ' ') {
+		send_json(fd, "{\"error\":\"unauthorized\"}");
+		return;
+	}
+	char *command = line + n + 1;
 	if (*command == '_') {
 		send_json(fd, "{\"error\":\"reserved command\"}");
 		return;

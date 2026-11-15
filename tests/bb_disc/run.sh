@@ -13,3 +13,4 @@ for metadata in present absent; do
 done
 
 python3 "$root/tests/bb_disc/formats.py"
+python3 "$root/tests/bb_disc/real_chd.py"

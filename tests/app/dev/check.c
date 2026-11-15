@@ -121,7 +121,6 @@ bool bb_sd_bench_start(void){sd_starts++;return true;}
 #ifndef DEV_CHECK_OWN_REGISTRY   // tests/gba/remote.py brings its own systems
 // BreadBox's registry and session as the remote sees them: one PS1 system whose states go to the fake below.
 #include "bb_registry.h"
-const char *dev_remote_source = "breadbox";
 bool emu_debug_state(int slot, bool save);
 static const bb_dev_ops test_dev = { .state = emu_debug_state };
 static const bb_system_t test_ps1 = { .id = "ps1", .dev = &test_dev };

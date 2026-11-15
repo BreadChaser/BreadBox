@@ -1,7 +1,6 @@
 #define _GNU_SOURCE   // strcasestr
 #include "ht_trace.h"
 #include "app_policy.h"
-#include "devswitch_source.h"
 // PSX3D entry point.
 #include <stdio.h>
 #include <stdlib.h>
@@ -303,26 +302,12 @@ void debug_parse_switch(const char *word)
 }
 
 // Developer switches for consoles started from the HOME Menu instead of 3dslink.
-const char *dev_remote_source = "none";
 static void parse_switch_file(void)
 {
-	const char *path = PSX3D_DIR "/switches.txt";
-	bool fallback = false;
-	int used_fallback = 0;
-	FILE *f = devswitch_open_config(path, APP_LEGACY_PSX3D_ROOT "/switches.txt", &used_fallback);
-	fallback = used_fallback != 0;
+	FILE *f = fopen(PSX3D_DIR "/switches.txt", "r");   // BreadBox's own file only; PSX3D's is never read
 	if (!f)
 		return;
-	dev_remote_source = fallback ? "psx3d" : "breadbox";
 	char word[384];
-	if (fallback) {
-		int remote = dev_remote;
-		devswitch_parse_fallback(f, &remote, dev_token, sizeof(dev_token));
-		dev_remote = remote != 0;
-		fclose(f);
-		dev_authorize();
-		return;
-	}
 	while (fscanf(f, "%383s", word) == 1) {
 		// Control/install permission is granted only by the on-card file.
 		if (!strcmp(word, "bench-exit=home")) dev_bench_home = true;
@@ -349,7 +334,7 @@ static bool start_game(const char *path, const char *save_name, const char *titl
  if(bb_platform_saves(BB_SAVES_START)==BB_SAVES_CLOSE)return false;   /* the last game's saves first; closing: no game */
  const bb_system_t *system=bb_system_for_path(path);
  if(!system) {
-  snprintf(launch_error,sizeof(launch_error),"Unsupported or ambiguous game format");
+  snprintf(launch_error,sizeof(launch_error),"Could not start the game\n" APP_NAME " can't tell which system this file is for. It may be damaged, or in a format " APP_NAME " doesn't open.");
   if(dev_remote_game())dev_game_ended(false);
   return false;
  }
@@ -360,7 +345,7 @@ static bool start_game(const char *path, const char *save_name, const char *titl
   if(dev_remote_game())dev_game_ended(false);return false;
  }
  if(!bb_session_begin(system,&launch)) {
-  snprintf(launch_error,sizeof(launch_error),(system->models & (g_new3ds?BB_MODEL_NEW:BB_MODEL_OLD))?"Not enough memory to start this system":"This system needs a New 3DS");
+  snprintf(launch_error,sizeof(launch_error),(system->models & (g_new3ds?BB_MODEL_NEW:BB_MODEL_OLD))?"Could not start the game\nNot enough memory to start this system.":"This system needs a New 3DS");
   if(dev_remote_game())dev_game_ended(false);
   return false;
  }

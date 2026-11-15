@@ -19,6 +19,13 @@ The room poster, “Occlupanida breadboxis”, is by BreadChaser too, with raste
 Archivo Black lettering by the Archivo Black Project Authors / Omnibus-Type,
 SIL OFL 1.1 ([license](ArchivoBlack-OFL.txt)).
 
+## Menu music and launch sound
+
+`assets/romfs/sfx/music.pcm` and `launch.pcm` are synthesized from scratch by
+`tools/make_sounds.py` (no samples), by BreadChaser, GPL-2.0-or-later. The
+script writes both files byte for byte as shipped. The other menu sounds are
+recorded paper; see the top-level CREDITS.
+
 ## Menu icons
 
 `assets/romfs/icons/dreamstale.bin` holds the menu icons: line icons by

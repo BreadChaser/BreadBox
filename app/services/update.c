@@ -597,6 +597,16 @@ static bool update_developer_busy(void)
  return dev_enabled();
 #endif
 }
+static bool update_prefs_ready(void){return __atomic_load_n(&update_prefs_loaded,__ATOMIC_ACQUIRE)!=0;}
+/* Why the updater cannot run right now, in plain words; NULL when it can. Settings > Updates always opens and
+ * shows this on the card, and Check now answers with it. Each line fits the card's one foot line (tests/ui_fit). */
+static const char *update_unavailable(void)
+{
+ if(update_developer_busy())return "Off while remote is on";
+ if(envIsHomebrew())return "Needs the installed app";
+ if(!update_prefs_ready())return "Starting...";
+ return NULL;
+}
 /* The UI's own copy of the worker's results. The worker writes the phase and the manifest while a job runs;
  * the UI reads them only after an acquire load of update_job_busy has seen the worker idle (update_poll),
  * and drawing reads only this copy (and the atomic byte counter). */
@@ -671,6 +681,8 @@ static int update_poll(bool room)
  }
  return room && update_view.state==BB_UPDATE_READY?UPDATE_POLL_READY:UPDATE_POLL_WAIT;
 }
+static void update_begin(void)
+{if(!update_initialized && update_enqueue(update_initialize_job)){update_initialized=true;aptHook(&update_apt_cookie,update_apt,NULL);}}
 bool bb_update_tick(void)
 {
  if(bb_exit_abandoned())return true;
@@ -680,7 +692,7 @@ bool bb_update_tick(void)
  if(bb_update_committed())return true;
  if(update_thread){bb_update_shutdown();bb_index_background_start();if(update_restart_root[0])bb_index_start(update_restart_root,false);log_resume();log_writer_start(g_new3ds?2:0);covers_resume();music_play(true);}
  if(bb_session_active() || update_developer_busy() || dev_covers_blocked() || !aptMainLoop() || !gspHasGpuRight() || __atomic_load_n(&update_job_busy,__ATOMIC_ACQUIRE))return false;
- if(!update_initialized){if(update_enqueue(update_initialize_job)){update_initialized=true;aptHook(&update_apt_cookie,update_apt,NULL);}return false;}
+ if(!update_initialized){update_begin();return false;}
  if(update_crypto_disabled)return false;
  if(update_notice[0] && !update_notice_until)update_notice_until=osGetTime()+5000;
  if(update_poll(true)==UPDATE_POLL_READY){
@@ -743,6 +755,7 @@ static bool update_line_bad;   /* the line update_settings_status returned last 
 static const char *update_settings_status(void)
 {
  update_line_bad=false;
+ const char *why=update_unavailable();if(why)return why;
  if(update_explicit_pending)return "Checking for updates..."; /* only a check really queued (a disabled one says why) */
  if(update_explicit_check && update_progress_text(update_card_line,sizeof(update_card_line)))return update_card_line;
  if(update_waits_for_save()){update_line_bad=true;return "Waiting: save not written";}
@@ -769,10 +782,10 @@ const char *bb_update_glance(void)
 }
 static flist_t update_list;static int update_selected;
 static void update_row(int i,void *unused,ui_card_row_t *r)
-{(void)unused;*r=(ui_card_row_t){.label=i?"Check now":"Install",.value=i?">":bb_update_preference(),.arrows=!i};}   /* not "Updates" again under the title */
+{(void)unused;*r=(ui_card_row_t){.label=i?"Check now":"Install",.value=i?">":update_prefs_ready()?bb_update_preference():"-",.arrows=!i && update_prefs_ready()};}   /* not "Updates" again under the title */
 /* The card's foot line: what this visit's check is doing or found; no standing "Last check" status (owner 2026-11-05) */
 static const char *update_card_notice(void)
-{return update_waits_for_save() || update_explicit_pending || update_explicit_check || update_view.staging?update_settings_status():"";}
+{return update_unavailable() || update_crypto_disabled || update_waits_for_save() || update_explicit_pending || update_explicit_check || update_view.staging?update_settings_status():"";}
 /* The card's footer: drawn and touched from the same list (a tap on Back or Check works like B or A). */
 static int update_bar(ui_button_t *bar)
 {bar[0]=(ui_button_t){KEY_B,"Back",UI_ICON_BACK,false};bar[1]=(ui_button_t){KEY_A,update_selected?"Check":"Change",UI_ICON_CHANGE,false};return 2;}
@@ -781,17 +794,20 @@ static void update_bottom(void *unused);
 void bb_update_settings(void)
 {
  /* Called only from the app Settings update_row, never while a game is active. */
- if(bb_session_active() || !__atomic_load_n(&update_prefs_loaded,__ATOMIC_ACQUIRE))return;
+ if(bb_session_active())return;
  update_selected=0;update_list=(flist_t){0};ui_swap_enter();
  while(aptMainLoop()){
   if(dev_tick(false) || dev_ui_pending())break;
+  if(!update_initialized && !update_developer_busy() && !__atomic_load_n(&update_job_busy,__ATOMIC_ACQUIRE))update_begin();   /* the room's tick has not started the updater yet */
   ui_button_t bar[2];int nbar=update_bar(bar);
   input_poll();u32 k=ui_card_input(&update_list,2,&update_selected,ui_bar_input(bar,nbar,input_keys_down()));k=ui_swap_keys(k,UI_SWAP_MENU);
   if(k&KEY_B)break;
-  if(!update_selected && (k&(KEY_A|KEY_LEFT|KEY_RIGHT))){int next=(update_preference+((k&KEY_LEFT)?2:1))%3;
+  if(!update_selected && (k&(KEY_A|KEY_LEFT|KEY_RIGHT)) && !update_prefs_ready())sfx_play(SFX_ERROR);   /* a preference that was not loaded is never written */
+  else if(!update_selected && (k&(KEY_A|KEY_LEFT|KEY_RIGHT))){int next=(update_preference+((k&KEY_LEFT)?2:1))%3;
    FILE *f=safe_begin(PREF);if(f){bool wrote=fprintf(f,"%d\n",next)>0;if(safe_finish(f,PREF,wrote)){__atomic_store_n(&update_preference,next,__ATOMIC_RELEASE);if(next==2)bb_update_net_stop();sfx_play(SFX_VALUE);}}
    if(__atomic_load_n(&update_preference,__ATOMIC_ACQUIRE)!=next)sfx_play(SFX_ERROR);   /* could not be written: it stays as it was */
-  }else if(update_selected && (k&KEY_A) && !update_explicit_pending){update_check_now=update_explicit_pending=true;}
+  }else if(update_selected && (k&KEY_A) && (update_unavailable() || update_crypto_disabled))sfx_play(SFX_ERROR);   /* the card's line says why (the updater never starts a check: self-test or cleanup failed) */
+  else if(update_selected && (k&KEY_A) && !update_explicit_pending){update_check_now=update_explicit_pending=true;}
   else if(k&KEY_A)sfx_cancel();   /* a check is already running: nothing new */   /* "Checking..." at once, even while the library scans */
   /* the room's tick is not running: the same policy runs here, never past READY */
   update_poll(false);

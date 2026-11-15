@@ -35,7 +35,8 @@ void covers_library_begin(void) { assert(!cover_changes); cover_changes++; }
 void covers_library_end(void) { assert(cover_changes==1); cover_changes--; }
 static u64 svcGetSystemTick(void) { return 0; }
 // the CHD content probe has its own suite (tests/bb_disc): every .chd here is a PS1 disc
-bool bb_disc_is_ps1_chd(const char *path) { (void)path; return true; }
+#include "../../../app/ui/bb_disc.h"
+bb_disc_kind bb_disc_chd_kind(const char *path) { (void)path; return BB_DISC_PS1; }
 #ifndef SYSCLOCK_ARM11
 #define SYSCLOCK_ARM11 268111856ULL
 #endif

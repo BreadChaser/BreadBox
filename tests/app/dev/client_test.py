@@ -17,6 +17,24 @@ sys.path.insert(0, str(HOST_TOOLS))
 from psx3dctl import Client, ControlError
 import fastbench
 
+class NoToken(unittest.TestCase):
+    """A server that somehow has no token (remote on, token empty) answers nothing but 'unauthorized'."""
+    def test_no_command_without_token(self):
+        server = subprocess.Popen([sys.argv[1]], stdout=subprocess.PIPE, text=True,
+                                  env=dict(os.environ, DEV_TEST_NO_TOKEN='1'))
+        try:
+            port = int(server.stdout.readline())
+            for line in (b'status\n', b' status\n', b'stats\n', b'exit\n'):
+                with socket.create_connection(('127.0.0.1', port), 5) as s:
+                    s.sendall(line)
+                    s.shutdown(socket.SHUT_WR); reply = s.makefile().read()
+                self.assertIn('unauthorized', reply, line)
+            self.assertIsNone(server.poll())   # 'exit' did not stop it
+        finally:
+            server.kill()
+            server.wait()
+            server.stdout.close()
+
 class Protocol(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

@@ -14,7 +14,6 @@
 #include <string.h>
 #define SELF_TITLE APP_TITLE_ID
 #define CIA_TEMP PSX3D_DIR "/update.cia.part"
-extern const char *dev_remote_source;
 
 static bool lan_url(const char *url)
 {
@@ -35,10 +34,6 @@ static bool lan_url(const char *url)
 }
 static bool consume_switch_url(void)
 {
-	// Startup may have borrowed credentials from PSX3D. Never rewrite or rename
-	// that file; consuming update= is only allowed in BreadBox's own config.
-	if (dev_remote_source && !strcmp(dev_remote_source, "psx3d"))
-		return true;
 	FILE *in = fopen(PSX3D_DIR "/switches.txt", "r");
 	if (!in)
 		return true; // remote-only invocation need not create a file

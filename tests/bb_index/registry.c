@@ -16,5 +16,12 @@ const bb_system_t *const bb_systems[]={&bb_system_gba,&bb_system_ps1};
 const unsigned bb_system_count=2;
 const bb_system_t *bb_system_by_id(const char *id) {for(unsigned i=0;i<bb_system_count;i++)if(!strcmp(id,bb_systems[i]->id))return bb_systems[i];return NULL;}
 
-/* The CHD content probe has its own suite (tests/bb_disc): every .chd here counts as a PS1 disc. */
-bool bb_disc_is_ps1_chd(const char *path) { (void)path; return true; }
+/* The CHD content probe has its own suite (tests/bb_disc). Here the answer follows the file name,
+ * and every call is counted so the scan mapping (and the no-open rule for bare names) can be asserted. */
+#include "../../app/ui/bb_disc.h"
+unsigned test_chd_reads;
+bb_disc_kind bb_disc_chd_kind(const char *path)
+{
+ test_chd_reads++;
+ return strstr(path,"other")?BB_DISC_OTHER:strstr(path,"unread")?BB_DISC_UNREAD:BB_DISC_PS1;
+}

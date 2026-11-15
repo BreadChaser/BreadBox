@@ -1,5 +1,10 @@
 #include "bb_disc.h"
 #include "../../core/deps/libchdr/include/libchdr/chd.h"
+/* On the 3DS the PS1 core builds libchdr with USE_LIBRETRO_VFS (its Makefile.libretro,
+ * platform ctr), and build/3ds/Makefile builds this file the same way: chd.h then maps
+ * FILE/fopen/fclose to the core's RFILE/rfopen/rfclose, the only handle its
+ * chd_open_file can read. A C FILE there made every CHD "invalid" (issue #1). */
+#include "app_log.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -27,33 +32,18 @@ static bool gdrom(chd_file *chd)
                             NULL, NULL, NULL) == CHDERR_NONE;
 }
 
-bool bb_disc_is_ps1_chd(const char *path)
+/* The ISO primary volume descriptor's identity at sector 16, read from hunk zero
+ * plus at most two more hunks. */
+static bb_disc_kind content(chd_file *chd, const chd_header *h, unsigned char *hunk)
 {
-    chd_file *chd = NULL;
-    unsigned char *hunk = NULL;
-    bool result = false;
-    if (!path || !*path) return false;
-    FILE *file = fopen(path, "rb");
-    if (!file) return false;
-    if (chd_open_file(file, CHD_OPEN_READ, NULL, &chd) != CHDERR_NONE) {
-        fclose(file); return false;
-    }
-    const chd_header *h = chd_get_header(chd);
-    if (!h || gdrom(chd)) goto done;
     const uint32_t unit = h->unitbytes, size = h->hunkbytes;
-    if ((unit != 2048 && unit != 2352 && unit != 2448) ||
-        size < unit || size > MAX_HUNK || !h->totalhunks ||
-        h->logicalbytes < (uint64_t)17 * unit ||
-        h->logicalbytes > (uint64_t)h->totalhunks * size)
-        goto done;
-    hunk = malloc(size);
-    if (!hunk || chd_read(chd, 0, hunk) != CHDERR_NONE) goto done;
+    if (chd_read(chd, 0, hunk) != CHDERR_NONE) return BB_DISC_UNREAD;
     size_t first = size;
     if (first > (size_t)16 * unit) first = (size_t)16 * unit;
     /* Reject other CD platforms even if an incidental Sony string is present. */
     if (contains(hunk, first, "SEGADISCSYSTEM") ||
         contains(hunk, first, "SEGA SEGASATURN") ||
-        contains(hunk, first, "SEGA SEGAKATANA")) goto done;
+        contains(hunk, first, "SEGA SEGAKATANA")) return BB_DISC_OTHER;
     bool license = contains(hunk, first, "Sony Computer Entertainment");
 
     /* ISO sector 16, not hunk 16. A 64-byte window covers cooked data and
@@ -68,9 +58,9 @@ bool bb_disc_is_ps1_chd(const char *path)
         size_t offset = (size_t)(pos % size);
         size_t count = size - offset;
         if (count > sizeof(pvd) - copied) count = sizeof(pvd) - copied;
-        if (pos + count > h->logicalbytes || index >= h->totalhunks) goto done;
+        if (pos + count > h->logicalbytes || index >= h->totalhunks) return BB_DISC_OTHER;
         if (index != cached) {
-            if (chd_read(chd, index, hunk) != CHDERR_NONE) goto done;
+            if (chd_read(chd, index, hunk) != CHDERR_NONE) return BB_DISC_UNREAD;
             cached = index;
         }
         memcpy(pvd + copied, hunk + offset, count);
@@ -81,17 +71,55 @@ bool bb_disc_is_ps1_chd(const char *path)
         const unsigned char *p = pvd + off;
         if (p[0] == 1 && !memcmp(p + 1, "CD001", 5) && p[6] == 1 &&
             !memcmp(p + 8, "PLAYSTATION", 11)) {
-            result = true;
+            bool exact = true;
             for (unsigned i = 19; i < 40; ++i)
-                if (p[i] != ' ' && p[i] != 0) result = false;
-            if (!result) continue;
-            break;
+                if (p[i] != ' ' && p[i] != 0) exact = false;
+            if (exact) return BB_DISC_PS1;
         }
     }
-    result = result || license;
-done:
+    return license ? BB_DISC_PS1 : BB_DISC_OTHER;
+}
+
+static bb_disc_kind classify(chd_file *chd)
+{
+    const chd_header *h = chd_get_header(chd);
+    if (!h) return BB_DISC_UNREAD;
+    if (gdrom(chd)) return BB_DISC_OTHER;
+    const uint32_t unit = h->unitbytes, size = h->hunkbytes;
+    /* Not CD sectors (a hard disk, for one) or too short to hold sector 16:
+     * positively not a PS1 disc. */
+    if ((unit != 2048 && unit != 2352 && unit != 2448) ||
+        h->logicalbytes < (uint64_t)17 * unit)
+        return BB_DISC_OTHER;
+    /* Geometry this bounded check will not read: the core may still play it. */
+    if (size < unit || size > MAX_HUNK || !h->totalhunks ||
+        h->logicalbytes > (uint64_t)h->totalhunks * size)
+        return BB_DISC_UNREAD;
+    unsigned char *hunk = malloc(size);
+    if (!hunk) return BB_DISC_UNREAD;
+    bb_disc_kind kind = content(chd, h, hunk);
     free(hunk);
+    return kind;
+}
+
+bb_disc_kind bb_disc_chd_kind(const char *path)
+{
+    if (!path || !*path) return BB_DISC_OTHER;
+    FILE *file = fopen(path, "rb");
+    if (!file) {
+        log_printf("disc: %s cannot be opened; listed as PS1\n", path);
+        return BB_DISC_UNREAD;
+    }
+    chd_file *chd = NULL;
+    chd_error err = chd_open_file(file, CHD_OPEN_READ, NULL, &chd);
+    if (err != CHDERR_NONE) {
+        fclose(file);
+        log_printf("disc: %s is not a readable CHD here (error %d); listed as PS1\n", path, (int)err);
+        return BB_DISC_UNREAD;
+    }
+    bb_disc_kind kind = classify(chd);
     chd_close(chd);
     fclose(file);
-    return result;
+    if (kind == BB_DISC_UNREAD) log_printf("disc: %s could not be checked; listed as PS1\n", path);
+    return kind;
 }

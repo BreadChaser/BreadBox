@@ -27,12 +27,13 @@ with tempfile.TemporaryDirectory() as tmp:
 #include <assert.h>
 typedef uint8_t u8; typedef uint32_t u32;
 #define PATH_LEN 512
-static bool bb_disc_is_ps1_chd(const char *p) { return strstr(p,"good.chd") != NULL; }
+typedef enum { BB_DISC_OTHER, BB_DISC_UNREAD, BB_DISC_PS1 } bb_disc_kind;
+static bb_disc_kind bb_disc_chd_kind(const char *p) { return strstr(p,"good.chd") ? BB_DISC_PS1 : strstr(p,"unread.chd") ? BB_DISC_UNREAD : BB_DISC_OTHER; }
 '''
  source+='\n'.join(extract(n) for n in ['ext_of(', 'trim(', 'cue_name(', 'ps1_image_at('])
  source+='''
 int main(void) { char path[512];
- const char *good[]={"ps1.bin","ps1.mdf","good.cue","good.m3u","good.chd"};
+ const char *good[]={"ps1.bin","ps1.mdf","good.cue","good.m3u","good.chd","unread.chd"};
  const char *bad[]={"pc.iso","psp.iso","bad.mdf","bad.cue","bad.m3u","loop.m3u","missing.m3u","bad.chd"};
  for (unsigned i=0;i<sizeof(good)/sizeof(*good);i++) assert(ps1_image_at((snprintf(path,sizeof(path),"./%s",good[i]),path),0));
  for (unsigned i=0;i<sizeof(bad)/sizeof(*bad);i++) assert(!ps1_image_at((snprintf(path,sizeof(path),"./%s",bad[i]),path),0));

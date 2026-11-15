@@ -63,6 +63,9 @@ CFLAGS += -I$(TOPDIR)/../../systems/common
 CFLAGS += -DPICA_LAYOUT_NAME=\"split\"
 
 CFLAGS	+=	$(INCLUDE) -D__3DS__ $(EXTRA_DEFS) -I$(COREDIR)/deps/libretro-common/include
+# The CHD probe hands the PS1 core's libchdr the handle it reads: built like the core
+# (core/Makefile.libretro, platform ctr: USE_LIBRETRO_VFS), checked by tests/bb_disc.
+bb_disc.o: CFLAGS += -DUSE_LIBRETRO_VFS
 # New 3DS per-game PS1 clock presets (versioned in romfs/presets).
 CFLAGS	+=	-DPSX3D_PS1_OVERCLOCK_PRESETS
 

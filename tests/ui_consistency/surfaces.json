@@ -1,4 +1,5 @@
 {
+  "card_notice.c": "6ba42d391c146d0acb4a8a396955293faae75b8021977a6c8c71ce8826c80340",
   "components/bb_pause.inc": "6135501e0f308e1b1aa7407cb472304b825331b7f3596b67ca9049b8e2363fca",
   "components/browser.inc": "aaa06c709646457fa22e56e31390ed7361b2be9352a53cf37485f2ade7e95f72",
   "components/emu.inc": "afeaeebab8f871d6f57419b65a7e9590bc80eaeed7a0f7fa12934ebaf754878d",
@@ -7,7 +8,7 @@
   "components/gba_settings_ui.inc": "135f0ec893c992791eed2b734e7bd7972b46425f86243c4eee15f6c3064857c6",
   "components/home.inc": "f5bb54d6bfc9c204943cb3f91e2c066ae54eb2f0c1ebb3f9eea48af8bffdca3b",
   "components/library.inc": "0f8939ae27f61f9d82a8bc56d96a55b1d98ad2532154a5254a46828617953abb",
-  "components/main.inc": "afdad0f7441c72f494bcf4b9b772d26a745b68ce1baa17316244e2639d169cda",
+  "components/main.inc": "941f2481771d07ecf5c9faf0ca61bcb0c3d669b918d5556b0b98e996b2aedf8a",
   "components/play_controls.inc": "f21805b009d015b209bed61ffb077f7591ed192dd55ad26924bb57c6aa688f2e",
   "components/postcards.inc": "95d75f50cd754a97cfb0f468ad700fce7d79a6c0a6aa6b961e742f2114cfa198",
   "components/savestates.inc": "3f8b3da7040be56d0eae6da042c6780e0b98a3481784b90dff2e565f73f49fcc",

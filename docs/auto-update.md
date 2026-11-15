@@ -12,6 +12,8 @@ last check is old enough (one hour; six hours after two failed checks, 24 hours
 after three or more). It never checks, downloads or installs while a game is
 running. A `.3dsx` cannot
 install updates. While the developer remote is on, player updates stay off.
+In both cases the Updates screen still opens and says why ("Off while remote is on",
+"Needs the installed app"), and Check now shows the same line.
 
 ## The manifest
 

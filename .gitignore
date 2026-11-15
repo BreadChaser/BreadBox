@@ -12,6 +12,7 @@ assets/romfs/gfx/
 
 /core/*.o
 /core/*.a
+/core/.breadbox-core-syms
 *.cxi
 /artifacts/
 

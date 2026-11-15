@@ -1,6 +1,7 @@
 #include "bb_disc.h"
 #include "../../core/deps/libchdr/include/libchdr/chd.h"
 #include <assert.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -8,7 +9,8 @@ static chd_header header;
 static unsigned char image[1024 * 1024];
 static int opens, closes, reads, fail_read, fail_open, null_header;
 static uint32_t read_at[4], gdtag;
-static int dummy;
+static int dummy, logged;
+void log_printf(const char *fmt, ...) { (void)fmt; ++logged; }
 
 chd_error chd_open_file(FILE *path, int mode, chd_file *parent, chd_file **out)
 {
@@ -65,11 +67,16 @@ static void pvd(unsigned offset)
     memset(p + 8, ' ', 32);
     memcpy(p + 8, "PLAYSTATION", 11);
 }
-static void expect(bool expected)
+static void expect(bb_disc_kind expected)
 {
-    assert(bb_disc_is_ps1_chd("game.chd") == expected);
+    logged = 0;
+    assert(bb_disc_chd_kind("game.chd") == expected);
     assert(opens == 1 && closes == !fail_open);
+    assert(logged == (expected == BB_DISC_UNREAD)); /* a file kept unchecked says why */
 }
+#define PS1 BB_DISC_PS1
+#define OTHER BB_DISC_OTHER
+#define UNREAD BB_DISC_UNREAD
 
 int main(void)
 {
@@ -79,66 +86,68 @@ int main(void)
         unsigned unit = units[u];
         for (unsigned mode = 0; mode < (unit == 2048 ? 1u : 2u); ++mode) {
             unsigned off = unit == 2048 ? 0 : (mode ? 24 : 16);
-            reset(unit, unit * 8); pvd(off); expect(true);
+            reset(unit, unit * 8); pvd(off); expect(PS1);
             assert(reads == 2 && read_at[0] == 0 && read_at[1] == 2);
             /* A non-unit-aligned hunk deliberately splits the PVD window. */
-            reset(unit, (16 * unit + 32) / 2); pvd(off); expect(true);
+            reset(unit, (16 * unit + 32) / 2); pvd(off); expect(PS1);
             assert(reads == 3 && read_at[1] == 1 && read_at[2] == 2);
-            reset(unit, 256 * 1024); pvd(off); expect(true);
+            reset(unit, 256 * 1024); pvd(off); expect(PS1);
             assert(reads == 1);
-            reset(unit, unit); pvd(off); expect(true);
+            reset(unit, unit); pvd(off); expect(PS1);
             assert(reads == 2 && read_at[1] == 16);
         }
     }
-    reset(2448, 19584); pvd(24); expect(true); /* typical CD CHD */
-    reset(2048, 16384); expect(false);
-    reset(2048, 16384); pvd(0); image[16 * 2048 + 1] = 'X'; expect(false);
-    reset(2048, 16384); pvd(0); image[16 * 2048 + 6] = 2; expect(false);
-    reset(2048, 16384); pvd(0); image[16 * 2048 + 19] = 'X'; expect(false);
+    reset(2448, 19584); pvd(24); expect(PS1); /* typical CD CHD */
+    reset(2048, 16384); expect(OTHER);
+    reset(2048, 16384); pvd(0); image[16 * 2048 + 1] = 'X'; expect(OTHER);
+    reset(2048, 16384); pvd(0); image[16 * 2048 + 6] = 2; expect(OTHER);
+    reset(2048, 16384); pvd(0); image[16 * 2048 + 19] = 'X'; expect(OTHER);
     reset(2048, 16384); pvd(0);
-    memcpy(image + 16 * 2048 + 8, "PSP GAME   ", 11); expect(false);
+    memcpy(image + 16 * 2048 + 8, "PSP GAME   ", 11); expect(OTHER);
     reset(2048, 16384); pvd(0);
-    memcpy(image + 16 * 2048 + 8, "OTHER      ", 11); expect(false);
+    memcpy(image + 16 * 2048 + 8, "OTHER      ", 11); expect(OTHER);
     reset(2048, 16384);
-    memcpy(image + 100, "Sony Computer Entertainment", 27); expect(true);
+    memcpy(image + 100, "Sony Computer Entertainment", 27); expect(PS1);
     reset(2048, 16384);
-    memcpy(image + 100, "Sony Computer EntertainmenX", 27); expect(false);
+    memcpy(image + 100, "Sony Computer EntertainmenX", 27); expect(OTHER);
     /* The license search must stop before sector 16 even with a large hunk. */
     reset(2048, 256 * 1024);
-    memcpy(image + 16 * 2048 + 100, "Sony Computer Entertainment", 27); expect(false);
+    memcpy(image + 16 * 2048 + 100, "Sony Computer Entertainment", 27); expect(OTHER);
     /* A signature in hunk 16 is irrelevant when ISO sector 16 is in hunk 2. */
     reset(2048, 16384);
-    memcpy(image + 16 * 16384, "\1CD001\1\0PLAYSTATION", 19); expect(false);
+    memcpy(image + 16 * 16384, "\1CD001\1\0PLAYSTATION", 19); expect(OTHER);
     reset(2352, 18816); pvd(24);
-    memcpy(image + 24, "SEGA SEGAKATANA", 15); expect(false);
-    reset(2048, 16384); pvd(0); fail_open = 1; expect(false); assert(!reads);
-    reset(2048, 16384); null_header = 1; expect(false); assert(!reads);
+    memcpy(image + 24, "SEGA SEGAKATANA", 15); expect(OTHER);
+    reset(2048, 16384); pvd(0); fail_open = 1; expect(UNREAD); assert(!reads);
+    reset(2048, 16384); null_header = 1; expect(UNREAD); assert(!reads);
     for (int f = 1; f <= 3; ++f) {
         reset(2048, (16 * 2048 + 32) / 2); pvd(0); fail_read = f;
-        expect(false); assert(reads == f);
+        expect(UNREAD); assert(reads == f);
     }
 #ifndef NO_METADATA
     const uint32_t tags[] = {GDROM_OLD_METADATA_TAG, GDROM_TRACK_METADATA_TAG};
     for (unsigned i = 0; i < 2; ++i) {
         reset(2448, 19584); pvd(24); gdtag = tags[i];
-        expect(false); assert(!reads);
+        expect(OTHER); assert(!reads);
     }
 #endif
     const uint32_t badsizes[] = {0, 1, 2047, 262145, UINT32_MAX};
     for (unsigned i = 0; i < sizeof(badsizes) / sizeof(badsizes[0]); ++i) {
         reset(2048, 16384); header.hunkbytes = badsizes[i];
-        expect(false); assert(!reads);
+        expect(UNREAD); assert(!reads);
     }
-    reset(512, 16384); expect(false); assert(!reads);
-    reset(2048, 16384); header.totalhunks = 0; expect(false); assert(!reads);
-    reset(2048, 16384); header.logicalbytes = 16 * 2048; expect(false); assert(!reads);
-    reset(2048, 16384); header.logicalbytes = UINT64_MAX; expect(false); assert(!reads);
-    reset(2048, 16384); header.totalhunks = 1; expect(false); assert(!reads);
+    reset(512, 16384); expect(OTHER); assert(!reads);
+    reset(2048, 16384); header.totalhunks = 0; expect(UNREAD); assert(!reads);
+    reset(2048, 16384); header.logicalbytes = 16 * 2048; expect(OTHER); assert(!reads);
+    reset(2048, 16384); header.logicalbytes = UINT64_MAX; expect(UNREAD); assert(!reads);
+    reset(2048, 16384); header.totalhunks = 1; expect(UNREAD); assert(!reads);
     reset(2048, 16384); header.totalhunks = UINT32_MAX;
     header.logicalbytes = (uint64_t)UINT32_MAX * 16384 + 1;
-    expect(false); assert(!reads); /* capacity arithmetic must not wrap */
+    expect(UNREAD); assert(!reads); /* capacity arithmetic must not wrap */
     reset(2048, 16384);
-    assert(!bb_disc_is_ps1_chd(NULL) && !bb_disc_is_ps1_chd(""));
+    assert(bb_disc_chd_kind(NULL) == OTHER && bb_disc_chd_kind("") == OTHER);
+    logged = 0;
+    assert(bb_disc_chd_kind("missing.chd") == UNREAD && logged == 1); /* kept: the core reports it */
     assert(!opens && !closes && !reads);
     puts("bb_disc: bounded CHD identification passed");
     return 0;

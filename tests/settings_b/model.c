@@ -96,7 +96,7 @@ static void paper_line_checks(void)
  float lines[64];int nl=0;
  for(int r=0;r<host_rect_n;r++){
   host_rect_t *q=&host_rects[r];
-  if(q->h==1 && q->w==UI_CARD_W && q->z==UI_CARD_Z_RULE && nl<64)lines[nl++]=q->y;
+  if(q->h==1 && ((q->w==UI_CARD_W && q->z==UI_CARD_Z_RULE) || (q->w==UI_CARD_W-2 && q->z==UI_CARD_Z_NOTICE_LINE)) && nl<64)lines[nl++]=q->y;   /* the grid, and the notice's own line */
  }
  assert(nl>=UI_CARD_ROWS+2);
  int on=0;

@@ -43,8 +43,9 @@ EXTERN_SYMS += CdromExeHash psx3d_widescreen_hook psx3d_widescreen_state_hook ps
 EXTERN_SYMS += Mcd1Data Mcd2Data psx3d_clip_prepare padAnalogMode padToggleAnalog
 EXTERN_SYMS += SaveFuncs LoadMcd Config
 # Already used by the PS1 core: expose their existing sections for the library
-# probe. Keep bindings identical across APP switches without moving core code.
-EXTERN_SYMS += chd_open_file chd_close chd_read chd_get_header
+# probe (rfopen/rfclose: the core reads CHDs through libretro file streams, see
+# app/ui/bb_disc.c). Keep bindings identical across APP switches without moving core code.
+EXTERN_SYMS += chd_open_file chd_close chd_read chd_get_header rfopen rfclose
 # core-internal calls that go to PSX3D (the core's code stays as it is)
 WRAP_SYMS := LoadMcd
 EXTERN_SYMS += psx3d_idle_skip psx3d_idle_pointer psx3d_idle_delay
@@ -65,7 +66,13 @@ EXTERN_SYMS += pica_init pica_exit pica_game_begin pica_game_end pica_flush_vert
 source-epoch-check:
 	+python3 tools/build/source-epoch.py
 
+# The core archive is rebuilt only when an object changes. A changed symbol list must
+# rebuild it too, or an old archive keeps the old bindings (silently, for a wrap).
+CORE_SYMS_STAMP := core/.breadbox-core-syms
 core: source-epoch-check
+	@printf '%s\n' "$(EXTERN_SYMS) | $(WRAP_SYMS)" | cmp -s - $(CORE_SYMS_STAMP) || { \
+		rm -f core/pcsx_rearmed_libretro_ctr.a core/pcsx_rearmed_libretro_ctr.o core/pcsx_rearmed_libretro_ctr1.o; \
+		printf '%s\n' "$(EXTERN_SYMS) | $(WRAP_SYMS)" > $(CORE_SYMS_STAMP); }
 	$(MAKE) -C core -f Makefile.libretro platform=ctr CTR_GPU=pica EXTRA_EXTERN_SYMS="$(EXTERN_SYMS)" EXTRA_WRAP_SYMS="$(WRAP_SYMS)"
 
 # Presets and defaults.ini (docs/settings.md section 6): a changed default stops
@@ -119,6 +126,7 @@ cxi: cia
 clean:
 	$(MAKE) -C core -f Makefile.libretro platform=ctr CTR_GPU=pica EXTRA_EXTERN_SYMS="$(EXTERN_SYMS)" clean
 	$(MAKE) -C build/3ds clean
+	rm -f $(CORE_SYMS_STAMP)
 	rm -rf build/systems
 	rm -f build/3ds/core-first-breadbox.ld build/3ds/$(APP_OUTPUT).cia build/3ds/$(APP_OUTPUT).cxi build/3ds/$(APP_OUTPUT).map build/3ds/$(APP_OUTPUT).smdh
 

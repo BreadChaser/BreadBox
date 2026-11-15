@@ -80,6 +80,7 @@ bool bb_update_installing(void) {return false;}
 bool bb_update_committed(void) {return false;}
 void breadbox_import_poll(void) {} /* migration has its own threaded production-controller test */
 #include "../../../app/ui/ui.c"
+#include "../../../app/ui/card_notice.c"
 #include "../../../app/ui/ui_font.c"
 #include "../../../app/ui/ui_mark.c"
 #include "../../../app/ui/statsview.c"

@@ -35,7 +35,6 @@ typedef struct {
 #define MEDIATYPE_SD 1
 bool dev_remote;
 char dev_token[96];
-const char *dev_remote_source = "breadbox";
 static bool homebrew, fail_write, fail_finish;
 static u64 running_id = APP_TITLE_ID, cia_id = APP_TITLE_ID;
 static u16 installed_version=1027, package_version=1028;
