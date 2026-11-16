@@ -15,6 +15,16 @@ different-title copies cannot install updates. While the developer remote is on,
 In both cases the Updates screen still opens and says why ("Off while remote is on",
 "Needs the installed app"), and Check now shows the same line.
 
+After an update, the room shows the running release's changelog once, after the
+installed confirmation. A or B closes the card; up/down and touch dragging scroll
+longer notes. Fresh installs show the welcome instead. Settings → Updates → What's new opens
+the same card. The build extracts the matching entry's first list block from
+CHANGELOG.md: at most six one-line highlights, with longer release notes under
+`### Details`. It checks measured font advances at the shared fixed card text
+size. An absent or empty entry is skipped. The seen version stays in config.ini
+with the app preferences. Room information uses one screen-depth bar along the
+bottom edge of the top screen; the update offer keeps its confirmation buttons.
+
 ## The manifest
 
 The app reads one fixed URL,

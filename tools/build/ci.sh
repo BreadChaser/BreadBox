@@ -62,7 +62,7 @@ gates() {
 	python3 tools/architecture/test-text-ratchet.py
 	python3 tools/architecture/ui-metric-ratchet.py
 }
-host_tests() { HOST_TEST_OUT="$out/host-tests" bash tools/build/host-tests.sh; }
+host_tests() { HOST_TEST_JOBS=${HOST_TEST_JOBS:-} HOST_TEST_OUT="$out/host-tests" bash tools/build/host-tests.sh; }
 
 case $step in host-tests|all) python3 tools/architecture/include-graph.py ;; esac
 case $step in
@@ -72,6 +72,12 @@ build) build ;;
 baseline) baseline "${2:-build/3ds/BreadBox.elf}" ;;
 layout) layout "${2:-build/3ds/BreadBox.elf}" ;;
 host-tests) host_tests ;;
-all) toolchain; gates; build; layout; host_tests ;;
+all)
+ rm -f "$out/ci-phases.jsonl"
+ for phase in toolchain gates build layout host-tests; do
+  echo "CI_STEP $phase"
+  case $phase in host-tests) host_tests ;; *) "$phase" ;; esac
+  printf '%s\n' "$phase" >> "$out/ci-phases.jsonl"
+ done ;;
 *) echo "usage: ci.sh [toolchain|gates|build|baseline|layout|host-tests|all]" >&2; exit 2 ;;
 esac

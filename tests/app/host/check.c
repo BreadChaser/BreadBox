@@ -81,9 +81,12 @@ bool bb_update_committed(void) {return false;}
 void breadbox_import_poll(void) {} /* migration has its own threaded production-controller test */
 #include "../../../app/ui/ui.c"
 #include "../../../app/ui/card_notice.c"
+#include "../../../app/ui/notice_bar.c"
 #include "../../../app/ui/ui_font.c"
 #include "../../../app/ui/ui_mark.c"
 #include "../../../app/ui/statsview.c"
+static const ui_button_t error_bar[1] = {{KEY_A,"OK",UI_ICON_CHECK,false}};
+#include "../../../app/ui/components/main.inc"
 bool sw_stats, sw_prof;
 int sw_pmu0=-1;
 char CdromId[10];
@@ -668,6 +671,12 @@ static void serial_config_checks(void)
   remove(APP_LEGACY_PSX3D_ROOT "/config.ini");rmdir(APP_LEGACY_PSX3D_ROOT);
   write_text(PSX3D_CONFIG,"show_fps=1\n");config_load();
  }
+ /* Seen release is app state: round trip and both reset scopes preserve it. */
+ write_text(PSX3D_CONFIG,"seen_version=0.9.2\nshow_fps=1\n");config_load();
+ assert(!strcmp(config_seen_version,"0.9.2") && !user_has("seen_version"));
+ config_save();assert(contains(PSX3D_CONFIG,"seen_version=0.9.2\n"));
+ config_reset_defaults();config_room_defaults();config_load();
+ assert(!strcmp(config_seen_version,"0.9.2"));
  // Every serial of the shipped data files resolves through the startup index.
  game_presets_init(PSX3D_TEST_PRESETS, PSX3D_DIR "/presets"); assert(nindex > 40 && game_presets_pack() > 0);
  for(int i=0;i<nindex;i++) {
@@ -978,6 +987,12 @@ int main(void)
   {"library-launch-discs","Can't start this game","BreadBox couldn't write this game's disc list. Is the SD card full or locked?"},
   {"library-scan-error","Some games may be missing","BreadBox couldn't read part of your games folder. Check the SD card, then hold Y on the shelves to check the library again."}};
  for(int i=0;i<(int)(sizeof(library_cards)/sizeof(library_cards[0]));i++){ shot(library_cards[i][0]); c=(confirm_t){library_cards[i][1],library_cards[i][2],"A  Back",{{KEY_B,"Cancel",0,false},{KEY_A,"Back",0,false}}}; confirm_draw(&c); shot_end(); assert(ui_dialog_pages(library_cards[i][2])==1); }
+ static const char *const launch_cards[][2]={
+  {"launch-busy","Could not start the game\nStill busy. Try again in a moment."},
+  {"launch-cancelled","Could not start the game\nStart canceled. Try again when ready."}};
+ for(unsigned i=0;i<sizeof(launch_cards)/sizeof(launch_cards[0]);i++){
+  shot(launch_cards[i][0]);draw_message((void *)launch_cards[i][1]);shot_end();
+ }
  clean_input(false); controls_shot("controls-old-unlisted",14); clean_input(true); controls_shot("controls",14);
  FT_Done_Face(title_face); FT_Done_Face(body_face); FT_Done_FreeType(ft); options_clear(); clear_overrides();
  puts("PASS: production drawing mockups"); return 0;

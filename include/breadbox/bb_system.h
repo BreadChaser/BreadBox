@@ -297,7 +297,7 @@ const uint32_t *covers_logo(const bb_system_t *s,int *w,int *h);   /* menus only
 const bb_system_t *bb_system_by_id(const char *id);   /* menus/dev only */
 uint32_t bb_heap_available(void);
 unsigned bb_platform_model(void);
-void bb_platform_release_menu(void);
+bool bb_platform_release_menu(void);
 void bb_platform_restore_menu(void);
 bool bb_platform_claim(const bb_system_t *system);
 void bb_platform_drop(void);

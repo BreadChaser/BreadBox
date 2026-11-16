@@ -61,16 +61,16 @@ static unsigned rows(void){return count;}
 static int legacy_row(int f) {for(int i=0;i<gba_setting_rows();i++)if(gba_setting_field(i)==f)return i;return 0;}
 static const char *const help[]={
  "Original keeps the cartridge picture at its native size. Fit keeps its shape. Stretch fills the screen. GBA depth follows the 3D slider.",
- "Soften enlarged pixels. Turn off for a sharper picture.",
- "Adjust cartridge colors for this screen.",
- "Blend neighboring pictures to soften flicker. Moving edges can look softer.",
+ "Sharp keeps pixel edges. Smooth softens enlarged pixels. Original screen size is pixel-exact.",
+ "Original keeps vivid cartridge colors. Corrected matches the GBA LCD. Soft mixes the two. Bright lifts midtones.",
+ "Mix this picture with the previous one for flicker transparency. Moving edges can look softer.",
  "GBA depth follows the 3D slider. Unsupported games use a flat picture.",
  "Set the light reaching this cartridge's solar sensor, from covered to bright sunlight.",
  "Keep recent moments to rewind. Needs free memory on New Nintendo 3DS."
 };
 static const char *const short_help[]={
- "Choose the picture's size.", "Soften enlarged pixels.", "Adjust cartridge colors.",
- "Soften flicker between pictures.", "Set depth with the 3D slider.",
+ "Choose the picture's size.", "Choose sharp or smooth pixels.", "Choose cartridge colors.",
+ "Blend flickering pictures.", "Set depth with the 3D slider.",
  "Choose the solar sensor light.", "Keep recent moments to rewind."
 };
 static bool read_row(unsigned index,bb_settings_row *out)

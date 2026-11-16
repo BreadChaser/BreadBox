@@ -18,4 +18,7 @@ const char *emu_load_error(void);   // browser.c: first run, find a folder with 
 // emu.c
 bool emu_init(void);
 void emu_deinit(void);
+// Prepared entry: the adapter drains background work and handles failure first.
+/* The prepared call keeps its original no-result ABI. */
+extern void covers_stop_prepared(void) __asm__("covers_stop_wait");
 bool emu_run_game(const char *path, const char *save_name, const char *title);

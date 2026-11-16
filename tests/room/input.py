@@ -111,7 +111,7 @@ typedef int bb_index_status_t;
 #define room_pace_add(...) ((void)0)
 static bool library_settled(int still);
 static bool covers_stop(void){paused=true;return !worker_busy;}
-#define covers_library_begin() ((void)0)
+#define covers_library_begin() true
 #define covers_library_end() ((void)0)
 #define bb_system_total() (scenario==26?0:24)
 #define bb_index_complete() true
@@ -120,7 +120,7 @@ static bool covers_stop(void){paused=true;return !worker_busy;}
 #define settings_ui_run(...) ((void)(settings_open++))
 #define shelf_scene_strip_hit(...) -1
 #define shelf_scene_card_hit(...) -1
-#define covers_stop_wait() ((void)covers_stop())
+#define covers_stop_wait() covers_stop()
 #define covers_reset() ((void)0)
 #define bb_games_dir_retry() ((void)0)
 #define settings_ui_take_folders() false

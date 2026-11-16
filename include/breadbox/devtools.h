@@ -11,7 +11,7 @@ bool dev_enabled(void);
 bool dev_batch_active(void);
 void dev_interrupt(void);
 enum { DEV_UI_NONE, DEV_UI_LIBRARY, DEV_UI_PAUSE, DEV_UI_SETTINGS, DEV_UI_STATES, DEV_UI_RESUME, DEV_UI_CONTINUE,
-	DEV_UI_WELCOME };   // the room: the first-launch welcome again (bb_welcome_open, as Settings > Help > Welcome)
+	DEV_UI_WELCOME, DEV_UI_WHATSNEW };   // the room: the first-launch welcome again (bb_welcome_open, as Settings > Help > Welcome)
 int dev_ui_pending(void);
 int dev_ui_take(void);
 extern int dev_ui_slot;

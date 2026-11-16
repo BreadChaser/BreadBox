@@ -45,7 +45,7 @@ BUILD		:=	$(APP_BUILD)
 SOURCES		:=	../../app/ui ../../app/settings ../../app/services ../../platform/3ds $(addprefix ../../systems/,$(SYSTEMS))
 SOURCES += ../../systems/common $(wildcard $(SYSTEMS:%=../../build/systems/%))
 DATA		:=	data
-INCLUDES	:=	include
+INCLUDES	:=	include generated
 GRAPHICS	:=	../../assets/gfx
 ROMFS		:=	../../assets/romfs
 GFXBUILD	:=	$(ROMFS)/gfx
@@ -198,7 +198,7 @@ endif
 # and playlog.o (library play history and favourites) follow; the save code
 # links last. cmdroom.o's code is PSX3D_COLD (after everything);
 # gpustereo_layers.o (New 3DS 3D) comes last.
-LATE_OFILES := picadirect.o presetupdate.o uploadskip.o display.o boxart.o qrcode.o share.o mp_ui.o playlog.o history.o safefile.o saveid.o savestates.o statefile.o scene.o icons.o cmdroom.o gpustereo_layers.o
+LATE_OFILES := picadirect.o presetupdate.o uploadskip.o display.o boxart.o qrcode.o share.o mp_ui.o playlog.o history.o safefile.o saveid.o savestates.o statefile.o scene.o icons.o cmdroom.o gpustereo_layers.o whatsnew.o whatsnew_model.o whatsnew_ui.o
 export OFILES_SOURCES 	:=	$(CPPFILES:.cpp=.o) $(filter-out $(LATE_OFILES),$(CFILES:.c=.o)) $(SFILES:.s=.o) $(LATE_OFILES)
 
 export OFILES_BIN	:=	$(addsuffix .o,$(BINFILES)) \

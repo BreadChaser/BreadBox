@@ -34,6 +34,7 @@
 #include "app_main.h"
 #include "breadbox_import.h"
 #include "welcome.h"
+#include "whatsnew.h"
 #include "icons.h"
 #include "room.h"
 #include "scene.h"
@@ -117,10 +118,10 @@ const char *slow_mode_notice(bool shortform)
 {
 	switch (g_slow_reason) {
 	case SLOW_EMULATOR:
-		return shortform ? "PC emulator: fast mode is off, games run slowly" :
+		return shortform ? "PC emulator: games run slowly" :
 			"Running in a PC emulator: fast mode is off, so games run much slower than on a real 3DS.";
 	case SLOW_NO_LUMA:
-		return shortform ? "Fast mode needs Luma3DS: games run slowly" :
+		return shortform ? "Fast mode needs Luma3DS" :
 			"Fast mode needs Luma3DS: games will run slowly.";
 	}
 	return NULL;
@@ -345,7 +346,7 @@ static bool start_game(const char *path, const char *save_name, const char *titl
   if(dev_remote_game())dev_game_ended(false);return false;
  }
  if(!bb_session_begin(system,&launch)) {
-  snprintf(launch_error,sizeof(launch_error),(system->models & (g_new3ds?BB_MODEL_NEW:BB_MODEL_OLD))?"Could not start the game\nNot enough memory to start this system.":"This system needs a New 3DS");
+  snprintf(launch_error,sizeof(launch_error),covers_wait_error()?covers_wait_error():(system->models & (g_new3ds?BB_MODEL_NEW:BB_MODEL_OLD))?"Could not start the game\nNot enough memory to start this system.":"This system needs a New 3DS");
   if(dev_remote_game())dev_game_ended(false);
   return false;
  }
@@ -537,7 +538,7 @@ int main(int argc, char **argv)
 	game_presets_init("romfs:/presets", PSX3D_DIR "/presets");
 	bool had_config = config_present();   // before the PSX3D import makes one: a truly first start shows the welcome
 	config_psx3d_imported = config_import_psx3d();
-	config_load();
+	config_load(); bb_whatsnew_boot(had_config);
 	bb_welcome_boot(had_config, config_psx3d_imported && g_cfg.games_dir[0] ? PSX_IMPORT_GAMES : 0);
 	boot_mark("presets + config");
     breadbox_import_init(); /* Repair parked primaries before any pause/game path. */
@@ -562,7 +563,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 	ui_init();
-	libui_init();
+	libui_init(); bb_whatsnew_prepare();
 	icons_preload();
 	boot_mark("icons ready");
 	boot_mark("video + ui");
@@ -786,11 +787,11 @@ int main(int argc, char **argv)
         /* Importer and cover retirement drain first, while the index worker can still run it
          * (its retry may start the worker again); after the close no worker starts, so the
          * worker this shutdown waits for is the last one. */
-        covers_stop_wait();
-        bb_index_shutdown();
-        bb_index_close();
+        if(!covers_stop_wait_apt())bb_exit_abandon();
+        if(!bb_exit_abandoned())bb_index_shutdown();
+        if(!bb_exit_abandoned())bb_index_close();
         /* The shutdown waits 45 ms; a worker in a long job must still end before main returns. */
-        for (u64 t0 = osGetTime(); !bb_index_shutdown_done(); svcSleepThread(1000000LL))
+        for (u64 t0 = osGetTime(); !bb_exit_abandoned() && !bb_index_shutdown_done(); svcSleepThread(1000000LL))
             if (osGetTime() - t0 > 3000) {
                 log_printf("exit: index worker did not stop\n");
                 bb_exit_abandon();
@@ -820,7 +821,7 @@ int main(int argc, char **argv)
 	libui_exit();
 	romfsExit();
 	bb_system_deinit();
-	ui_exit();
+	bb_whatsnew_exit(); ui_exit();
 	log_printf("exit: video\n");
 	video_exit();
 	if (!sw_noirrst)

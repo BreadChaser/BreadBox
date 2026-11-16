@@ -23,7 +23,7 @@ typedef uint64_t u64;typedef uint16_t u16;
 struct {void *data;unsigned size;}right_texture;
 static u16 *right_pixels;
 static bool right_ready=true,stereo_frame,ui_wants_3d,g_new3ds=true,skip_video,stereo_attempt,stereo_force;
-static struct {bool stereo,color_correction,frame_blend,smoothing;} gba_settings={true};
+static struct {bool stereo,core_color_correction,core_frame_blend,smoothing;} gba_settings={true};
 static struct {bool stereo;} g_cfg={true};
 static bool gba_3d_available(void){return g_cfg.stereo || !g_new3ds;}
 static gba_costs mono_costs,extra_costs,present_costs,skipped_costs;

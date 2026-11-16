@@ -51,4 +51,4 @@ with tempfile.TemporaryDirectory() as td:
 home=(r/'app/ui/home.c').read_text()
 assert 'else shelf_preload_end(true);' in home
 assert 'if(k || screen != DEV_UI_NONE)shelf_preload_end(true);' in home
-assert 'shelf_preload_end(false);' in home[home.index('static void leave(void)'):home.index('static void launch_leave(void)')]
+assert 'shelf_preload_end(false);' in home[home.index('void leave(void)'):home.index('static void launch_leave(void)')]

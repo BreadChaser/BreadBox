@@ -13,6 +13,8 @@
 #include "ui_list.h"
 #include "ui_pause.h"
 #include "ui.h"
+#include "ui_fixture.h"
+#include "whatsnew.h"
 #include "covers.h"
 #include "uisound.h"
 #include "playlog.h"
@@ -108,7 +110,7 @@ static const char *const update_status_text[]={"Not checked yet","Checking for u
  "Bad update info. Try later","Bad download. Will retry","Install failed. Reopen app","BreadBox is up to date",
  "Try the update tomorrow","Check the SD card. Retry","Battery low. Plug in","Restart or install by hand",
  "Unfinished update removed","Restart or install by hand","Check the date and time","Reopen to retry update",
- "Try again later","Free %u MB on the SD card","Needs the installed app"};   /* 16: the server answered, without the update file (404, 503 ...): not Wi-Fi */
+ "Try again later","Free %u MB on SD card","Needs the installed app"};   /* 16: the server answered, without the update file (404, 503 ...): not Wi-Fi */
 /* Results that are good news are written in ink, not red. */
 static bool update_status_good(unsigned status){return status==0 || status==1 || status==2 || status==7 || status==12;}
 #define BACKOFF UPDATE_ROOT "/failed.txt"
@@ -770,7 +772,7 @@ bool bb_update_tick(void)
    if(update_elapsed(now,&update_idle_since)<5000)return false;
    if(!update_countdown_since){update_countdown_since=now;log_printf("update: automatic countdown started\n");}
    u64 countdown=update_elapsed(now,&update_countdown_since);
-   if(countdown<3000){snprintf(update_notice,sizeof(update_notice),"Updating BreadBox in %u... Any button: later",3-(unsigned)(countdown/1000));update_notice_until=osGetTime()+100;return false;}
+   if(countdown<3000){snprintf(update_notice,sizeof(update_notice),"Updating in %us. Any key: later",3-(unsigned)(countdown/1000));update_notice_until=osGetTime()+100;return false;}
   }
   update_approved=true;
   /* covers_stop cancels LOW import work. Let a reserved writer finish before
@@ -803,8 +805,16 @@ static bool update_progress_text(char *text,size_t cap)
  else return false;
  return true;
 }
+PSX3D_COLD bool bb_update_startup_ready(void)
+{
+ if(update_developer_busy())return true;
+ return __atomic_load_n(&update_prefs_loaded,__ATOMIC_ACQUIRE) &&
+  (!update_notice[0] || (update_notice_until && osGetTime()>=update_notice_until));
+}
 void bb_update_draw_notice(void)
 {
+ const char *fixture=ui_fixture_notice();if(fixture){ui_notice(fixture,60);return;}
+
  if(bb_update_installing() || bb_update_committed())return;
  char text[48];
  if(update_approved && (update_waits_for_save() ||
@@ -854,13 +864,14 @@ const char *bb_update_glance(void)
 }
 static flist_t update_list;static int update_selected;
 static void update_row(int i,void *unused,ui_card_row_t *r)
-{(void)unused;*r=(ui_card_row_t){.label=i?"Check now":"Install",.value=i?">":update_prefs_ready()?bb_update_preference():"-",.arrows=!i && update_prefs_ready()};}   /* not "Updates" again under the title */
+{(void)unused;*r=(ui_card_row_t){.label=i==BB_UPDATE_NOTES_ROW?bb_whatsnew_label():i?"Check now":"Install",.value=i?">":update_prefs_ready()?bb_update_preference():"-",.arrows=!i && update_prefs_ready()};}   /* not "Updates" again under the title */
 /* The card's foot line: what this visit's check is doing or found; no standing "Last check" status (owner 2026-11-05) */
 static const char *update_card_notice(void)
-{return update_unavailable() || update_crypto_disabled || update_waits_for_save() || update_explicit_pending || update_explicit_check || update_view.staging || update_status>=3?update_settings_status():"";}
+{const char *fixture=ui_fixture_notice();if(fixture){update_line_bad=ui_fixture_problem();return fixture;}
+ return update_unavailable() || update_crypto_disabled || update_waits_for_save() || update_explicit_pending || update_explicit_check || update_view.staging || update_status>=3?update_settings_status():"";}
 /* The card's footer: drawn and touched from the same list (a tap on Back or Check works like B or A). */
 static int update_bar(ui_button_t *bar)
-{bar[0]=(ui_button_t){KEY_B,"Back",UI_ICON_BACK,false};bar[1]=(ui_button_t){KEY_A,update_selected?"Check":"Change",UI_ICON_CHANGE,false};return 2;}
+{bar[0]=(ui_button_t){KEY_B,"Back",UI_ICON_BACK,false};bar[1]=(ui_button_t){KEY_A,update_selected==BB_UPDATE_NOTES_ROW?"Open":update_selected?"Check":"Change",update_selected==BB_UPDATE_NOTES_ROW?UI_ICON_OPEN:UI_ICON_CHANGE,false};return 2;}
 static void update_bottom(void *unused);
 
 void bb_update_settings(void)
@@ -872,18 +883,19 @@ void bb_update_settings(void)
   if(dev_tick(false) || dev_ui_pending())break;
   if(!update_initialized && !update_developer_busy() && !__atomic_load_n(&update_job_busy,__ATOMIC_ACQUIRE))update_begin();   /* the room's tick has not started the updater yet */
   ui_button_t bar[2];int nbar=update_bar(bar);
-  input_poll();u32 k=ui_card_input(&update_list,2,&update_selected,ui_bar_input(bar,nbar,input_keys_down()));k=ui_swap_keys(k,UI_SWAP_MENU);
+  input_poll();u32 k=ui_card_input(&update_list,BB_UPDATE_ROWS,&update_selected,ui_bar_input(bar,nbar,input_keys_down()));k=ui_swap_keys(k,UI_SWAP_MENU);
   if(k&KEY_B)break;
   if(!update_selected && (k&(KEY_A|KEY_LEFT|KEY_RIGHT)) && !update_prefs_ready())sfx_play(SFX_ERROR);   /* a preference that was not loaded is never written */
   else if(!update_selected && (k&(KEY_A|KEY_LEFT|KEY_RIGHT))){int next=(update_preference+((k&KEY_LEFT)?2:1))%3;
    FILE *f=safe_begin(PREF);if(f){bool wrote=fprintf(f,"%d\n",next)>0;if(safe_finish(f,PREF,wrote)){__atomic_store_n(&update_preference,next,__ATOMIC_RELEASE);if(next==2)bb_update_net_stop();sfx_play(SFX_VALUE);}}
    if(__atomic_load_n(&update_preference,__ATOMIC_ACQUIRE)!=next)sfx_play(SFX_ERROR);   /* could not be written: it stays as it was */
-  }else if(update_selected && (k&KEY_A) && (update_unavailable() || update_crypto_disabled))sfx_play(SFX_ERROR);   /* the card's line says why (the updater never starts a check: self-test or cleanup failed) */
+  }else if(update_selected==BB_UPDATE_NOTES_ROW && (k&KEY_A)){bb_whatsnew_open();ui_swap_enter();}
+  else if(update_selected && (k&KEY_A) && (update_unavailable() || update_crypto_disabled))sfx_play(SFX_ERROR);   /* the card's line says why (the updater never starts a check: self-test or cleanup failed) */
   else if(update_selected && (k&KEY_A) && !update_explicit_pending){update_check_now=update_explicit_pending=true;}
   else if(k&KEY_A)sfx_cancel();   /* a check is already running: nothing new */   /* "Checking..." at once, even while the library scans */
   /* the room's tick is not running: the same policy runs here, never past READY */
   update_poll(false);
-  ui_card_update(&update_list,update_selected,2);music_update();ui_begin();video_present_vsync(false,ui_menu_top,update_bottom,NULL);
+  ui_card_update(&update_list,update_selected,BB_UPDATE_ROWS);music_update();ui_begin();video_present_vsync(false,ui_menu_top,update_bottom,NULL);
  }
  ui_swap_enter();
 }

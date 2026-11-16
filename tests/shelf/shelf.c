@@ -145,10 +145,10 @@ void music_play(bool on) { if (!on) music_stops++; }
 size_t linearSpaceFree(void) { return 2 * 1024 * 1024; }
 void music_update(void) {}
 void covers_resume(void) {}
-void covers_stop_wait(void) {}
+bool covers_stop_wait(void) {return true;}
 bool covers_stop(void) { return true; }
 void covers_reset(void) {}
-void covers_library_begin(void) {}
+bool covers_library_begin(void) {return true;}
 bool covers_library_try_begin(void) { return true; }
 void covers_library_end(void) {}
 void covers_pump(void) { after_close += closing; }

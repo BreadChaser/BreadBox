@@ -41,7 +41,7 @@ for d in "${gitdirs[@]}"; do gitmounts+=(-v "$d:$d:ro"); done
 
 # CI settings a caller (or the workflow's env) may set; passed through only when set.
 passenv=()
-for var in BB_BUILD_JOBS BASELINE_BUILD_REFERENCE BASELINE_JOBS; do
+for var in BB_BUILD_JOBS BASELINE_BUILD_REFERENCE BASELINE_JOBS HOST_TEST_JOBS; do
 	[[ -n ${!var+x} ]] && passenv+=("$var")
 done
 

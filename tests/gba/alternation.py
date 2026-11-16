@@ -26,7 +26,7 @@ with tempfile.TemporaryDirectory(prefix='gba-alt-') as td:
 typedef uint32_t u32;typedef uint16_t u16;typedef uint8_t u8;
 static unsigned frames,lock_hold,alternation_streak,probe_count;
 static bool probe_frame,phase_lock,ui_wants_3d,skip_video,ff;   /* fast-forward off */
-static struct {bool frame_blend;} gba_settings;
+static struct {bool core_frame_blend;} gba_settings;
 '''+s[a:b]+r'''
 static u16 pic[160*240];
 static void make(unsigned scroll,unsigned phase){
@@ -95,7 +95,7 @@ int main(void){
     picture scrolls, and the only steadily alternating row is the status row,
     which also holds the race timer that changes every frame. Whole-row hashes
     never matched two frames back there, so the race never locked. */
- lock_hold=0;ui_wants_3d=false;gba_settings.frame_blend=false;
+ lock_hold=0;ui_wants_3d=false;gba_settings.core_frame_blend=false;
  for(unsigned f=0;f<60;f++)frame(f*2,0,false);
  assert(!lock_hold);
  for(unsigned f=0;f<900;f++){
@@ -131,7 +131,7 @@ int main(void){
   assert(!lock_hold);}
  /* Stereo (ui_wants_3d) and the core's frame mixing never phase-lock. */
  lock_hold=300;ui_wants_3d=true;shown=0;for(unsigned f=0;f<20;f++)frame(0,0,false);assert(shown==20);
- ui_wants_3d=false;gba_settings.frame_blend=true;shown=0;for(unsigned f=0;f<20;f++)frame(0,0,false);assert(shown==20);
+ ui_wants_3d=false;gba_settings.core_frame_blend=true;shown=0;for(unsigned f=0;f<20;f++)frame(0,0,false);assert(shown==20);
  return 0;
 }
 ''')

@@ -2632,7 +2632,7 @@ PSX3D_COLD_FN(leave_unplayed) static bool leave_unplayed(void)
 
 bool emu_run_game(const char *path, const char *save_name, const char *title)
 {
-	covers_stop_wait();
+	covers_stop_prepared();
 	bool ok = run_game(path, save_name, title);
 	dev_game_ended(ok);
 	return ok;

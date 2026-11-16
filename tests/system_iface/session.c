@@ -16,7 +16,7 @@ static bool enough=true,released,claim_ok=true;
 bool bb_platform_claim(const bb_system_t *s) {(void)s;assert(released);return claim_ok;}
 void bb_platform_drop(void) {}
 int bb_platform_count(const bb_system_t *s) {(void)s;return 0;}
-void bb_platform_release_menu(void) {assert(!released);released=true;}
+bool bb_platform_release_menu(void) {assert(!released);released=true;return true;}
 void bb_platform_restore_menu(void) {assert(released);released=false;}
 bool bb_platform_budget(const bb_system_t *s) {(void)s;assert(released);return enough;}
 int main(void) {

@@ -66,7 +66,7 @@ static int robust_test(char **argv)
   adapter=blocker!=0;percent=9;battery=0;free_clusters=blocker?0:100000;
   assert(!bb_update_tick() && !starts && !update_thread);
   notice_seen[0]=0;bb_update_draw_notice();
-  assert(!strcmp(notice_seen,blocker?"Free 3 MB on the SD card":"Battery low. Plug in"));
+  assert(!strcmp(notice_seen,blocker?"Free 3 MB on SD card":"Battery low. Plug in"));
   adapter=true;percent=100;battery=5;free_clusters=100000;fake_time+=5001;
   robust_finish();notice_seen[0]=0;update_commit=1;bb_update_draw_notice();assert(!notice_seen[0]);update_commit=0;
  }
@@ -80,7 +80,7 @@ static int robust_test(char **argv)
   assert(!starts && !finishes && !cancels && update_machine.state==BB_UPDATE_READY && !update_install_attempted);
   assert(!bb_update_tick() && !update_thread);
   notice_seen[0]=0;bb_update_draw_notice();
-  assert(!strcmp(notice_seen,blocker?"Free 3 MB on the SD card":"Battery low. Plug in"));
+  assert(!strcmp(notice_seen,blocker?"Free 3 MB on SD card":"Battery low. Plug in"));
   for(unsigned turn=0;turn<20;turn++)assert(!bb_update_tick() && !update_thread && !starts);
   adapter=true;percent=100;battery=5;free_clusters=100000;fake_time+=5001;
   assert(!bb_update_tick() && update_thread);
@@ -145,9 +145,9 @@ static int robust_test(char **argv)
  /* Space is an actionable storage failure, including during download. */
  free_clusters=0;update_machine.state=BB_UPDATE_IDLE;update_discover_job(NULL);
  assert(update_status==17 && update_machine.state==BB_UPDATE_IDLE);
- update_view_refresh();assert(!strcmp(update_settings_status(),"Free 5 MB on the SD card"));
+ update_view_refresh();assert(!strcmp(update_settings_status(),"Free 5 MB on SD card"));
  stage();assert(!update_install(NULL) && update_status==17 && !starts);
- update_view.state=BB_UPDATE_IDLE;assert(!strcmp(update_settings_status(),"Free 3 MB on the SD card"));
+ update_view.state=BB_UPDATE_IDLE;assert(!strcmp(update_settings_status(),"Free 3 MB on SD card"));
  remove(STAGE);assert(!update_download(NULL) && update_status==17);
  free_clusters=100000;space_result=-1;assert(!update_require_space(2097152) && update_status==9);space_result=0;
  /* A complete cached download only needs install space, with no discovery margin. */

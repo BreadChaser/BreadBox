@@ -101,6 +101,7 @@ static unsigned bb_heap_available(void) {return 0;}
 #define KEY_CPAD_DOWN KEY_DOWN
 #include "gba_settings.h"
 GbaSettings gba_settings;
+const char *gba_color_name(int c){return "Original (vivid)";}
 bool gba_settings_solar_game;
 static unsigned changed_field=99,cleared;
 static bool undo_ready;

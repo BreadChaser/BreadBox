@@ -29,7 +29,7 @@ static void draw_gba_settings(void *unused)
     const theme_t *th=theme();
     C2D_DrawRectSolid(0,0,UI_Z_BACKDROP,UI_BOTTOM_SCREEN_WIDTH,UI_SCREEN_HEIGHT,th->surface);
     gba_settings_list_draw(&settings_list,setting_row,"This game · GBA");
-    static const ui_button_t bar[]={{KEY_B,"Back",UI_ICON_BACK,false},{KEY_LEFT,"Change",UI_ICON_LEFT,false},{KEY_RIGHT,"Change",UI_ICON_RIGHT,false}};
+    static const ui_button_t bar[] __asm__("bar.0")={{KEY_B,"Back",UI_ICON_BACK,false},{KEY_LEFT,"Change",UI_ICON_LEFT,false},{KEY_RIGHT,"Change",UI_ICON_RIGHT,false}};
     ui_bar_draw(bar,3);
 }
 

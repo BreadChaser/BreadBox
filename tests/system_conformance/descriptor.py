@@ -11,7 +11,8 @@ sid=sys.argv[1];src=(r/f'systems/{sid}/sys_{sid}.c').read_text()
 # immutable declarations so unavailable device hooks cannot be called by accident.
 parts=['#include <assert.h>\n#include <string.h>\n#include <stdio.h>\n#include <zlib.h>\n#include "bb_system.h"\n']
 if sid=='gba':
- a=src.index('static const char *const sizes[]');b=src.index('static const char *solar_value',a)
+ parts.append('#include "gba_color.h"\n')
+ a=src.index('static const char *const filters[]');b=src.index('static const char *solar_value',a)
  parts.append(src[a:b])
 if sid=='nes':
  a=src.index('static bb_probe_result probe(');b=src.index('static bb_profile profile;',a)
@@ -58,6 +59,7 @@ with tempfile.TemporaryDirectory(prefix='bb-conformance-schema-') as td:
  subprocess.run(['cc','-std=gnu11','-fsyntax-only','-include','stddef.h','-include','string.h','-Itests/app/host','-Iapp/ui','-Iinclude/breadbox','-Iplatform/3ds','-Isystems/gba','-Isystems/common','-Icore/deps/libretro-common/include',str(r/f'systems/{sid}/sys_{sid}.c')],cwd=r,check=True)
  (p/'check.c').write_text(''.join(parts))
  if sid=='nes':subprocess.run([sys.executable,str(r/'systems/nes/tests/make-rom.py'),str(p/'fixture.nes')],check=True)
- subprocess.run(['cc','-std=c11','-Wall','-Wextra','-Wno-unused-function','-Wno-misleading-indentation','-ffunction-sections','-fdata-sections','-Wl,--gc-sections','-fsanitize=address,undefined','-fno-sanitize-recover=all','-Itests/app/host','-Iapp/ui','-Iinclude/breadbox','-Iplatform/3ds','-Isystems/gba','-Isystems/common','-Icore/deps/libretro-common/include',str(p/'check.c'),'-lz','-o',str(p/'check')],cwd=r,check=True)
+ extra=['systems/gba/gba_color.c','-lm'] if sid=='gba' else []
+ subprocess.run(['cc','-std=c11','-Wall','-Wextra','-Wno-unused-function','-Wno-misleading-indentation','-ffunction-sections','-fdata-sections','-Wl,--gc-sections','-fsanitize=address,undefined','-fno-sanitize-recover=all','-Itests/app/host','-Iapp/ui','-Iinclude/breadbox','-Iplatform/3ds','-Isystems/gba','-Isystems/common','-Icore/deps/libretro-common/include',str(p/'check.c'),*extra,'-lz','-o',str(p/'check')],cwd=r,check=True)
  subprocess.run([str(p/'check')],cwd=p,check=True)
 print(sid+': compiled production settings schema + seven shared pause rows PASS')

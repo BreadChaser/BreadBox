@@ -42,7 +42,7 @@ const unsigned bb_system_count=3;
 bool bb_platform_budget(const bb_system_t *s) {(void)s;return true;}
 bool bb_platform_claim(const bb_system_t *s) {(void)s;return true;}
 void bb_platform_drop(void) {}
-void bb_platform_release_menu(void) {}
+bool bb_platform_release_menu(void) {return true;}
 void bb_platform_restore_menu(void) {}
 int bb_platform_count(const bb_system_t *s) {return bb_index_count(s);}
 int main(void) {

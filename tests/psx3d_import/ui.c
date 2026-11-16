@@ -81,13 +81,13 @@ static void drain(void){for(unsigned i=0;i<100 && (job || launched || queued);i+
 static void settings_count(void)
 {
  config_psx3d_imported=true;copied_n=1;breadbox_import_start(false);drain();
- assert(strstr(notice,"Brought your PSX3D saves and settings over: 2 files.") && !config_psx3d_imported);
+ assert(strstr(notice,"PSX3D: 2 copied; 0 backups") && !config_psx3d_imported);
  {unsigned kinds;assert(breadbox_import_settled(&kinds) && (kinds&PSX_IMPORT_SETTINGS));}   /* the welcome's PSX3D card names the settings */
  breadbox_import_notice_quiet();assert(!notice[0]);   /* its card says it: no second account on top */
  strcpy(notice,"PSX3D import paused: SD card full. It resumes next launch.");breadbox_import_notice_quiet();assert(notice[0]);   /* problems stay */
- breadbox_import_start(false);drain();assert(strstr(notice,"Brought your PSX3D saves over: 1 file."));
+ breadbox_import_start(false);drain();assert(strstr(notice,"PSX3D: 1 copied; 0 backups"));
  config_psx3d_imported=true;copied_n=0;breadbox_import_start(false);drain();
- assert(strstr(notice,"Brought your PSX3D settings over: 1 file."));
+ assert(strstr(notice,"PSX3D: 1 copied; 0 backups"));
  copied_n=42;
 }
 int main(void)
@@ -102,7 +102,7 @@ int main(void)
  available=true;breadbox_import_poll();assert(job && !runs); // room can draw before callback
  {unsigned kinds;assert(!breadbox_import_settled(&kinds));}   /* the welcome waits for it */
  tick();assert(steps>=1 && !finished && bb_writers_busy());drain();assert(!bb_writers_busy());assert(runs==1 && finished && applies==1 && commits==1 && continued==1);
- breadbox_import_notice();assert(notices==1);assert(strstr(notice,"saves over: 42 files."));
+ breadbox_import_notice();assert(notices==1);assert(strstr(notice,"PSX3D: 42 copied; 0 backups"));
  assert(breadbox_import_pause() && finished);breadbox_import_resume();
  for(int i=0;i<100;i++)breadbox_import_start(true);
  assert(runs==1 && !job); // returns do not rescan
@@ -122,7 +122,7 @@ int main(void)
  for(unsigned i=0;;i++){assert(i<100);pump();if(job && job->phase==2 && job->done)break;fake_tick+=SYSCLOCK_ARM11;breadbox_import_poll();}
  assert(!breadbox_import_pause() && !job);drain();assert(!bb_writers_busy());
  breadbox_import_resume();breadbox_import_start(true);drain();assert(finished);
- failures=1;breadbox_import_start(false);drain();assert(finished && strstr(notice,"could not"));
+ failures=1;breadbox_import_start(false);drain();assert(finished && strstr(notice,"retry in Files"));
  unsigned before=runs;breadbox_import_poll();assert(runs==before && !job);
  failures=0;open_failures=1;before=runs;breadbox_import_start(false);
  tick();assert(job && job->retry_at && !finished && !job->result.failed);

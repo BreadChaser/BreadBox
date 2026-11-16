@@ -91,19 +91,6 @@ void bb_sync_texture_copy(u32 *in, u32 indim, u32 *out, u32 outdim, u32 size, u3
  video_gpu_idle();
 }
 
-void bb_platform_release_menu(void)
-{
- bb_save_settle();   /* the last game's files written after it (bb_later): on the card first */
- bb_last_picture_release();
- /* Drain importer cleanup before stopping its worker. */
- covers_stop_wait();
- bb_index_shutdown();
- video_gpu_idle();covers_release_gpu();music_unload();
- icons_release();
- shelf_release();room_scene_release();room_hands_release();
- if(home_release_cache())room_scene_tv_maps_release();
- bb_mem_probe("menu released, system starting",NULL);
-}
 void bb_platform_restore_menu(void)
 {
  room_pace_return_start();

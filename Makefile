@@ -90,9 +90,13 @@ system-cores: core
 app: system-cores
 endif
 
-app: title-version-check core
+app: changelog-header title-version-check core
 	@python3 tools/presets/check.py
 	$(MAKE) -C build/3ds
+
+.PHONY: changelog-header
+changelog-header:
+	python3 tools/build/changelog.py CHANGELOG.md $(APP_VERSION_HEADER) build/3ds/generated/whatsnew_text.h
 
 # Installable CIA. Needs makerom (Project_CTR) and bannertool on PATH,
 # or MAKEROM=/path/to/makerom BANNERTOOL=/path/to/bannertool.

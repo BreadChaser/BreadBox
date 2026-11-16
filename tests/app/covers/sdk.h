@@ -1,5 +1,11 @@
 // Exercise the actual cover lifecycle and curl driver with small SDK substitutes.
 #define BB_VERSION "test"
+#define PSX3D_COLD
+#define COVERS_STOP_DEADLINE_MS 65000
+_Bool covers_stop_wait(void);
+_Bool covers_stop_wait_apt(void);
+const char *covers_stop_pending(void);
+const char *covers_wait_error(void);
 #define PSX3D_DIR "."
 #define PATH_LEN 512
 #define CUR_THREAD_HANDLE 0
@@ -54,7 +60,11 @@ static bool blocked, g_new3ds;
 bool dev_covers_blocked(void) { return blocked; }
 static void (*video_pre_draw)(void);
 static int cancel_after, sleeps;
+#ifdef COVERS_FAKE_TIME
+u64 osGetTime(void);
+#else
 u64 osGetTime(void) { struct timespec t;clock_gettime(CLOCK_MONOTONIC,&t);return (u64)t.tv_sec*1000+t.tv_nsec/1000000; }
+#endif
 static void svcSleepThread(long long ns);
 #ifndef COVERS_THREADED
 static void LightLock_Init(LightLock *l) {*l=0;}
@@ -75,6 +85,14 @@ static void socExit(void) {}
 static void aptHook(aptHookCookie *c,void (*f)(APT_HookType,void*),void *p) {(void)c;(void)f;(void)p;}
 static void aptUnhook(aptHookCookie *c) {(void)c;}
 /* HOME: what covers_home_frame allows, a rejected press (one-shot), jumps to the HOME Menu */
+#define KEY_B (1u << 1)
+static bool closing, gpu_right=true;
+static unsigned keys_down;
+static bool aptMainLoop(void) {return !closing;}
+static bool aptShouldClose(void) {return closing;}
+static bool gspHasGpuRight(void) {return gpu_right;}
+static void hidScanInput(void) {}
+static unsigned hidKeysDown(void) {unsigned keys=keys_down;keys_down=0;return keys;}
 static bool home_allowed=true,home_rejected;static int home_jumps;
 static void aptSetHomeAllowed(bool on) {home_allowed=on;}
 static bool aptCheckHomePressRejected(void) {bool r=home_rejected;home_rejected=false;return r;}
@@ -91,7 +109,7 @@ static int library_count(void) {return 2;}
 static const game_t *library_get(int i) {assert(i==0);return &game;}
 static int library_count(void) {return 1;}
 #endif
-#ifdef COVERS_THREADED
+#if defined(COVERS_THREADED) || defined(COVERS_LOG_CAPTURE)
 static void log_printf(const char *fmt,...);
 #else
 static void log_printf(const char *fmt,...) {(void)fmt;}
@@ -100,7 +118,7 @@ static void C3D_TexDelete(C3D_Tex *t) {free(t->data);}
 static bool C3D_TexInit(C3D_Tex *t,int w,int h,int fmt) {(void)fmt;t->data=malloc(w*h*2);return !!t->data;}
 static void C3D_TexSetFilter(C3D_Tex *t,int a,int b) {(void)t;(void)a;(void)b;}
 static void C3D_TexSetWrap(C3D_Tex *t,int a,int b) {(void)t;(void)a;(void)b;}
-static unsigned long long svcGetSystemTick(void) {return 0;}
+static unsigned long long svcGetSystemTick(void) {return osGetTime()*(SYSCLOCK_ARM11/1000); }
 static void GSPGPU_FlushDataCache(void *p,int n) {(void)p;(void)n;}
 CURLMcode __real_curl_multi_poll(CURLM*,struct curl_waitfd*,unsigned,int,int*);
 CURLMcode __wrap_curl_multi_poll(CURLM *m,struct curl_waitfd *f,unsigned n,int ms,int *num)

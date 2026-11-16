@@ -3,6 +3,7 @@
 #include "sdk.h"
 #include <stdatomic.h>
 #include "../../../app/ui/covers.c"
+#include "../../../app/ui/covers_wait.c"
 #include "../../../app/ui/covers_match.c"
 #include "../../../app/services/covers_fetch.c"
 bool breadbox_import_pause(void){return true;}

@@ -9,6 +9,7 @@
 #include "dev_switches.h"
 #include "memory_cards.h"
 #include "emu.h"
+#include "covers.h"
 #include "library.h"
 #include "libui.h"
 #include "home.h"
@@ -37,6 +38,7 @@ static ADAPTER bb_run_result run(const bb_launch *l,char *error,size_t cap)
  if(!bb_exec_held() || bb_session_system()!=bb_system_by_id("ps1")) {
   snprintf(error,cap,"PlayStation does not own system memory");return BB_RUN_FAILED;
  }
+ if(!covers_stop_wait()){snprintf(error,cap,"%s",covers_wait_error());dev_game_ended(false);return BB_RUN_FAILED;}
  int previous=sw_state;if(l->slot>=0)sw_state=l->slot;
  bool ok=emu_run_game(l->path,l->save_name,l->title);
  sw_state=previous;

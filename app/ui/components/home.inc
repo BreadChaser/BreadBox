@@ -1,10 +1,10 @@
 // Shared home presentation; content/state are provided by its controller.
 // The room's top screen has no wordmark and no version (the version is in Share and Credits):
-// only what the player has to read, the slow-mode banner and the first-start line.
+// only the shared information footer and the first-start line.
 static void room_top_notices(void)
 {
 	if (!have_games) {
-		float y = slow_mode_notice(false) ? 32 : 0;
+		float y = 0;
 		C2D_DrawRectSolid(0, y, 0.6f, UI_TOP_SCREEN_WIDTH, 2, accent(1, UI_ALPHA_OPAQUE));
 	}
 	slow_banner();
@@ -142,16 +142,7 @@ static void slow_banner(void)
 	const char *m = slow_mode_notice(false);
 	if (!m)
 		return;
-	char l1[96], l2[96];
-	const char *cut = strchr(m, ',');
-	if (!cut)
-		cut = strchr(m, ':');
-	snprintf(l1, sizeof(l1), "%.*s", cut ? (int)(cut - m) + 1 : (int)strlen(m), m);
-	snprintf(l2, sizeof(l2), "%s", cut ? cut + 2 : "");
-	const theme_t *th = theme();
-	C2D_DrawRectSolid(0, 0, UI_Z_BAND, UI_TOP_SCREEN_WIDTH, 32, th->banner_bg);   // under the text (0.7)
-	ui_text_ex(NULL, 8, 2, UI_FONT_SMALL, th->banner_text, 0, ui_fit(l1, UI_FONT_SMALL, 384));
-	ui_text_ex(NULL, 8, 16, UI_FONT_SMALL, th->banner_text, 0, ui_fit(l2, UI_FONT_SMALL, 384));
+	ui_notice(slow_mode_notice(true), 60);
 }
 
 static void big_title(const char *title, const char *line, float ease)
@@ -176,11 +167,11 @@ static void top_common(void)
 		ui_text_ex(libui_font(), 10 + w + 0.42f * 6, 6, UI_FONT_META, theme()->wordmark_accent, 0, APP_WORDMARK_RIGHT);
 	}
 	if (!have_games) {   // first start: one friendly line
-		float y = slow_mode_notice(false) ? 32 : 0;   // under the slow-mode banner
+		float y = 0;
 		C2D_DrawRectSolid(0, y, 0.6f, UI_TOP_SCREEN_WIDTH, 2, accent(1, UI_ALPHA_OPAQUE));
 	}
 	slow_banner();
-	ui_text_ex(NULL, 396, 226, 0.35f, theme()->version_text, C2D_AlignRight, "v" PSX3D_VERSION);
+
 }
 
 static void soon_bottom(void *ud)

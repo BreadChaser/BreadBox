@@ -48,6 +48,7 @@
 #include "breadbox_import.h"
 #include "shelf.h"
 #include "welcome.h"
+#include "whatsnew.h"
 #include "cold_code.h"
 #include "place_cards.h"
 #include "playlog.h"
@@ -595,9 +596,9 @@ static void launch_info(const char *path, home_launch_t *out)
 static u64 quit_tick;
 
 static bool welcome_live;   // home_run's room is up (bb_welcome_open uses it)
-static void leave(void)
+static PSX3D_COLD void leave(void)
 {
-	welcome_live = false;
+	welcome_live = false; bb_whatsnew_room(DEV_UI_NONE, false, NULL);
 	shelf_preload_end(false); // gameplay/Library/lifecycle takes over a pending pause
 	room_pace_priority(false);   // back to the menus' usual priority (before a game too)
 	aptSetHomeAllowed(true);
@@ -754,7 +755,7 @@ int home_run(bool games, char *path, size_t len, home_launch_t *out)
 			return HOME_AGAIN;
 		}
 		HT("dev done");
-        int screen = dev_ui_take();
+        int screen = dev_ui_take(); bb_whatsnew_room(screen, room_intro >= 1 && room.mode == ROOM_HOME && !quit_tick && !room_quit_on && !bb_welcome_due(), present_with);
 
 		if (screen == DEV_UI_LIBRARY) { leave(); return HOME_LIBRARY; }
 		if (screen == DEV_UI_WELCOME && bb_welcome_open()) { leave(); return HOME_FOLDERS; }
@@ -769,9 +770,8 @@ int home_run(bool games, char *path, size_t len, home_launch_t *out)
         if(k || screen != DEV_UI_NONE)shelf_preload_end(true);
 
 		if (covers_home_frame()) continue;   // HOME: held back while the covers use the network (as in the Library)
-		if (welcome_ready()) {   // the first start's tour (or its games card again after the folder picker)
-			int w = welcome_run(welcome_resume >= 0 ? welcome_resume : 0);
-			if (w == WELCOME_FOLDERS) { leave(); return HOME_FOLDERS; }
+		if (welcome_ready()) {
+			int w = welcome_run(welcome_resume >= 0 ? welcome_resume : 0); if (w == WELCOME_FOLDERS) { leave(); return HOME_FOLDERS; }
 			if (w == WELCOME_CLOSED) { leave(); return aptMainLoop() ? HOME_AGAIN : HOME_QUIT; }
 			continue;
 		}
@@ -999,7 +999,7 @@ int home_empty_library_run(void)
 		HT("preload/dev begin");
         if (dev_tick(false)) { r = 3; break; }
 		HT("dev done");
-        int screen = dev_ui_take();
+        int screen = dev_ui_take(); bb_whatsnew_room(screen, false, NULL);
 		if (screen == DEV_UI_SETTINGS) { settings_ui_run(false, empty_top); continue; }
 		input_poll(); HT("input");
 		u32 k = ui_header_back(ui_bar_input(empty_bar, 3, input_keys_down()));

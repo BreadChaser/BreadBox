@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdatomic.h>
+enum { BB_UPDATE_NOTES_ROW=2, BB_UPDATE_ROWS=3 };
 #define BB_UPDATE_TITLE UINT64_C(0x000400000B0B0B00)
 #define BB_UPDATE_MAX (64u*1024u*1024u)
 typedef struct {
@@ -33,6 +34,7 @@ bool bb_update_tick(void); /* true: AM committed; bypass scene cleanup and shut 
 /* Shared menu frame: continue staging only; the room alone installs. */
 void bb_update_menu_tick(void);
 void bb_update_draw_notice(void);
+bool bb_update_startup_ready(void); /* receipt has had its time in the room */
 bool bb_update_installing(void);
 bool bb_update_committed(void);
 void bb_update_install_frame(void);

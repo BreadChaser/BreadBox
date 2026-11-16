@@ -1,5 +1,6 @@
 #include "sdk.h"
 #include "../../../app/ui/covers.c"
+#include "../../../app/ui/covers_wait.c"
 #include "../../../app/ui/covers_match.c"
 #include "../../../app/services/covers_fetch.c"
 #include "shelf-drain.inc"

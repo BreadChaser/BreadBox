@@ -82,7 +82,7 @@ void video_present_vsync(bool g,void (*t)(void *),void (*b)(void *),void *u) {(v
 const theme_t *theme(void) {static theme_t t;return &t;}
 void C2D_DrawRectSolid(float x,float y,float z,float w,float h,u32 c) {(void)x;(void)y;(void)z;(void)w;(void)h;(void)c;}
 static unsigned cover_changes;
-void covers_library_begin(void) { assert(!cover_changes); cover_changes++; }
+bool covers_library_begin(void) { assert(!cover_changes); cover_changes++; return true; }
 bool covers_library_try_begin(void) { covers_library_begin(); return true; }
 void covers_library_end(void) { assert(cover_changes==1); cover_changes--; }
 

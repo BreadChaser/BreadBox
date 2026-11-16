@@ -47,7 +47,9 @@ assert result.returncode == 0, result.stdout + result.stderr
 assert 'rm -rf build/systems' in result.stdout, result.stdout
 ci = (ROOT / 'tools/build/ci.sh').read_text()
 assert '$(nproc)' not in ci and 'BB_BUILD_JOBS' in ci
+assert 'HOST_TEST_JOBS=${HOST_TEST_JOBS:-}' in ci
 host = (ROOT / 'tools/build/host-tests.sh').read_text()
+assert 'jobs=${HOST_TEST_JOBS:-$default_jobs}' in host
 assert 'HOST_TEST_ALLOW_SKIPS' not in host
 assert 'run baseline-gate' not in host and 'run build-contract' in host
 assert 'tests/layout_baseline/check.py' in ci
@@ -137,6 +139,10 @@ with tempfile.TemporaryDirectory() as td:
                                     env=env, capture_output=True, text=True)
             assert result.returncode == 0, result.stdout + result.stderr
             assert '1 passed, 0 failed' in result.stdout, result.stdout
+            parallel = subprocess.run(['bash', 'tools/build/host-tests.sh', 'art-smdh24'], cwd=ROOT,
+                                      env=dict(env, HOST_TEST_JOBS='2'), capture_output=True, text=True)
+            assert parallel.returncode == 0, parallel.stdout + parallel.stderr
+            assert '1 passed, 0 failed, 0 skipped' in parallel.stdout, parallel.stdout
         assert not list(home.iterdir())
         assert not (td / 'logs' / 'scratch').exists() or not any((td / 'logs' / 'scratch').iterdir())
     finally:
@@ -151,7 +157,7 @@ fixed_tmp = sorted(str(f.relative_to(ROOT)) for f in (ROOT / 'tests').rglob('*')
                    and any(n in f.read_text(errors='replace') for n in needles))
 assert fixed_tmp == ['tests/gpu_thread_sim.py'], fixed_tmp   # a manual tool, not a host-tests group
 container = (ROOT / 'tools/build/container.sh').read_text()
-assert 'for var in BB_BUILD_JOBS BASELINE_BUILD_REFERENCE BASELINE_JOBS' in container
+assert 'for var in BB_BUILD_JOBS BASELINE_BUILD_REFERENCE BASELINE_JOBS HOST_TEST_JOBS' in container
 assert '"${passenv[@]/#/--env=}"' in container and '--setenv "$var" "${!var}"' in container
 print('read-only empty-home host setup, ImageMagick compatibility and GNU fixture declarations PASS')
 

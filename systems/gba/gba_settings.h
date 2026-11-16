@@ -4,12 +4,16 @@
 
 /* screen_size: 0 = Original, 1 = Fit (3:2), 2 = Stretch. stereo has no row:
  * GBA 3D follows the 3D slider. rewind: New 3DS only (like PS1). */
-typedef struct { int screen_size, smoothing, color_correction, frame_blend, stereo, solar, rewind; } GbaSettings;
-#define GBA_SETTINGS_DEFAULT ((GbaSettings){1,0,0,0,1,5,1})
+/* The core post-process slots stay off: picture effects belong to presentation,
+ * including both layer-3D eyes. Keep the established core-facing offsets. */
+typedef struct { int screen_size, smoothing, core_color_correction, core_frame_blend, stereo, solar, rewind;
+ int color_correction, frame_blend; } GbaSettings;
+#define GBA_SETTINGS_DEFAULT ((GbaSettings){1,0,0,0,1,5,1,0,0})
 #define GBA_SETTING_FIELDS 7
 enum { GBA_SET_SCREEN, GBA_SET_SMOOTH, GBA_SET_COLOR, GBA_SET_BLEND, GBA_SET_STEREO, GBA_SET_SOLAR, GBA_SET_REWIND,
        GBA_SET_HOTKEY_FF, GBA_SET_HOTKEY_REWIND };   /* hotkeys: app-wide, shared with PS1 */
 extern GbaSettings gba_settings;
+extern void (*gba_settings_changed)(void);
 extern bool gba_settings_solar_game;   /* the running game has a solar sensor (Boktai) */
 const char *gba_setting_label(int row, void *ud);
 void gba_settings_load(void);

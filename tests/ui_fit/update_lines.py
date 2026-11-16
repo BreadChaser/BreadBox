@@ -5,6 +5,9 @@ others 1.0) calibrated on emulator stills of the card at 0.7: "No connection. Ch
 (23.0) fits; "Bad download. Try tomorrow" (23.4) was cut. Lines must stay at or under 23.0."""
 import re, sys
 from pathlib import Path
+from card_lines import geometry, width as measured_width
+row_end, strip_top = geometry(['UI_CARD_ROWS_Y+3*UI_CARD_ROW', 'UI_CARD_Y+UI_CARD_H-UI_CARD_NOTICE_H'])
+assert row_end <= strip_top, f'Updates row 3 ends at {row_end}, overlapping reason strip at {strip_top}'
 src = (Path(__file__).resolve().parents[2] / 'app/services/update.c').read_text()
 table = re.search(r'update_status_text\[\]=\{(.*?)\};', src, re.S).group(1)
 body = src[src.index('static const char *update_settings_status(void)\n{'):]
@@ -19,13 +22,15 @@ lines = re.findall(r'"((?:[^"\\]|\\.)*)"', table) + re.findall(r'return "((?:[^"
 lines = [line.replace('%u', '207') for line in lines]
 assert 'Ready. Reopen to install' in lines
 assert 'Battery low. Plug in' in lines
-assert 'Free 207 MB on the SD card' in lines
+assert 'Free 207 MB on SD card' in lines
 wide=set('mwMWDOQGCNHUABKRV');narrow=set("iltfjr.,' I:;-!|")
 # Exact twentieth units keep the calibrated boundary identical across Python
 # versions (sum() gained compensated floating-point summation in Python 3.12).
 width=lambda t: sum(27 if c in wide else 11 if c in narrow else 20 for c in t)
 assert width("No connection. Check Wi-Fi") == 460
 assert width("Bad download. Try tomorrow") == 467
+available, size = geometry(['UI_CARD_X+UI_CARD_W-UI_CARD_RIGHT-UI_CARD_TEXT_X', 'UI_CARD_NOTICE_SIZE'])
+assert all(measured_width(line, size) <= available for line in lines), 'An Updates reason exceeds its real card-font width'
 bad = [l for l in lines if width(l) > 460 or re.search(r'\((network|hash|manifest|install|SD card)\)|\bAM\b|SHA|CIA|Last check', l)]
 for l in bad:
     print('too wide or technical:', repr(l), round(width(l) / 20, 1))

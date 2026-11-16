@@ -1,5 +1,6 @@
 /* Shared top-screen paper slip: SELECT cycles complete label/value pages at the text floor.
  * The final line carries the continuation cue only when the text needs more than one page. */
+#include "ui_text_pages.h"
 static PSX3D_COLD int value_card_lines(const char *text)
 {
  return text && *text ? wrap_text(text, UI_TEXT_FLOOR, UI_VALUE_CARD_W - UI_VALUE_CARD_PAD * 2,
@@ -8,9 +9,7 @@ static PSX3D_COLD int value_card_lines(const char *text)
 PSX3D_COLD int ui_value_card_pages(const char *label, const char *value)
 {
  int lines = value_card_lines(label) + value_card_lines(value);
- if (lines <= UI_VALUE_CARD_LINES) return 1;
- int capacity = UI_VALUE_CARD_LINES - 1;
- return (lines + capacity - 1) / capacity;
+ return ui_text_page_count(lines, UI_VALUE_CARD_LINES, UI_VALUE_CARD_CUE_LINES);
 }
 PSX3D_COLD void ui_value_card(const char *label, const char *value, int page)
 {
@@ -19,7 +18,7 @@ PSX3D_COLD void ui_value_card(const char *label, const char *value, int page)
  int nl = value_card_lines(label), nv = value_card_lines(value), total = nl + nv;
  if (!total) return;
  bool paged = total > UI_VALUE_CARD_LINES;
- int capacity = UI_VALUE_CARD_LINES - (paged ? 1 : 0);
+ int capacity = UI_VALUE_CARD_LINES - (paged ? UI_VALUE_CARD_CUE_LINES : 0);
  int pages = (total + capacity - 1) / capacity;
  page = page < 0 ? 0 : page % pages;
  int first = page * capacity, shown = total - first < capacity ? total - first : capacity;

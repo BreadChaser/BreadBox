@@ -18,6 +18,7 @@
 // to a letter never shows empty cards while the full size ones come from the
 // SD card.
 #include "covers_internal.h"
+#include "cold_code.h"
 
 
 
@@ -64,7 +65,7 @@ unsigned covers_sd_ms;             // "covers sdms=N": cache reads take N ms per
 
 int covers_last_curl;
 long covers_last_http;
-static unsigned stop_ms, max_stop_ms;
+extern unsigned covers_stop_ms, covers_max_stop_ms;
 atomic_bool covers_paused; // gameplay / HOME / sleep: do not start work
 atomic_int covers_busy_workers;    // workers currently fetching/decoding a cover or presets
 static bool initialized, library_was_paused;
@@ -73,7 +74,7 @@ static bool try_open, try_was_paused;
 static unsigned gpu_generation;
 bool covers_presets_claimed; // a worker runs the preset check (under lock)
 static aptHookCookie apt_cookie;
-void covers_stop_wait(void);
+
 
 // The system tells us about HOME, sleep and closing right away (from inside
 // aptMainLoop). Stop network work immediately instead of whenever the main
@@ -88,7 +89,7 @@ static void on_apt(APT_HookType hook, void *param)
 	case APTHOOK_ONSLEEP:
 		if (!apt_suspended) apt_was_paused = library_changes ? library_was_paused : covers_paused;
 		apt_suspended |= hook == APTHOOK_ONSUSPEND ? 1 : 2;
-		covers_stop_wait();
+		covers_stop_wait_apt();
 		break;
 	case APTHOOK_ONRESTORE:
 	case APTHOOK_ONWAKEUP:
@@ -577,40 +578,26 @@ bool covers_busy(void)
 
 // Pause the workers and close the network. Doesn't block: call it each
 // frame until it returns true (the network loop checks pause every 10ms).
-bool covers_stop(void)
+PSX3D_COLD const char *covers_stop_pending(void)
 {
- if(!breadbox_import_pause())return false;
- if(!bb_update_net_stop())return false;
-	if (sw_nocovers)
-		return true;
-	// Serialize pause with worker claims: no worker may start between the
-	// busy check and returning success to a game load or APT.
-	covers_lock();
-	covers_paused = true;
-	bool active = covers_busy_workers > 0;
-	LightLock_Unlock(&covers_list_lock);
-	if (active || LightLock_TryLock(&covers_net_lock) != 0)
-		return false;
-	covers_net_close();
-	LightLock_Unlock(&covers_net_lock);
-	return true;
+ /* Request all stops together, even if the importer has not settled yet. */
+ bool importing = !breadbox_import_pause();
+ bool updating = !bb_update_net_stop();
+ const char *pending = importing ? "importer" : updating ? "update network" : NULL;
+ if (sw_nocovers) return pending;
+ /* A stuck filesystem/decode operation may hold either lock. Never block here. */
+ if (LightLock_TryLock(&covers_list_lock) != 0) return pending ? pending : "cover list";
+ covers_paused = true;
+ bool active = covers_busy_workers > 0;
+ LightLock_Unlock(&covers_list_lock);
+ if (active) return pending ? pending : "cover loader";
+ if (LightLock_TryLock(&covers_net_lock) != 0) return pending ? pending : "cover network";
+ covers_net_close();
+ LightLock_Unlock(&covers_net_lock);
+ return pending;
 }
 
-// Wait for actual quiescence. Never enter gameplay/update with a worker alive.
-void covers_stop_wait(void)
-{
-	u64 start = osGetTime();
-	bool warned = false;
-	while (!covers_stop()) {
-		if (!warned && osGetTime() - start >= 5000) {
-			log_printf("covers: quiescence waiting over 5s; importer/worker still active\n");
-			warned = true;
-		}
-		svcSleepThread(10000000LL);
-	}
-	stop_ms = osGetTime() - start;
-	if (stop_ms > max_stop_ms) max_stop_ms = stop_ms;
-}
+bool covers_stop(void) { return covers_stop_pending() == NULL; }
 
 void covers_resume(void)
 {
@@ -630,13 +617,18 @@ void covers_resume(void)
 // HOME during a cover download froze the app (11ec33b8). While the workers use the network HOME is held back; a
 // press is caught, the downloads stop (polled, never waited for here), then the app goes to the HOME Menu itself.
 // Every menu loop that runs the covers (Home, the Library) calls this once a frame; true when it went HOME.
+static bool home_pending;
+PSX3D_COLD bool covers_wait_home(void)
+{
+ if (aptCheckHomePressRejected()) home_pending = true;
+ return home_pending;
+}
 bool covers_home_frame(void)
 {
-	static bool pending;
-	aptSetHomeAllowed(!pending && !covers_busy());
-	if (aptCheckHomePressRejected()) pending = true;
-	if (!pending || !covers_stop()) return false;
-	pending = false;
+	aptSetHomeAllowed(!home_pending && !covers_busy());
+	if (aptCheckHomePressRejected()) home_pending = true;
+	if (!home_pending || !covers_stop()) return false;
+	home_pending = false;
 	aptSetHomeAllowed(true);
 	aptJumpToHomeMenu();
 	covers_resume();
@@ -727,14 +719,16 @@ static void invalidate_library(void)
 // A library mutation is a transaction on the UI thread. Workers may borrow
 // game_t only while busy; drain them BEFORE freeing or sorting any entries.
 // BreadBox keeps this transaction open across incremental import frames.
-void covers_library_begin(void)
+bool covers_library_begin(void)
 {
-	if (sw_nocovers || !initialized) return;
-	if (library_changes++) return;
+	if (sw_nocovers || !initialized) return true;
+	if (library_changes) { library_changes++; return true; }
 	bool was_paused = covers_paused;
-	covers_stop_wait();
+	if (!covers_stop_wait()) return false;
+	library_changes++;
 	library_was_paused = was_paused;
 	invalidate_library();
+	return true;
 }
 
 // covers_library_begin without waiting: false while the worker is still in a job (a download or a decode:
@@ -765,7 +759,7 @@ void covers_library_end(void)
 void covers_reset(void)
 {
 	if (sw_nocovers || !initialized) return;
-	covers_library_begin();
+	if (!covers_library_begin()) return;
 	LightLock_Lock(&covers_state_lock);
 	boxart_misses_clear();
 	LightLock_Unlock(&covers_state_lock);
@@ -820,7 +814,7 @@ void covers_debug(char *out, size_t len)
 	         "\"heap_used\":%u,\"heap_arena\":%u,\"linear_free\":%u}",
 	         gpu_generation, library_changes, textures, pixels, covers_paused ? "true" : "false", covers_busy_workers, covers_net_open ? "true" : "false", covers_attempts,
 	         covers_downloaded, covers_cache_hits, covers_aborted_count, covers_failures, covers_last_curl, covers_last_http,
-	         stop_ms, max_stop_ms, ready, wanted, cached, missing, invalid,
+	         covers_stop_ms, covers_max_stop_ms, ready, wanted, cached, missing, invalid,
 	         legacy, covers_upgraded, covers_miss_skips, covers_other_names, uploads, uploads ? upload_total_us / uploads : 0, upload_max_us,
 	         frames, frames ? (unsigned)(frame_total_us / frames) : 0, frame_max_us, frames_over_25ms, frames_over_40ms,
 	         covers_nthumbs, covers_thumbs_loaded ? "true" : "false", covers_thumb_made, covers_thumb_filled,

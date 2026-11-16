@@ -14,7 +14,7 @@ main=text('app/ui/main.c')
 if not 0<=main.find('playlog_init();')<main.find('bb_index_start(g_cfg.games_dir'):errors.append('playlog tables must be made at start')
 mk=text('build/3ds/Makefile')
 if not re.search(r'ifneq \(\$\(CORE_SYSTEMS\),\)\nLDFLAGS \+= -Wl,--wrap=retro_init,--wrap=retro_deinit\n(#.*\n)*LDFLAGS \+= -Wl,--wrap=malloc,--wrap=free,--wrap=calloc,--wrap=realloc',mk):errors.append('BreadBox link must route tiny blocks to the small pool')
-plat=text('platform/3ds/bb_platform.c')
+plat=text('platform/3ds/bb_platform.c')+text('platform/3ds/bb_menu_release.c')
 for where in ('menu released, system starting','system ended'):
  if where not in plat:errors.append('switch memory log missing: '+where)
 if errors:sys.exit('\n'.join(errors))

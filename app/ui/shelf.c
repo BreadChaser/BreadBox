@@ -886,7 +886,7 @@ int shelf_run(char *path, size_t cap)
 			// user's rescan (Y), it forgets the database's misses and writes them to the SD card on
 			// this thread (174 ms in Azahar, once after every game)
 			u64 t0 = svcGetSystemTick();
-			covers_library_begin(); covers_library_end();
+			if (!covers_library_begin()) {covers_resume();continue;} covers_library_end();
 			build(); publication_changed=false; favorite_rebuild_pending=false; show_played(); cover_drain(false);
 			if(refresh_requested){view.notice="Collection updated";view.notice_t=view.t;}
 			log_printf("shelf: the library changed (%u games), shelves made again in %.1f ms\n", (unsigned)bb_system_total(),
@@ -984,7 +984,7 @@ int shelf_run(char *path, size_t cap)
 			u32 rescan_keys = held | (k & KEY_Y);
 			if (held & KEY_TOUCH) rescan_keys |= ui_bar_input(bar_all, 4, KEY_TOUCH) & KEY_Y;
 			if (shelf_hold_action(&rescan_hold, (rescan_keys & KEY_Y) != 0, view.t)) {
-				covers_stop_wait(); covers_reset();
+				if(!covers_stop_wait()){covers_resume();goto present;} covers_reset();
 				bb_games_dir_retry();
 				library_result loaded=library_load_result(g_cfg.games_dir,true);
                 if (!aptMainLoop()) break; // lifecycle takes ownership of the pause

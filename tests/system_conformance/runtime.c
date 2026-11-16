@@ -27,7 +27,7 @@ bool bb_exec_held(void){return loan!=NULL;}
 bool bb_platform_budget(const bb_system_t *s){return s==&test_system;}
 bool bb_platform_claim(const bb_system_t *s){assert(s==&test_system && !loan);loan=malloc(4096);return loan && bb_arena_claim(&arena,(uintptr_t)loan,4096,(uintptr_t)loan);}
 void bb_platform_drop(void){assert(loan);bb_arena_drop(&arena);free(loan);loan=NULL;}
-void bb_platform_release_menu(void){}
+bool bb_platform_release_menu(void){return true;}
 void bb_platform_restore_menu(void){}
 int bb_platform_count(const bb_system_t *s){(void)s;return 0;}
 static void session_begin(void){bb_launch l={0};assert(bb_session_begin(&test_system,&l));assert(bb_session_system()==&test_system && bb_exec_held());}

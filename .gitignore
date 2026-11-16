@@ -46,3 +46,5 @@ REVIEW*.md
 
 # Ledger of trunk-gate runs (tools/build/trunk-gate.sh)
 /.trunk-gate.jsonl
+
+/build/3ds/generated/

@@ -455,6 +455,7 @@
 #define UI_VALUE_CARD_BOTTOM 234
 #define UI_VALUE_CARD_PAD 6
 #define UI_VALUE_CARD_LINES 9         // includes one continuation line for a paged value
+#define UI_VALUE_CARD_CUE_LINES 1
 #define UI_VALUE_CARD_PAGE_MARK_W 60  // SELECT cue and next-page arrow
 #define UI_CARD_RULE_Y 43             // the red rule under the header: the title and the right-hand eyebrow sit on it
 #define UI_CARD_TITLE_SIZE 0.8f
@@ -611,3 +612,15 @@
 #define UI_SETTINGS_SCOPE_MAX_W 130     // but never wider than the glass's dark face ("Game Boy Advance · Picture" ran off it)
 #define UI_SETTINGS_SCOPE_SIZE .44f   // top screen: shrinks to UI_FONT_CONTEXT to fit (was .3)
 #define UI_COLOR_SCOPE_PHOSPHOR 0xffa5f09a
+
+// One screen-depth information line along the top screen's bottom edge.
+#define UI_NOTICE_HEIGHT 26
+#define UI_NOTICE_TOP (UI_SCREEN_HEIGHT-UI_NOTICE_HEIGHT)
+#define UI_NOTICE_INSET 12
+#define UI_NOTICE_TEXT_INSET 2
+#define UI_NOTICE_RULE 1
+#define UI_NOTICE_FADE 20
+#define UI_NOTICE_LEFT 0
+#define UI_TEXT_ALIGN_LEFT 0
+#define UI_NOTICE_TEXT_WIDTH (UI_TOP_SCREEN_WIDTH-UI_NOTICE_INSET*2)
+#define UI_NOTICE_ACCENT 3

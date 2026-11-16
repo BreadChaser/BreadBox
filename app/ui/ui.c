@@ -1351,17 +1351,10 @@ int ui_bar_parse(const char *hint, ui_button_t *out, int max)
 	return n;
 }
 
-// A short notice in the middle of the top screen (sorted, favourites, rescan).
+// Shared top-screen information footer.
 void ui_notice(const char *s, int frames)
 {
-	if (frames <= 0 || !s || !s[0])
-		return;
-	int a = frames > 20 ? 255 : frames * 255 / 20;
-	float w = text_width(0.48f, s) + 28, x = 200 - w / 2;
-	// under the text (ui_text_ex draws at 0.7), over covers and titles
-	C2D_DrawRectSolid(x, 104, UI_Z_NOTICE, w, 30, theme_alpha(ui_bar_color(UI_COL_NOTICE), a * 225 / 255));
-	C2D_DrawRectSolid(x, 104, 0.665f, 3, 30, theme_alpha(theme()->accent[3], a));
-	ui_text_ex(NULL, 200, 111, 0.48f, theme_alpha(theme()->heading, a), C2D_AlignCenter, s);
+ ui_notice_bar(s,frames);
 }
 
 // The first letter of a title for a placeholder card: a whole UTF-8 sequence,

@@ -17,7 +17,7 @@ Settings          Customize >  Systems >  Collection >  Updates >  About >
     <system>      its rows under red headings (Picture, Controls, Saves, Cartridge, Cheats), then More: Advanced >, Help
       Advanced    the rows the adapter marks advanced (PS1: Speed, Compatibility, Troubleshooting), Help
   Collection      Games folder | Import again from PSX3D
-  Updates         the update page (Automatic / Ask first / Off, check now)
+  Updates         the update page (Ask first / Automatic / Off, Check now, What's new)
   About           Credits | How to install | Welcome (when the welcome tour is built in)
 ```
 
@@ -96,6 +96,35 @@ value.
   and impact line (options.c `notes[]`). Their defaults are the general correct
   value per console. Presets set them per game only after a test on that console
   shows a gain (see Defaults and presets).
+
+## Game Boy Advance rows
+
+GBA picture choices use the system default and an optional per-game override.
+X Inherit removes a game's explicit choice; Y resets this scope. Existing saved
+`smoothing`, `color_correction` and `frame_blend` values keep their meaning.
+
+- **Screen size.** Original is pixel-exact at 240×160, centered. Fit (default)
+  keeps the 3:2 shape at 360×240. Stretch fills 400×240.
+- **Filter.** Sharp (default) keeps pixel edges; Smooth uses linear scaling.
+  Original screen size avoids the uneven pixel widths of fractional scaling.
+- **Color.** Original (vivid), the unchanged default, keeps cartridge colors.
+  Corrected uses the existing GBA LCD correction. Soft mixes Original and
+  Corrected equally. Bright lifts midtones while preserving black and white.
+  Old `color_correction=0` means Original; `1` means Corrected. Unknown color
+  values fall back to Original. Colors use a table generated when the choice
+  changes, applied during texture upload without another CPU picture pass.
+- **LCD ghosting.** Off (default) or On. On mixes the current and previous
+  pictures equally on the GPU, restoring effects that flicker to imitate
+  transparency. Moving edges can look softer. Each 3D eye has its own history;
+  the first picture after a change is shown without a blend.
+- **FPS counter.** Off, FPS, or Detailed, on the bottom screen.
+- **Button mappings.** The shared controls card; while playing it is in Pause.
+- **Rewind.** On by default on New 3DS, when memory is available.
+- **Sunlight.** Only for solar-sensor cartridges, 0 (Covered) through 10 (Bright),
+  default 5 (Daylight).
+- **Cheats.** Per game; while playing they are in Pause.
+
+The 3D slider continues to control layer depth with every picture choice.
 
 ## Defaults and presets
 

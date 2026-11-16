@@ -25,7 +25,7 @@ typedef struct {char *title,*cover_key,*group;int ndiscs;char *discs[8];} game_t
 static bool covers_library_try_begin(void) {return true;}
 static bool playlog_poll_adoptions(void) {return false;}
 int bb_system_cover_id(const bb_system_t *s,int row) {(void)s;return row;}
-static void covers_library_begin(void) {}
+static bool covers_library_begin(void) {return true;}
 static void covers_library_end(void) {}
 typedef uint32_t u32; typedef uint64_t u64;
 static struct { char games_dir[512]; } g_cfg;

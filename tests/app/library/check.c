@@ -31,7 +31,7 @@ void log_printf(const char *fmt, ...)
 }
 
 static unsigned cover_changes;
-void covers_library_begin(void) { assert(!cover_changes); cover_changes++; }
+bool covers_library_begin(void) { assert(!cover_changes); cover_changes++; return true; }
 void covers_library_end(void) { assert(cover_changes==1); cover_changes--; }
 static u64 svcGetSystemTick(void) { return 0; }
 // the CHD content probe has its own suite (tests/bb_disc): every .chd here is a PS1 disc

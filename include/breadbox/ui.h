@@ -65,6 +65,7 @@ enum { UI_COL_BAR, UI_COL_RULE, UI_COL_NOTICE, UI_COL_STAR };
 u32 ui_bar_color(int which);
 void ui_star(float cx, float cy, float r, u32 c, u32 hollow, float z);
 void ui_notice(const char *s, int frames);
+void ui_notice_bar(const char *s, int frames);
 void ui_first_letter(char *out, const char *title);   // out[8]: one whole UTF-8 letter   // top screen, fades over its last 20 frames
 void ui_text_wrap(float x, float y, float size, u32 color, float width, const char *s);
 void ui_button_text(float x, float y, float pixels, float spacing, u32 color, int id);

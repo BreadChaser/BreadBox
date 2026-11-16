@@ -17,7 +17,13 @@ one-time import from `sdmc:/3ds/PSX3D` remain live BreadBox compatibility code.
   the folder picker's shallow look for games in the 3DS's own root folders.
   `welcome.c` is the first-launch welcome's flag (`welcome` in config.ini) and
   words; `home_welcome.inc` tours the room with it (`bb_welcome_open()` for
-  Settings > About > Welcome; dev `ui welcome`). `place_cards.c`: the room cards' lines.
+  Settings > About > Welcome; dev `ui welcome`). `whatsnew.c`/`whatsnew_model.c`
+  track seen releases in config.ini; `whatsnew_ui.c` and `components/whatsnew.inc`
+  scroll the shared ruled card with `card_scroll.c` (list repeat/motion, whole-row
+  drag targets). `tools/build/changelog.py` generates its text from CHANGELOG.md
+  (test `whats-new`; measured fit in `tests/ui_fit/card_lines.py`).
+  `notice_bar.c` draws the shared screen-depth information footer on the top screen.
+  `place_cards.c`: the room cards' lines.
 - `app/settings/`: the Settings pages (one list per page, a page stack; adapters own the rows);
   `app/ui/card_notice.c` the card notice's strip and ruled line (its own file: `ui.o`'s cold code sits right ahead of the GBA save dialogs, so growth there moves them);
   `app/ui/ui_mark.c` the selection highlighter (`ui_mark.h`, masks from `tools/ui/mark_masks.py`);
@@ -25,7 +31,9 @@ one-time import from `sdmc:/3ds/PSX3D` remain live BreadBox compatibility code.
   `app/services/`: updater (`update_pending.inc` keeps accepted downloads across starts;
   the cold menu turn in `breadbox_import_ui.c` advances staging), sharing and `covers_fetch.c` (the cover worker thread, HTTP, cache files);
   `app/ui/covers.c` the cover API and textures, `covers_match.c` cover names (host test `covers-match`),
-  shared state in the private `covers_internal.h`.
+  shared state in the private `covers_internal.h`; `covers_wait.c` bounds transition drains
+  and services lifecycle cancellation (host test `launch-wait`).
+  `platform/3ds/bb_menu_release.c` releases menu resources only after a successful drain.
 - `platform/3ds/`: device boundaries, video, audio, input and networking.
 - `systems/<id>/sys_<id>.c`: system descriptors behind `bb_system.h`.
   `systems/common/retro_host.c` owns libretro callbacks/core validity;
@@ -37,7 +45,10 @@ one-time import from `sdmc:/3ds/PSX3D` remain live BreadBox compatibility code.
   `library.c` the PS1 list, cache and index import, `ps1_disc_groups.c` titles and
   disc groups, `ps1_library_import.c` .cue/.m3u references (private `ps1_library.h`);
   a system's `components/*.inc` are its drawing parts;
-  GBA runs in `systems/gba/gba.c`. `core/` and `gba-core/` are vendored engines.
+  GBA runs in `systems/gba/gba.c`; `gba_picture.c` presents color/LCD mixing
+  through the offscreen helper `gba_picture_mix.h`;
+  `gba_color.c` builds the color tables and fuses lookup with texture upload
+  (host test `tests/gba_color/run.sh`). `core/` and `gba-core/` are vendored engines.
 - `include/breadbox/`: system contracts, shared style tokens and one header per
   shell module (`app_config.h`, `platform_video.h`, `ui.h`, etc.); `ui_words.h`
   holds the words every system says alike (postcards), defines only.
@@ -50,6 +61,8 @@ one-time import from `sdmc:/3ds/PSX3D` remain live BreadBox compatibility code.
   (encode/decode/text); Share shows CIA versions with it (test `share-room`).
   `source-epoch.py` invalidates timestamp-bearing objects when the epoch changes;
   `jobs.py` preserves caller jobserver tokens and bounds standalone core builds.
+  `gate-record.py` validates structured local CI receipts from the fixed runner;
+  `host-tests.sh --list` is its suite manifest, and `summary.json` records suite results.
   `tests/layout_baseline/build_contract.py` checks these build contracts;
   real-ELF controls in `check.py` run in the CI layout stage.
 - `app/ui/room_*.c`: the room main menu (`room_bbr.c` portable BBR v3 tables,

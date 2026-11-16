@@ -53,7 +53,7 @@ static unsigned cancel_stop,cancel_index,cancel_save,cancel_log;
 static bool importer_drained,index_pending,retire_after_cancel;static unsigned retire_polls;
 static bool abandoned;void bb_exit_abandon(void){abandoned=true;}
 bool bb_exit_abandoned(void){return abandoned;}
-void covers_stop_wait(void){importer_drained=true;}
+bool covers_stop_wait(void){importer_drained=true;return true;}
 static void bb_index_shutdown(void){assert(importer_drained);importer_drained=false;}
 bool bb_index_shutdown_done(void){if(cancel_index && !--cancel_index)abort_install();if(retire_after_cancel && !cancel_index && ++retire_polls>=3)index_pending=false;return !index_pending;}
 static unsigned restart_scans;
@@ -170,6 +170,9 @@ static bool confirm_answer=true;static unsigned confirms;static bool confirm_saw
 static bool update_progress_text(char *text,size_t cap);
 bool ui_confirm_choice(const char *a,const char *b,const char *c,const char *d,bool e){(void)a;(void)b;(void)c;(void)d;(void)e;
  confirms++;char t[48];if(update_progress_text(t,sizeof(t)))confirm_saw_progress=true;return confirm_answer;}
+static unsigned whatsnew_opened;
+void bb_whatsnew_open(void){whatsnew_opened++;}
+const char *bb_whatsnew_label(void){return "What's new";}
 static char notice_seen[64];void ui_notice(const char *s,int frames){(void)frames;snprintf(notice_seen,sizeof(notice_seen),"%s",s);}
 /* footer taps: the shared bar input maps a tap on tab i to its key (tap_tab -1: no tap) */
 static int tap_tab=-1;
@@ -404,6 +407,16 @@ int main(int argc,char **argv)
  keys[0]=KEY_DOWN;keys[1]=KEY_A;key_index=0;bb_update_settings();assert(update_check_now);
  game=true;key_index=0;bb_update_settings();assert(!key_index);game=false;
  f=fopen(RECEIPT,"w");assert(f);fprintf(f,"%u 1.0.0\n",installed);fclose(f);update_initialize_job(NULL);assert(!strcmp(update_notice,"Updated to 1.0.0"));assert(access(RECEIPT,F_OK));
+ /* Release notes wait until the installed receipt has been presented in the room. */
+ {
+  bool was_diagnostic=diagnostic,was_bench=dev_bench;diagnostic=false;dev_bench=false;
+  u64 before=fake_time;update_notice_until=0;
+  assert(!bb_update_startup_ready());
+  update_notice_until=fake_time+5000;assert(!bb_update_startup_ready());
+  fake_time+=5000;assert(bb_update_startup_ready());
+  update_prefs_loaded=0;assert(!bb_update_startup_ready());update_prefs_loaded=1;
+  fake_time=before;update_notice_until=0;diagnostic=was_diagnostic;dev_bench=was_bench;
+ }
  /* Exclusive writer reservation closes the check/start race. */
  assert(bb_writer_begin());assert(bb_writer_begin());assert(bb_writers_busy());
  assert(!bb_writers_try_exclusive());bb_writer_end();bb_writer_end();
@@ -717,6 +730,16 @@ int main(int argc,char **argv)
     assert(!strcmp(update_card_notice(),update_status_text[status]) && update_line_bad);
     update_crypto_disabled=false;update_status=saved;
    }
+   /* The third row opens independently of update eligibility and starts no check. */
+   for(int state=0;state<3;state++) {
+    diagnostic=dev_bench=state==0;homebrew=state==1;update_preference=2;
+    update_prefs_loaded=1;update_initialized=true;update_check_now=update_explicit_pending=false;
+    unsigned opened=whatsnew_opened;ui_card_row_t row={0};update_row(BB_UPDATE_NOTES_ROW,NULL,&row);
+    assert(!strcmp(row.label,"What's new") && !strcmp(row.value,">") && !row.arrows);
+    keys[0]=KEY_DOWN;keys[1]=KEY_DOWN;keys[2]=KEY_A;keys[3]=KEY_B;key_index=0;sfx_errors=0;
+    bb_update_settings();assert(whatsnew_opened==opened+1 && !sfx_errors && !update_check_now && key_index==4);
+   }
+   diagnostic=dev_bench=false;homebrew=false;
    update_prefs_loaded=prefs;update_initialized=init;queued=before;
   }
   puts("PASS: updater UI policy: worker completion acquired before its phase, staging refuses other phases, consent before any progress, Later, progress %, one retry policy in Settings, developer guard, READY only in the room, footer taps");
