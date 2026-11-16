@@ -267,6 +267,8 @@ int main(int argc,char **argv)
 #ifdef BB_UPDATE_RELEASE_TEST
  return release_transport_test(argc,argv);
 #endif
+ /* A player who never opened the Updates page is asked before an update installs. */
+ assert(update_preference==1 && !strcmp(bb_update_preference(),"Ask first"));
  accept_queue=true;diagnostic=true;
 #ifdef BB_UPDATE_TEST_REMOTE
  assert(!bb_update_tick() && queued==1);update_job_busy=0;

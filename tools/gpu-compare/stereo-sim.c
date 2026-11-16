@@ -5,7 +5,7 @@
  * GPU_HASH_VRAM also hashes the right eye's VRAM. */
 #include "citro3d.h"
 #include "stereo-sim.h"
-#include "../../include/breadbox/gpustereo.h"
+#include "../../systems/ps1/gpustereo.h"
 #include <assert.h>
 #include <math.h>
 

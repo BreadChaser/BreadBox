@@ -9,7 +9,7 @@
 #include "libretro.h"
 #include "app_log.h"
 #include "memory_cards.h"
-#include "emu.h"
+#include "../../../systems/ps1/emu.h"
 #include "clip.h"
 #include "history.h"
 #include <dirent.h>

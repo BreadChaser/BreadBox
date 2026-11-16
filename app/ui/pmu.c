@@ -10,7 +10,7 @@
 #include "core_hooks.h"
 #include "dev_switches.h"
 #include "pmu.h"
-#include "emu.h"
+#include "ps1_hooks.h"
 #include "devtools.h"
 #include "../../core/plugins/gpulib/psx3d_frameskip.h"
 

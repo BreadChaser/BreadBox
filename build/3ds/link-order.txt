@@ -24,6 +24,8 @@ clip.c
 cmdroom.c
 config.c
 covers.c
+covers_fetch.c
+covers_match.c
 covers_pack.c
 covers_png.c
 csnd_out.c
@@ -51,6 +53,8 @@ home.c
 icons.c
 input.c
 library.c
+ps1_disc_groups.c
+ps1_library_import.c
 libui.c
 log.c
 main.c

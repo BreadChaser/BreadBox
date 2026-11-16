@@ -1,5 +1,5 @@
 /* BreadBox bookshelf controller (room themes): content, navigation, motion and
- * launch. Painting is shelf_scene.c; the screens are components/shelf.inc.
+ * launch. Painting is shelf_scene*.c; the screens are components/shelf.inc.
  * Motion follows the approved mock (js/breadbox-r8.js) step for step: a
  * spring-damped camera along the shelf, a box that comes out by itself when
  * the shelf settles, a shared, eased dolly between all shelves and one shelf. */

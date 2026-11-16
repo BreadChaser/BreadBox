@@ -68,309 +68,18 @@
 #define UI_REPEAT_INTERVAL 4
 // Frozen original composition coordinates and vector-asset geometry. These
 // are shared compatibility tokens, not per-screen styling overrides.
-#define UI_METRIC_0 0
-#define UI_METRIC_0X00FFFFFF 0x00ffffff
-#define UI_METRIC_0X40000000 0x40000000
-#define UI_METRIC_0X80 0x80
-#define UI_METRIC_0XC0 0xc0
-#define UI_METRIC_0XE0 0xe0
-#define UI_METRIC_0XF0 0xf0
-#define UI_METRIC_0XFF000000 0xff000000
-#define UI_METRIC_0XFFFFFF 0xffffff
-#define UI_METRIC_0_001F 0.001f
-#define UI_METRIC_0_004F 0.004f
-#define UI_METRIC_0_006F 0.006f
-#define UI_METRIC_0_007F 0.007f
-#define UI_METRIC_0_01F 0.01f
-#define UI_METRIC_0_02F 0.02f
-#define UI_METRIC_0_03F 0.03f
-#define UI_METRIC_0_04F 0.04f
-#define UI_METRIC_0_05F 0.05f
-#define UI_METRIC_0_06F 0.06f
-#define UI_METRIC_0_07F 0.07f
-#define UI_METRIC_0_08F 0.08f
-#define UI_METRIC_0_09F 0.09f
-#define UI_METRIC_0_0F 0.0f
-#define UI_METRIC_0_11F 0.11f
-#define UI_METRIC_0_12F 0.12f
-#define UI_METRIC_0_13F 0.13f
-#define UI_METRIC_0_14F 0.14f
-#define UI_METRIC_0_15F 0.15f
-#define UI_METRIC_0_16F 0.16f
-#define UI_METRIC_0_17F 0.17f
-#define UI_METRIC_0_18F 0.18f
-#define UI_METRIC_0_1F 0.1f
-#define UI_METRIC_0_21F 0.21f
-#define UI_METRIC_0_22F 0.22f
-#define UI_METRIC_0_24F 0.24f
-#define UI_METRIC_0_25F 0.25f
-#define UI_METRIC_0_26F 0.26f
-#define UI_METRIC_0_2F 0.2f
-#define UI_METRIC_0_32F 0.32f
-#define UI_METRIC_0_33F 0.33f
-#define UI_METRIC_0_34F 0.34f
-#define UI_METRIC_0_35F 0.35f
-#define UI_METRIC_0_36F 0.36f
-#define UI_METRIC_0_38F 0.38f
-#define UI_METRIC_0_39F 0.39f
-#define UI_METRIC_0_3F 0.3f
-#define UI_METRIC_0_42F 0.42f
-#define UI_METRIC_0_45F 0.45f
-#define UI_METRIC_0_48F 0.48f
-#define UI_METRIC_0_4F 0.4f
-#define UI_METRIC_0_51F 0.51f
-#define UI_METRIC_0_52F 0.52f
-#define UI_METRIC_0_55F 0.55f
-#define UI_METRIC_0_5F 0.5f
-#define UI_METRIC_0_62F 0.62f
-#define UI_METRIC_0_63F 0.63f
-#define UI_METRIC_0_64F 0.64f
-#define UI_METRIC_0_655F 0.655f
-#define UI_METRIC_0_65F 0.65f
-#define UI_METRIC_0_665F 0.665f
-#define UI_METRIC_0_66F 0.66f
-#define UI_METRIC_0_67F 0.67f
-#define UI_METRIC_0_68F 0.68f
-#define UI_METRIC_0_6F 0.6f
-#define UI_METRIC_0_70F 0.70f
-#define UI_METRIC_0_71F 0.71f
-#define UI_METRIC_0_725F 0.725f
-#define UI_METRIC_0_75F 0.75f
-#define UI_METRIC_0_7F 0.7f
-#define UI_METRIC_0_825F 0.825f
-#define UI_METRIC_0_82F 0.82f
-#define UI_METRIC_0_84F 0.84f
-#define UI_METRIC_0_85F 0.85f
-#define UI_METRIC_0_86F 0.86f
-#define UI_METRIC_0_88F 0.88f
-#define UI_METRIC_0_8F 0.8f
-#define UI_METRIC_0_95F 0.95f
-#define UI_METRIC_0_96F 0.96f
-#define UI_METRIC_0_9F 0.9f
-#define UI_METRIC_1 1
-#define UI_METRIC_10 10
 #define UI_PROGRESS_PERCENT_MAX 100
-#define UI_METRIC_100 100
-#define UI_METRIC_104 104
-#define UI_METRIC_108 108
-#define UI_METRIC_11 11
-#define UI_METRIC_110 110
-#define UI_METRIC_111 111
-#define UI_METRIC_112 112
-#define UI_METRIC_116 116
-#define UI_METRIC_116_0F 116.0f
-#define UI_METRIC_12 12
-#define UI_METRIC_120 120
 #define UI_PROGRESS_BAR_Y 125
-#define UI_METRIC_128 128
-#define UI_METRIC_132 132
-#define UI_METRIC_136 136
-#define UI_METRIC_138 138
-#define UI_METRIC_138_F 138.f
-#define UI_METRIC_13_9F 13.9f
-#define UI_METRIC_14 14
-#define UI_METRIC_140 140
-#define UI_METRIC_142 142
-#define UI_METRIC_15 15
-#define UI_METRIC_150 150
-#define UI_METRIC_156 156
-#define UI_METRIC_16 16
 #define UI_PROGRESS_TEXT_CENTER_X 160
-#define UI_METRIC_160 160
-#define UI_METRIC_16_0F 16.0f
-#define UI_METRIC_17 17
-#define UI_METRIC_170 170
-#define UI_METRIC_172 172
-#define UI_METRIC_173 173
-#define UI_METRIC_174 174
-#define UI_METRIC_178 178
-#define UI_METRIC_179 179
-#define UI_METRIC_18 18
-#define UI_METRIC_180 180
-#define UI_METRIC_184 184
-#define UI_METRIC_186 186
-#define UI_METRIC_19 19
-#define UI_METRIC_191 191
-#define UI_METRIC_193 193
-#define UI_METRIC_194 194
-#define UI_METRIC_196 196
-#define UI_METRIC_198 198
-#define UI_METRIC_1_0F 1.0f
-#define UI_METRIC_1_1F 1.1f
-#define UI_METRIC_1_25F 1.25f
-#define UI_METRIC_1_2F 1.2f
-#define UI_METRIC_1_33F 1.33f
-#define UI_METRIC_1_35F 1.35f
-#define UI_METRIC_1_3F 1.3f
-#define UI_METRIC_1_4F 1.4f
-#define UI_METRIC_1_5F 1.5f
-#define UI_METRIC_1_6F 1.6f
-#define UI_METRIC_1_7F 1.7f
-#define UI_METRIC_1_8F 1.8f
-#define UI_METRIC_2 2
-#define UI_METRIC_20 20
-#define UI_METRIC_200 200
-#define UI_METRIC_200_0F 200.0f
-#define UI_METRIC_201 201
-#define UI_METRIC_204 204
-#define UI_METRIC_206 206
-#define UI_METRIC_21 21
-#define UI_METRIC_210 210
-#define UI_METRIC_212 212
-#define UI_METRIC_215 215
-#define UI_METRIC_22 22
-#define UI_METRIC_221 221
-#define UI_METRIC_225 225
-#define UI_METRIC_226 226
-#define UI_METRIC_228_0F 228.0f
-#define UI_METRIC_23 23
-#define UI_METRIC_232 232
-#define UI_METRIC_236 236
-#define UI_METRIC_23_0F 23.0f
-#define UI_METRIC_24 24
 #define UI_PROGRESS_BAR_WIDTH 240
 #define UI_SCREEN_HEIGHT 240
 #define UI_PROGRESS_BAR_WIDTH_F 240.0f
-#define UI_METRIC_255 255
-#define UI_METRIC_256 256
-#define UI_METRIC_26 26
-#define UI_METRIC_260 260
-#define UI_METRIC_264 264
-#define UI_METRIC_27 27
-#define UI_METRIC_28 28
-#define UI_METRIC_286 286
-#define UI_METRIC_288 288
-#define UI_METRIC_288_0F 288.0f
-#define UI_METRIC_292 292
 #define UI_PROGRESS_TEXT_WIDTH 296
-#define UI_METRIC_296 296
-#define UI_METRIC_296_0F 296.0f
-#define UI_METRIC_2_0F 2.0f
-#define UI_METRIC_2_2F 2.2f
-#define UI_METRIC_2_4F 2.4f
-#define UI_METRIC_3 3
-#define UI_METRIC_30 30
-#define UI_METRIC_308 308
-#define UI_METRIC_30_0F 30.0f
-#define UI_METRIC_310 310
-#define UI_METRIC_312 312
-#define UI_METRIC_314 314
-#define UI_METRIC_315 315
-#define UI_METRIC_317 317
-#define UI_METRIC_32 32
 #define UI_BOTTOM_SCREEN_WIDTH 320
 #define UI_BOTTOM_SCREEN_WIDTH_F 320.0f
-#define UI_METRIC_352_0F 352.0f
-#define UI_METRIC_36 36
-#define UI_METRIC_368 368
-#define UI_METRIC_376 376
-#define UI_METRIC_38 38
-#define UI_METRIC_380 380
-#define UI_METRIC_384 384
-#define UI_METRIC_39 39
-#define UI_METRIC_390 390
-#define UI_METRIC_392 392
-#define UI_METRIC_396 396
 #define UI_PROGRESS_BAR_HEIGHT 4
-#define UI_METRIC_4 4
 #define UI_PROGRESS_BAR_X 40
-#define UI_METRIC_40 40
-#define UI_METRIC_42 42
-#define UI_METRIC_44 44
-#define UI_METRIC_46 46
-#define UI_METRIC_48 48
-#define UI_METRIC_5 5
-#define UI_METRIC_50 50
-#define UI_METRIC_52 52
-#define UI_METRIC_56 56
-#define UI_METRIC_58 58
-#define UI_METRIC_5_5F 5.5f
-#define UI_METRIC_6 6
-#define UI_METRIC_60_0F 60.0f
-#define UI_METRIC_62 62
-#define UI_METRIC_62_0F 62.0f
-#define UI_METRIC_64 64
-#define UI_METRIC_66 66
-#define UI_METRIC_68 68
-#define UI_METRIC_7 7
-#define UI_METRIC_70 70
-#define UI_METRIC_72 72
-#define UI_METRIC_76 76
-#define UI_METRIC_768 768
-#define UI_METRIC_8 8
-#define UI_METRIC_80 80
-#define UI_METRIC_8192 8192
-#define UI_METRIC_83 83
-#define UI_METRIC_84 84
-#define UI_METRIC_85 85
-#define UI_METRIC_86 86
-#define UI_METRIC_87 87
-#define UI_METRIC_88 88
-#define UI_METRIC_9 9
-#define UI_METRIC_90 90
-#define UI_METRIC_92 92
 #define UI_PROGRESS_TEXT_Y 95
-#define UI_METRIC_96 96
-#define UI_METRIC__02F .02f
-#define UI_METRIC__1F .1f
-#define UI_METRIC__30F .30f
-#define UI_METRIC__35F .35f
-#define UI_METRIC__38F .38f
-#define UI_METRIC__39F .39f
-#define UI_METRIC__3F .3f
-#define UI_METRIC__42F .42f
-#define UI_METRIC__45F .45f
-#define UI_METRIC__48F .48f
-#define UI_METRIC__4F .4f
-#define UI_METRIC__55F .55f
-#define UI_METRIC__5F .5f
-#define UI_METRIC__65F .65f
-#define UI_METRIC__6F .6f
-#define UI_METRIC__7F .7f
-#define UI_METRIC__85F .85f
-#define UI_METRIC__8F .8f
-#define UI_METRIC__9F .9f
-#define UI_METRIC_0_002F 0.002f
-#define UI_METRIC_0_0005F 0.0005f
-#define UI_METRIC_100_0F 100.0f
-#define UI_METRIC_34 34
-#define UI_METRIC_304 304
-#define UI_METRIC_13 13
-#define UI_METRIC_55 55
-#define UI_METRIC_0_81F 0.81f
-#define UI_METRIC_0_56F 0.56f
-#define UI_METRIC_0_58F 0.58f
-#define UI_METRIC_228 228
-#define UI_METRIC_216 216
-#define UI_METRIC_63_8176F 63.8176f
-#define UI_METRIC_97 97
-#define UI_METRIC_0U 0u
-#define UI_METRIC_60 60
-#define UI_METRIC_0_53F 0.53f
-#define UI_METRIC_0_60F 0.60f
-#define UI_METRIC_50_75F 50.75f
-#define UI_METRIC_0_61F 0.61f
-#define UI_METRIC_49_25F 49.25f
-#define UI_METRIC_48_75F 48.75f
-#define UI_METRIC_19_75F 19.75f
-#define UI_METRIC_18_25F 18.25f
-#define UI_METRIC_36_5F 36.5f
-#define UI_METRIC_266 266
-#define UI_METRIC_246 246
-#define UI_METRIC_220 220
-#define UI_METRIC_214 214
-#define UI_METRIC_210_0F 210.0f
-#define UI_METRIC_1024 1024
-#define UI_METRIC_45 45
-#define UI_METRIC_0_0002F 0.0002f
-#define UI_METRIC_0_30F 0.30f
-#define UI_METRIC_0_975F 0.975f
-#define UI_METRIC_3_55F 3.55f
-#define UI_METRIC_0_41F 0.41f
-#define UI_METRIC_0_075F 0.075f
-#define UI_METRIC_0_0004F 0.0004f
-#define UI_METRIC_0_0006F 0.0006f
-#define UI_METRIC_0_0008F 0.0008f
 
 // Original style-7 touch bar metrics.
 #define BAR_TOP 200          // 40 px: the icon and a caption at the text floor (was 208, captions .36)
@@ -385,8 +94,30 @@
 #define BAR_CAPTION_MIN UI_TEXT_FLOOR
 #define UI_GAME_CLEAR C2D_Color32(0, 0, 0, 255)
 
-// Compatibility metrics used by inherited components.
-
+// Depth layers (citro2d z; larger is nearer). Text and icons sit at UI_Z_TEXT, panels behind them, fades in front.
+#define UI_Z_BACKDROP .1f        // the full-screen fill behind a screen
+#define UI_Z_BAND 0.65f          // a banner or the touch bar's face, under the text
+#define UI_Z_NOTICE 0.66f        // a notice or help panel, just above the bands and under the text
+#define UI_Z_TEXT 0.7f
+#define UI_Z_COVER 0.95f         // a fade that is meant to hide what is under it
+#define UI_Z_STEP 0.001f         // the smallest layer step: a detail drawn over (or under) its base shape
+#define UI_PLAY_Z_ACCENT 0.58f   // the accent edges of the touch buttons
+#define UI_ALPHA_OPAQUE 255      // an alpha channel at full strength
+// Margins of the text pages.
+#define UI_WRAP_X 14             // a wrapped paragraph's left edge on the bottom screen
+#define UI_WRAP_W 292            // and its width
+#define UI_SHARE_LEFT 20         // the Share page's text
+#define UI_BROWSER_LEFT 16       // the games-folder page's text
+// The room's home tiles on the bottom screen: a hero tile, a middle row and two small tiles.
+#define UI_HOME_MARGIN 8         // the outer margin of the tile grid
+#define UI_HOME_TILE_W 304       // a full-width tile
+#define UI_HOME_HALF_W 149       // half-width tiles, side by side
+#define UI_HOME_COL2_X 163       // the second column's left edge
+#define UI_HOME_HERO_H 94
+#define UI_HOME_MID_Y 108
+#define UI_HOME_MID_H 76
+#define UI_HOME_SMALL_Y 190
+#define UI_HOME_SMALL_H 42
 
 // Header placement shared by app and standalone.
 #define UI_HEADER_LEFT 10
@@ -395,10 +126,6 @@
 #define UI_HEADER_RIGHT 310
 #define UI_HEADER_RIGHT_Y 6
 #define UI_HEADER_RULE_Y 26
-#define UI_METRIC_238 238
-#define UI_METRIC_276 276
-#define UI_METRIC_250 250
-#define UI_METRIC_270 270
 
 #define UI_TOUCH_STICK_X UI_PLAY_STICK_CENTER_X
 #define UI_TOUCH_STICK_Y UI_PLAY_STICK_CENTER_Y
@@ -411,28 +138,12 @@
 #define UI_LIBUI_ROW_H 24
 #define UI_LIBUI_ROWS 8
 #define UI_SETTINGS_UI_VISIBLE_ROWS 6
-#define UI_METRIC_94 94
-#define UI_METRIC_149 149
-#define UI_METRIC_163 163
-#define UI_METRIC_190 190
-#define UI_METRIC_152 152
-#define UI_METRIC_2_1F 2.1f
 
 #define UI_ICON_DRAW_SECONDS 0.8f
 #define UI_ICON_BREATH_SECONDS 3.6f
 #define UI_ICON_GLOW_SCALE 1.625f
 
 // Controller animation/input timings use the same style data.
-#define UI_METRIC_20_0F 20.0f
-#define UI_METRIC_260_0F 260.0f
-#define UI_METRIC_14_0F 14.0f
-#define UI_METRIC_3_0F 3.0f
-#define UI_METRIC_0_999F 0.999f
-#define UI_METRIC_36_0F 36.0f
-#define UI_METRIC_180_0F 180.0f
-#define UI_METRIC_22_0F 22.0f
-#define UI_METRIC_300_0F 300.0f
-#define UI_METRIC_3600 3600
 // Save slot postcards (components/postcards.inc). Bottom: a corkboard with
 // the Continue card on the left and ten slot cards in a 4-wide grid (5 x 2 when
 // a system has no Continue card); top: the chosen card large.
@@ -619,7 +330,7 @@
 #define UI_PC_CC_FLECK_MX 97          // paper flecks from a fixed pattern
 #define UI_PC_CC_FLECK_MY 53
 #define UI_PC_CC_FLECK_ALPHA 22
-// The room's paper cards on the bottom screen (shelf_scene.c): text sizes in pixels (font scale = px / 30)
+// The room's paper cards on the bottom screen (shelf_scene_draw.c): text sizes in pixels (font scale = px / 30)
 // and the step between their lines. Readable on a real Old 3DS (owner 2026-11-05: was 8-10 px).
 #define UI_ROOM_ROW_PX UI_TEXT_FLOOR_PX      // the Collection card's rows
 #define UI_ROOM_VALUE_PX UI_TEXT_FLOOR_PX    // their counts
@@ -627,7 +338,7 @@
 #define UI_ROOM_HINT_PX UI_TEXT_FLOOR_PX     // the line along the card's foot
 #define UI_ROOM_MIN_PX UI_TEXT_FLOOR_PX      // every line shrinks only to this, then is cut with "..."
 #define UI_ROOM_TINY_PX UI_TEXT_FLOOR_PX     // the picture's label
-// The paper cards' geometry (card-local coordinates; text_at's y is the baseline region, see shelf_scene.c).
+// The paper cards' geometry (card-local coordinates; shelf_scene_text_at's y is the baseline region, see shelf_scene_draw.c).
 #define UI_ROOM_CARD_X 26             // the place / catalog card
 #define UI_ROOM_CARD_Y 22
 #define UI_ROOM_CARD_W 268

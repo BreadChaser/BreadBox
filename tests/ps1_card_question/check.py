@@ -191,8 +191,11 @@ with tempfile.TemporaryDirectory() as d:
                               'bool ui_confirm_choice(const char *,const char *,const char *,const char *,bool);\n'
                               'void ui_format_when(char *,size_t,time_t);\nvoid emu_osd(const char *);\nvoid emu_osd_alert(const char *);\n')
     (d / 'real.c').write_text(real)
+    # a copy, so its own folder's emu.h does not hide the stub
+    question = d / 'card_question.c'
+    question.write_text((root / 'systems/ps1/card_question.c').read_text())
     subprocess.run(flags[:1] + [f'-I{stub}'] + flags[1:] + [str(d / 'early.c'), str(d / 'real.c'),
-                   str(root / 'systems/ps1/card_question.c'), str(root / 'app/ui/breadbox_handoff.c'),
+                   str(question), str(root / 'app/ui/breadbox_handoff.c'),
                    '-Wl,--wrap=retro_init,--wrap=retro_deinit,--wrap=retro_unload_game,--wrap=video_game_end',
                    '-o', str(d / 'early')], check=True)
     subprocess.run([str(d / 'early')], check=True)

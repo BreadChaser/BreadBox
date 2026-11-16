@@ -1,0 +1,24 @@
+{
+ "files": {
+  "app/ui/home.c": 1665,
+  "app/ui/ui.c": 2073,
+  "core/plugins/gpu_pica/gpu_pica.c": 4184,
+  "systems/ps1/emu.c": 2712
+ },
+ "functions": {
+  "app/ui/devcontrol.c::dev_tick": 327,
+  "app/ui/devupdate.c::dev_update": 211,
+  "app/ui/home.c::home_run": 261,
+  "app/ui/main.c::main": 398,
+  "app/ui/room_scene.c::draw": 154,
+  "app/ui/shelf.c::shelf_run": 306,
+  "app/ui/ui.c::bar_icon": 194,
+  "platform/3ds/devnet.c::serve_client": 200,
+  "systems/gba/gba.c::gba_run": 421,
+  "systems/gba/gba_lut_probe.c::gba_lut_probe": 166,
+  "systems/ps1/emu.c::menu_run": 252,
+  "systems/ps1/emu.c::run_game": 626,
+  "systems/ps1/gpustereo_core.c::capture_n": 207,
+  "systems/ps1/gpustereo_layers.c::lay_tri": 198
+ }
+}

@@ -11,7 +11,7 @@
 #include "app_log.h"
 #include "platform_video.h"
 #include "dev_switches.h"
-#include "emu.h"
+#include "ps1_hooks.h"
 #include "audio.h"
 #include "app_input.h"
 #include "ui_list.h"

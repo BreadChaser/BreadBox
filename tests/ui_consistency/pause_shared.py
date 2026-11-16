@@ -31,7 +31,7 @@ for name in ('UI_PC_SAVED', 'UI_PC_LOADED', 'UI_PC_SAVE_FAILED', 'UI_PC_ALL_USED
         bad.append(name + ' must name the postcard')
 
 # 2. the PS1 pause is the shared card
-emu_inc = (r / 'app/ui/components/emu.inc').read_text()
+emu_inc = (r / 'systems/ps1/components/emu.inc').read_text()
 emu = (r / 'systems/ps1/emu.c').read_text()
 pause = (r / 'app/ui/bb_pause.c').read_text()
 for need in ('bb_pause_present_top(', 'bb_pause_present_card('):

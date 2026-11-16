@@ -2,8 +2,9 @@
 
 `check.py` enforces the controller / shared presentation / style-data boundary
 without the SDK and inspects both conditional app paths in the original source.
-Controllers cannot call raw drawing primitives. Components cannot contain numeric
-metrics; these live in `ui_style.h`. Existing game-frame, backdrop and debug
+Controllers cannot call raw drawing primitives. Components may not gain numeric
+literals: they are counted per file (`literals.json`, lowered with `--record`, never raised), so a new
+number needs a token in `ui_style.h`. Existing game-frame, backdrop and debug
 renderers are reviewed, fingerprinted exceptions. Adding a new screen-specific
 rectangle, text renderer, header or bar fails even if its geometry matches today.
 

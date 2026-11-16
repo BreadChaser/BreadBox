@@ -213,7 +213,12 @@ export HFILES	:=	$(PICAFILES:.v.pica=_shbin.h) $(SHLISTFILES:.shlist=_shbin.h) \
 
 export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 			$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
-			-I$(CURDIR)/../../app/ui -I$(CURDIR)/../../include/breadbox -I$(CURDIR)/../../platform/3ds -I$(CURDIR)/$(BUILD)
+			-I$(CURDIR)/../../include/breadbox -I$(CURDIR)/$(BUILD)
+# The shell's own headers (app/ui, platform/3ds) are on the path only for shell
+# objects; systems/ code reaches the shell through include/breadbox
+# (tools/architecture/include-graph.py checks it).
+export SHELL_INCLUDE	:=	-I$(CURDIR)/../../app/ui -I$(CURDIR)/../../platform/3ds
+export SHELL_OFILES	:=	$(foreach dir,../../app/ui ../../app/settings ../../app/services ../../platform/3ds,$(patsubst %.c,%.o,$(notdir $(wildcard $(dir)/*.c))))
 
 export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
@@ -320,6 +325,7 @@ saveid.o: CFLAGS += -Os
 presetupdate.o: CFLAGS += -Os
 # the core's state layout (statefile.c reads core headers)
 statefile.o: CFLAGS += -I$(COREDIR)/include
+$(SHELL_OFILES): CFLAGS += $(SHELL_INCLUDE)
 
 -include $(DEPSDIR)/*.d
 

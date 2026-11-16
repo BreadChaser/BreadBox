@@ -55,7 +55,7 @@ static emu_frontend_sample front = {.top=60, .drawn=30};
 static const emu_frontend_sample *emu_frontend_stats(void) { return &front; }
 static u32 hidKeysHeld(void) { return keys; }
 static void hidTouchRead(touchPosition *t) { *t=touch; }
-#include "../../app/ui/game_palette.h"
+#include "../../include/breadbox/game_palette.h"
 game_palette_t g_game_palette;
 #include "../../app/ui/statsview.c"
 static void frames(unsigned n) { while(n--) statsview_frame(); }

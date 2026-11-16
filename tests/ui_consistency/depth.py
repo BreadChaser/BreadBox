@@ -6,8 +6,9 @@ import re, sys
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[2]
-metric = {m.group(1): float(m.group(2)) for m in re.finditer(
-    r'#define (UI_METRIC_\d+_\d+F) ([0-9.]+)f', (root / 'include/breadbox/ui_style.h').read_text())}
+# Depths written as a number or as one of the named UI_*Z_* tokens of ui_style.h.
+DEPTH = {m.group(1): float(m.group(2)) for m in re.finditer(
+    r'#define (UI_\w*Z_\w+) ([0-9.]+)f\b', (root / 'include/breadbox/ui_style.h').read_text())}
 TEXT = 0.7
 files = sorted((root / 'app/ui/components').glob('*.inc')) + [root / 'app/ui/ui.c']
 bad = []
@@ -19,9 +20,14 @@ for path in files:
             continue
         for m in re.finditer(r'C2D_DrawRectSolid\(([^;]*)\);', body):
             args = [a.strip() for a in m.group(1).split(',')]
-            if len(args) < 3 or args[2] not in metric:
+            if len(args) < 3:
                 continue
-            z = metric[args[2]]
+            if re.fullmatch(r'\d+\.\d+f', args[2]):
+                z = float(args[2][:-1])
+            elif args[2] in DEPTH:
+                z = DEPTH[args[2]]
+            else:
+                continue
             if TEXT < z < 0.95:
                 line = src[:src.index(m.group(0))].count('\n') + 1
                 bad.append(f'{path.relative_to(root)}:{line}: panel at depth {z} covers text at {TEXT}')

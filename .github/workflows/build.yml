@@ -6,7 +6,7 @@ name: build
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev, "try/**"]
   pull_request:
   workflow_dispatch:
 
@@ -32,6 +32,10 @@ jobs:
       # Builds tools/build/Dockerfile (FROM the pinned digest, plus the CIA tools).
       - name: Toolchain matches toolchain.lock
         run: tools/build/container.sh bash tools/build/ci.sh toolchain
+
+      - name: Size and source-text gates
+        if: ${{ !cancelled() }}
+        run: tools/build/container.sh bash tools/build/ci.sh gates
 
       - name: Build 3DSX and CIA
         run: tools/build/container.sh bash tools/build/ci.sh build

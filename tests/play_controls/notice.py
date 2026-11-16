@@ -35,7 +35,7 @@ with tempfile.TemporaryDirectory(dir=os.environ.get('TMPDIR')) as tmp:
  subprocess.run(['cc','-std=gnu11','-Wall','-Wextra','-Werror','-I'+str(r/'include/breadbox'),str(p/'notice.c'),'-o',str(p/'notice')],check=True)
  subprocess.run([str(p/'notice')],check=True)
  # The actual merge regression must be caught by this draw test.
- (p/'notice.c').write_text(source.replace('UI_METRIC_178,UI_METRIC_0_66F','UI_METRIC_178,UI_METRIC__9F'))
+ (p/'notice.c').write_text(source.replace('178,UI_Z_NOTICE','178,.9f'))
  subprocess.run(['cc','-std=gnu11','-I'+str(r/'include/breadbox'),str(p/'notice.c'),'-o',str(p/'bad')],check=True)
  assert subprocess.run([str(p/'bad')],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode,'bad background depth escaped'
 print('PASS: depth regression negative control')

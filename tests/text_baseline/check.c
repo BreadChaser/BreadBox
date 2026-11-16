@@ -174,7 +174,7 @@ static void body_surfaces(void)
 	sizes("settings/pause card notice", UI_CARD_NOTICE_SIZE, UI_TEXT_FLOOR, notice, false);
 	sizes("card eyebrow on the red rule", UI_TEXT_FLOOR, UI_TEXT_FLOOR, UI_CARD_RULE_Y, false);
 	sizes("room card eyebrow on the red rule", UI_TEXT_FLOOR, UI_TEXT_FLOOR, UI_ROOM_RULE_Y, false);
-	/* the room's place cards, the Collection list, the game card and the welcome tour's cards (shelf_scene.c text_at
+	/* the room's place cards, the Collection list, the game card and the welcome tour's cards (shelf_scene_draw.c shelf_scene_text_at
 	   on paper: UI_PAPER_TOP at px / 30) */
 	const float px[] = { UI_ROOM_ROW_PX, UI_ROOM_VALUE_PX, UI_ROOM_LINE_PX, UI_ROOM_HINT_PX, UI_ROOM_MIN_PX, UI_ROOM_TINY_PX };
 	for (float y = UI_ROOM_ROWS_Y; y <= UI_ROOM_HINT_Y; y += UI_ROOM_LIST_STEP)

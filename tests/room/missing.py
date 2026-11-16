@@ -19,7 +19,8 @@ first = [l.strip() for l in body.split('\n')[2:] if l.strip() and not l.strip().
 assert first == 'if (!shelf_scene_in_room()) return 4;', 'shelf_run must leave first when the room is missing: ' + first
 scene = (root / 'app/ui/shelf_scene.c').read_text()
 assert re.search(r'bool shelf_scene_in_room\(void\) \{ return in_room\(\); \}', scene)
-assert re.search(r'static bool in_room\(void\) \{ const room_file \*f = room_scene_file\(\); return f && ', scene)
+assert re.search(r'static inline bool in_room\(void\) \{ const room_file \*f = room_scene_file\(\); return f && ',
+                 (root / 'app/ui/shelf_scene_internal.h').read_text())
 main = (root / 'app/ui/main.c').read_text()
 assert re.search(r'int r = breadbox_systems_run\(path, sizeof\(path\)\);[\s\S]{0,300}if \(r == 4\) \{ at_home = true; continue; \}', main), 'main: 4 goes home'
 assert 'int breadbox_systems_run(char *path, size_t len) { return shelf_run(path, len); }' in (root / 'app/ui/breadbox_systems.c').read_text()

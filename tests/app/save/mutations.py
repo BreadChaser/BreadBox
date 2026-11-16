@@ -63,8 +63,8 @@ def run(name, safefile, cards_src, hist_src=None):
     open(tmp+'/safefile.c','w').write(safefile)
     open(tmp+'/cards.c','w').write(cards_src)
     open(tmp+'/history.c','w').write(hist_src or hist)
-    shutil.copy('app/ui/safefile.h', tmp+'/safefile.h')
-    flags=['cc','-std=gnu11','-D_GNU_SOURCE','-w','-g','-DSAFEFILE_TEST','-DHIST_BUDGET=12000','-include','tests/app/save/host.h','-I'+tmp,'-Itests/app/host','-Iapp/ui','-Iinclude/breadbox','-Iplatform/3ds','-Icore/deps/libretro-common/include']
+    shutil.copy('include/breadbox/safefile.h', tmp+'/safefile.h')
+    flags=['cc','-std=gnu11','-D_GNU_SOURCE','-w','-g','-DSAFEFILE_TEST','-DHIST_BUDGET=12000','-include','tests/app/save/host.h','-I'+tmp,'-Itests/app/host','-Iapp/ui','-Iinclude/breadbox','-Iplatform/3ds','-Isystems/ps1','-Icore/deps/libretro-common/include']
     caught = False
     wrap=['-Wl,--wrap=stat,--wrap=fopen']   # SD errors on one file (io_errors.c, cards.c)
     for test, extra, link in (('check', [], []), ('io_errors', [], wrap),

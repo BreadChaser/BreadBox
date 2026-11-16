@@ -111,7 +111,7 @@ static u64 update_failed_time;
 static void update_network_close(void)
 {if(update_multi){curl_multi_cleanup(update_multi);update_multi=NULL;}update_asset_url[0]=0;}
 static bb_update_manifest update_manifest;
-static int update_preference; /* Automatic, Ask first, Off */
+static int update_preference=1; /* 0 Automatic, 1 Ask first (the default), 2 Off */
 static bool update_initialized,update_checked,update_check_now,update_explicit_check,update_approved,update_install_attempted;
 static unsigned update_job_busy,update_net_busy,update_net_abort,update_prefs_loaded;
 bool bb_update_net_busy(void){return (__atomic_load_n(&update_net_busy,__ATOMIC_ACQUIRE)&1)!=0;}

@@ -111,7 +111,7 @@ static PSX3D_COLD int welcome_run(int page)
 		}
 		if (g_cfg.games_dir[0] && bb_index_poll(true)) shelf_library_changed();   // the games card follows the scan
 		music_update();
-		const float dt = UI_METRIC_1_0F / UI_METRIC_60_0F * (float)video_ui_steps();
+		const float dt = 1.0f / 60.0f * (float)video_ui_steps();
 		clock_s += dt;
 		room_tv_poll((int)(clock_s * 60));
 		room_view_step(&room, dt);

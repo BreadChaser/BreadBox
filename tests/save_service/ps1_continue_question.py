@@ -23,7 +23,7 @@ def function(text, name):
 
 states = (root / 'systems/ps1/savestates.c').read_text()
 emu = (root / 'systems/ps1/emu.c').read_text()
-header = (root / 'app/ui/bb_pause.h').read_text()
+header = (root / 'include/breadbox/bb_pause.h').read_text()
 bad = []
 code = r'''
 #include <assert.h>
@@ -36,7 +36,7 @@ typedef uint32_t u32;typedef uint16_t u16;
 #define PSX3D_COLD_FN(x)
 enum {KEY_A=1,KEY_B=2,KEY_X=4,KEY_Y=8,SFX_SELECT,SFX_MOVE,SFX_BACK,TW=8,TH=8,STATE_AUTO=10,NO_SLOT=-1};
 ''' + re.search(r'enum \{ BB_CONTINUE_ASK[^;]*;\n#define BB_CONTINUE_BUTTONS[^\n]*\n', header)[0] + \
-    re.search(r'enum \{ RESUME_NONE[^;]*;', (root / 'include/breadbox/savestates.h').read_text())[0] + r'''
+    re.search(r'enum \{ RESUME_NONE[^;]*;', (root / 'systems/ps1/savestates.h').read_text())[0] + r'''
 enum {STATES_PAGE_RING=2};
 typedef struct {int unused;} C3D_Tex;typedef struct {u32 saved;} thm_hdr_t;typedef struct {char path[8];} hist_entry_t;
 typedef struct {int page;hist_entry_t entry;} states_pick_t;

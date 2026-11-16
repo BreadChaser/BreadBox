@@ -1,4 +1,4 @@
-// The PS1 game library: one entry per game, discs grouped (library.inc)
+// The PS1 game library: one entry per game, discs grouped (systems/ps1/library.c)
 #pragma once
 #include <3ds.h>
 #include <stdbool.h>

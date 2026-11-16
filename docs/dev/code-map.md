@@ -22,17 +22,25 @@ one-time import from `sdmc:/3ds/PSX3D` remain live BreadBox compatibility code.
   `app/ui/card_notice.c` the card notice's strip and ruled line (its own file: `ui.o`'s cold code sits right ahead of the GBA save dialogs, so growth there moves them);
   `app/ui/ui_mark.c` the selection highlighter (`ui_mark.h`, masks from `tools/ui/mark_masks.py`);
   `app/ui/ui_font.c` where the loaded fonts' letters stand (`UI_PAPER_TOP` puts text on ruled lines with any font; test `tests/text_baseline`);
-  `app/services/`: updater and sharing.
+  `app/services/`: updater, sharing and `covers_fetch.c` (the cover worker thread, HTTP, cache files);
+  `app/ui/covers.c` the cover API and textures, `covers_match.c` cover names (host test `covers-match`),
+  shared state in the private `covers_internal.h`.
 - `platform/3ds/`: device boundaries, video, audio, input and networking.
 - `systems/<id>/sys_<id>.c`: system descriptors behind `bb_system.h`.
   `systems/common/retro_host.c` owns libretro callbacks/core validity;
   `retro_ctr.c` is the shared runner. PS1 runs in `systems/ps1/emu.c`,
   `systems/ps1/ps1_messages.c` routes routine BIOS/game-fix notices to the log,
   `card_question.c` asks about an unreadable memory card before a game runs;
+  `library.c` the PS1 list, cache and index import, `ps1_disc_groups.c` titles and
+  disc groups, `ps1_library_import.c` .cue/.m3u references (private `ps1_library.h`);
+  a system's `components/*.inc` are its drawing parts;
   GBA runs in `systems/gba/gba.c`. `core/` and `gba-core/` are vendored engines.
 - `include/breadbox/`: system contracts, shared style tokens and one header per
   shell module (`app_config.h`, `platform_video.h`, `ui.h`, etc.); `ui_words.h`
   holds the words every system says alike (postcards), defines only.
+  `ps1_hooks.h` holds the only PS1 calls the shell makes. Include paths are per
+  layer: systems/ sees include/breadbox and systems/common, only the shell also
+  sees app/ui and platform/3ds (`tools/architecture/include-graph.py`).
   `bb_registry.h` declares the registry; `tools/build/systems-table.py` generates
   its table from `SYSTEMS` in `apps/breadbox.mk`.
   `tools/build/title-version.py` generates `include/breadbox/title_version.h`
@@ -45,6 +53,10 @@ one-time import from `sdmc:/3ds/PSX3D` remain live BreadBox compatibility code.
   styles, camera and library case; `room_scene.c` GPU draw and final dither pass;
   `room_walls.c`/`room_board.c` the poster and corkboard). Themes are room styles
   (Day, Night: `theme.c`); the room file is `assets/romfs/room/room.bbr`.
+- `app/ui/shelf_scene.c`: the room's Library (camera, visible spines, the case in the hands,
+  case backs, top screen); `shelf_scene_spines.c` the close-up spine atlas and its bake,
+  `shelf_scene_wood.c` the procedural grain, `shelf_scene_draw.c` primitives, text, the desk
+  and its cards; shared state in the private `shelf_scene_internal.h`.
 - `assets/`: ROMFS; `apps/breadbox/`: product metadata; `build/3ds/`: Makefile,
   linker scripts and link order. `tools/`: build, layout, architecture, cleanup;
   `tools/room/lamplight/` builds the room (Blender: `scene.py` geometry,
@@ -71,6 +83,8 @@ bash tests/app/save/run.sh
 bash tests/update/run.sh
 python3 tests/main_lifecycle/check.py
 python3 tools/architecture/ownership-guard.py --strict
+tools/build/container.sh bash tools/build/ci.sh gates   # size gate + source-text and UI_METRIC ratchets (docs/building.md)
+tools/build/trunk-gate.sh; tools/build/merge-to-trunk.sh <branch>   # full CI on a commit, ledger, gated fast-forward
 tools/build/container.sh bash tools/build/ci.sh layout   # both layout gates, after a build
 tools/build/container.sh bash tools/build/ci.sh all      # exactly what GitHub CI runs
 ```

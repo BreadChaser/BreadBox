@@ -8,7 +8,7 @@ from pathlib import Path
 import os, subprocess, tempfile
 
 root = Path(__file__).resolve().parents[2]
-pc_h = (root/'app/ui/postcards.h').read_text()
+pc_h = (root/'include/breadbox/postcards.h').read_text()
 types = pc_h[pc_h.index('typedef struct {\n\tbool used;'):pc_h.index('} pc_view;') + len('} pc_view;')]
 cont_types = pc_h[pc_h.index('typedef struct {\n\tC3D_Tex *tex;'):pc_h.index('} pc_continue;') + len('} pc_continue;')]
 

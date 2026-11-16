@@ -40,7 +40,7 @@ and `build/3ds/`; vendored engines live in `core/`, `gba-core/` and
 headers, which the renderer and batching code include.
 
 `apps/breadbox.mk` selects packaging, object directories, the system list and the
-version header. `app/ui/app_policy.h` supplies compile-time names, SD
+version header. `include/breadbox/app_policy.h` supplies compile-time names, SD
 roots, title IDs, release URLs and the PS1 preset feed. The PS1 preset pack is
 still published on the frozen PSX3D release page. On first start, BreadBox
 imports compatible settings, memory cards, and save states from
@@ -82,6 +82,29 @@ python3 tools/layout/compare.py /path/to/baseline.elf build/3ds/BreadBox.elf
 python3 tools/layout/check-pinned.py /path/to/baseline.elf build/3ds/BreadBox.elf build/3ds/build-breadbox
 python3 tools/architecture/ownership-guard.py --strict   # shared code owns no system policy
 ```
+
+### Structure gates and the trunk gate
+
+Four small checks keep the code from drifting. `ci.sh gates` runs the first three (they also
+run inside `ci.sh all`); each has a host test in `tests/arch_gates/`. Every stored number is a plain
+file in `tools/architecture/` that may only go down: after you shrink something, run the script
+with `--update` to lock it in. `--update` refuses to raise a number or add an entry. `--list`
+prints what is counted.
+
+- **Size gate** (`size-gate.py`): first-party C files stay at or under 1,500 lines and functions
+  at or under 150. An `.inc` file counts into the file that includes it. Today's offenders are
+  frozen in `size-exceptions.json`. It fails when one grows, when a new one appears, and when a
+  listed one no longer offends (delete it with `--update`). Vendored trees are not scanned.
+- **Source-text ratchet** (`test-text-ratchet.py`): counts the Python tests that read a production
+  source file and then slice or search its text (`.index(`, `.count(`, a `[a:b]` slice). The count
+  (`text-ratchet.count`) must not rise; write a new test against the real code instead.
+- **UI_METRIC ratchet** (`ui-metric-ratchet.py`): counts uses of numbered `UI_METRIC_<n>` names
+  (`ui-metric.count`, now 0). The numbered names are gone; use a named style token instead.
+- **Trunk gate** (`tools/build/trunk-gate.sh`): runs `ci.sh all` in the container for the checked-out,
+  clean commit and appends `{sha, tree, date, result}` to the gitignored ledger `.trunk-gate.jsonl`
+  (the run takes about an hour). `trunk-gate.sh --check <sha>` exits 0 only when that commit has a
+  green line. `tools/build/merge-to-trunk.sh <branch>`, run on a clean trunk, refuses unless the
+  branch is a fast-forward of trunk and its head has a green line, then fast-forwards.
 
 ### Accepted-build baseline
 

@@ -150,7 +150,7 @@ int main(int argc,char **argv)
 '''
 with tempfile.TemporaryDirectory() as td:
     td = Path(td)
-    answers = re.search(r'enum \{ BB_CONTINUE_ASK[^;]*;\n#define BB_CONTINUE_BUTTONS[^\n]*\n', (root / 'app/ui/bb_pause.h').read_text())[0]
+    answers = re.search(r'enum \{ BB_CONTINUE_ASK[^;]*;\n#define BB_CONTINUE_BUTTONS[^\n]*\n', (root / 'include/breadbox/bb_pause.h').read_text())[0]
     (td / 'bb_pause_answers.h').write_text(answers)
     src = td / 'question.c'
     src.write_text(code.replace('static int file_bytes', 'static int file_position(const char *path){FILE *f=fopen(path,"rb");if(!f)return -1;int p=fseek(f,28,SEEK_SET)?-1:fgetc(f);fclose(f);return p;}\nstatic int file_bytes'))

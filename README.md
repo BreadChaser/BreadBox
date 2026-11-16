@@ -74,7 +74,7 @@ All screenshots were taken on real consoles.
 - A save from another emulator is asked about before it is used, and the original is kept
 
 **And more**
-- Updates itself over Wi-Fi: Automatic, Ask first or Off
+- Updates itself over Wi-Fi: Ask first, Automatic or Off
 - Copies your memory cards, postcards, settings, cheats and BIOS files from PSX3D
 - Share BreadBox with a friend: the coffee table shows a QR code for FBI
 

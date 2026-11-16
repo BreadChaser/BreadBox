@@ -42,10 +42,8 @@ generic. Content identity keys are `<system>:<key>` and are stable on disk.
 
 - Step 3: typed content identity and fully system-owned settings still need a
   follow-up refactor; the current PS1 bridge is transitional.
-- Large UI and session files remain unsplit, including `shelf_scene.c`,
-  `emu.c::run_game`, `covers.c`, and `main()`.
-- `UI_METRIC_<n>` names still encode visual roles by number and should become
-  semantic names.
+- Large session code remains unsplit, including `emu.c::run_game` and `main()`
+  (`shelf_scene.c` and `covers.c` were split in 2026-11).
 - The developer remote is included in the build but ships disabled by default. Only `sdmc:/3ds/BreadBox/switches.txt` enables it; see [developer controls](dev-control.md).
 
 ## Shared runtime behavior

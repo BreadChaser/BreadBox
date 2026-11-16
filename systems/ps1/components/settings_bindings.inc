@@ -1,6 +1,6 @@
 static int binding_bar(settings_ui_t *s,ui_button_t *bar)
 {
- int n=UI_METRIC_0;bar[n++]=(ui_button_t){KEY_B,"Back",UI_ICON_BACK,false};
+ int n=0;bar[n++]=(ui_button_t){KEY_B,"Back",UI_ICON_BACK,false};
  if(s->game)bar[n++]=(ui_button_t){KEY_X,"Inherit",UI_ICON_RESET,false};
  bar[n++]=(ui_button_t){KEY_Y,"Reset",UI_ICON_RESET,false};
  bar[n++]=(ui_button_t){KEY_A,"Change",UI_ICON_CHANGE,false};return n;

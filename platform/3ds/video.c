@@ -15,7 +15,7 @@
 #include "uisound.h"
 #include "app_main.h"
 #include "widescreen.h"
-#include "gpustereo.h"
+#include "ps1_hooks.h"
 #include "display.h"
 #include "bb_registry.h"
 #include "../../core/plugins/gpu_pica/gpu_pica.h"

@@ -30,7 +30,7 @@ A game that isn't listed hasn't been tested. Tell us how it ran with the **Game 
 - Open an issue first for anything bigger than a small fix.
 - The app is in `app/`, `platform/3ds/` and `include/breadbox/`. Each system lives in `systems/<id>/`.
 - The PlayStation emulator is in `core/` and the Game Boy Advance emulator in `gba-core/`. Both are edited directly; they started as PCSX-ReARMed and gpSP and keep their GPL licenses and credits.
-- [AGENTS.md](AGENTS.md) has a one-page map of the code. Build steps and tests: [docs/building.md](docs/building.md). Developer docs: [docs/dev/](docs/dev/README.md).
+- [docs/dev/code-map.md](docs/dev/code-map.md) has a one-page map of the code. Build steps and tests: [docs/building.md](docs/building.md). Developer docs: [docs/dev/](docs/dev/README.md).
 - Run the host tests before you send a change: `make host-tests`.
 - Keep a change to one thing, with a message that says what and why.
 - Code shared by all systems holds no system-specific rules; those go in the system's own folder ([system layer](docs/dev/system-layer.md)).

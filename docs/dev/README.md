@@ -2,7 +2,7 @@
 
 For people changing BreadBox. Build and test steps are in
 [building.md](../building.md); the release checklist is [TESTING.md](../../TESTING.md);
-[AGENTS.md](../../AGENTS.md) maps the code.
+[code-map.md](code-map.md) maps the code.
 
 | Page | Topic |
 |---|---|

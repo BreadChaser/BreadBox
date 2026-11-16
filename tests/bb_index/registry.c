@@ -18,7 +18,7 @@ const bb_system_t *bb_system_by_id(const char *id) {for(unsigned i=0;i<bb_system
 
 /* The CHD content probe has its own suite (tests/bb_disc). Here the answer follows the file name,
  * and every call is counted so the scan mapping (and the no-open rule for bare names) can be asserted. */
-#include "../../app/ui/bb_disc.h"
+#include "../../include/breadbox/bb_disc.h"
 unsigned test_chd_reads;
 bb_disc_kind bb_disc_chd_kind(const char *path)
 {

@@ -9,7 +9,7 @@ def fn(source,name):
  while n:
   n+=(source[i]=='{')-(source[i]=='}');i+=1
  return source[m.start():i].replace('PSX3D_COLD ','')
-u=(root/'app/ui/ui.c').read_text();lib=(root/'systems/ps1/library.inc').read_text()
+u=(root/'app/ui/ui.c').read_text();lib=(root/'systems/ps1/library.c').read_text()
 code=r'''
 #include <assert.h>
 #include <stdint.h>

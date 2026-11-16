@@ -49,13 +49,28 @@
    "reason": "cover fetch reads disc lists from the PS1 library entry (audit step 3)",
    "approved": {
     "ps1-content-type": [
+     "const game_t *g = cover_game(game, &scratch);"
+    ]
+   }
+  },
+  "app/ui/covers_internal.h": {
+   "reason": "cover fetch reads disc lists from the PS1 library entry (audit step 3) (moved with the covers split, S9)",
+   "approved": {
+    "ps1-content-type": [
      "typedef struct {game_t game;",
-     "static const game_t *cover_game(int id, cover_record *scratch)",
+     "static __attribute__((unused)) const game_t *cover_game(int id, cover_record *scratch)",
      "scratch->game=(game_t){.title=(char *)it.title,.cover_key=(char *)it.key,.group=(char *)it.code,.ndiscs=it.path!=NULL};",
      "scratch->game.discs[0]=(char *)it.path;return &scratch->game;",
      "scratch->game=(game_t){.title=scratch->title,.cover_key=scratch->key,.ndiscs=1};",
-     "scratch->game.discs[0]=scratch->path;return &scratch->game;",
-     "cover_record scratch; const game_t *g=cover_game(tslots[i].game,&scratch);",
+     "scratch->game.discs[0]=scratch->path;return &scratch->game;"
+    ]
+   }
+  },
+  "app/services/covers_fetch.c": {
+   "reason": "cover fetch reads disc lists from the PS1 library entry (audit step 3) (moved with the covers split, S9)",
+   "approved": {
+    "ps1-content-type": [
+     "cover_record scratch; const game_t *g=cover_game(covers_tslots[i].game,&scratch);",
      "static bool fetch_cover(const game_t *g, bool *retry, cover_t *c)",
      "snprintf(disc, sizeof(disc), \"%s\", g->ndiscs > 0 ? g->discs[0] : \"\");",
      "static bool load_cover(const game_t *g, bool *retry, bool refresh, cover_t *c, bool *fresh)",
@@ -63,7 +78,6 @@
      "snprintf(local,sizeof(local),\"%s\",g->discs[0]);",
      "static bool upgrade_cover(const game_t *g, bool *retry, cover_t *c)",
      "const game_t *g = library_get(i);",
-     "const game_t *g = cover_game(game, &scratch);",
      "const game_t *g = cover_game(game, &scratch);",
      "const game_t *g = cover_game(game, &scratch);"
     ]

@@ -60,7 +60,7 @@ print('caller jobserver/standalone limits and complete clean contract PASS')
 # Public notices keep their authors/licenses while naming real current paths.
 building = (ROOT / 'docs/building.md').read_text()
 assert '(16 + 16 * major + minor) * 1024 + patch * 16 + 15' in building
-assert 'Settings > About > Welcome' in (ROOT / 'AGENTS.md').read_text()
+assert 'Settings > About > Welcome' in (ROOT / 'docs/dev/code-map.md').read_text()
 room = (ROOT / 'assets/romfs/room/CREDITS.md').read_text()
 assert 'tools/room/lamplight/' in room and (ROOT / 'tools/room/lamplight').is_dir()
 assert 'room3d/blender/' not in room and 'see build.py' not in room

@@ -7,7 +7,7 @@ not yet known, the first scan's partial counts, huge numbers, more systems than 
 card gets no line until something is known) and prints every line it makes. Here each printed line, and the
 shipped strings (every system's name from systems/*/sys_*.c, the version from version.h, every update state from
 update.c's bb_update_glance, the room styles from theme.c), must fit the room card's info row at real metrics:
-label + gap + value inside the ruled width at the text floor (shelf_scene.c info_row), with the conservative font
+label + gap + value inside the ruled width at the text floor (shelf_scene_draw.c info_row), with the conservative font
 model of tests/ui_fit/strings.py, never shrunk below the floor or cut. The last game's name is the one line that may
 be cut (a long title; it has the whole line). A negative control (a too-long label) must fail.
 """

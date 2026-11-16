@@ -484,11 +484,11 @@ static void draw_bottom(void *ud); /* rendered by the shared savestates componen
 static void lift_update(browser_t *b, slot_t *slots, int sel)
 {
  u64 now=svcGetSystemTick();
- float dt=b->motion_tick?(float)(now-b->motion_tick)/SYSCLOCK_ARM11:UI_METRIC_0;
+ float dt=b->motion_tick?(float)(now-b->motion_tick)/SYSCLOCK_ARM11:0;
  b->motion_tick=now;
  b->t+=dt;
  for(int i=0;i<SLOTS;i++)
-  ui_motion_settle(&slots[i].lift,&slots[i].lift_v,i==sel?UI_METRIC_1_0F:UI_METRIC_0_0F,UI_MOTION_SETTLE_RATE,dt);
+  ui_motion_settle(&slots[i].lift,&slots[i].lift_v,i==sel?1.0f:0.0f,UI_MOTION_SETTLE_RATE,dt);
 }
 
 // grid navigation and touch; true: the selected cell was picked

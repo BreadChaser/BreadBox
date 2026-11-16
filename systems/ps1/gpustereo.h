@@ -73,14 +73,6 @@ void gs_core_counts(unsigned *lookups, unsigned *found, unsigned *shifted, unsig
 
 // gpustereo.c (3DS frontend)
 void gpustereo_frame(void);           // main thread, after pica_thread_sync
-void gpustereo_after_present(void);   // GPU thread, after C3D_FrameEnd
-void gpustereo_game_end(void);        // GPU idle, before pica_exit
-// presentation: the right eye's texture for the canonical/held picture, or NULL
 struct C3D_Tex_t;
 bool gpustereo_ready(void);
-void *gpustereo_right_for(void *picture_tex);
-void gpustereo_frame_end(void);       // before a command list is submitted
-extern volatile bool gpustereo_copy_bypass;   // thumbnails: plain copies out of VRAM
-int gpustereo_mode(void);             // 0 off, 1 screen depth, 2 real 3D (0 on Old 3DS)
-float gpustereo_flat(void);           // real 3D: share of screen depth (1 until the right eye is ready)
-void gpustereo_status(char *out, int n);
+// the shell's hooks (after present, game end, right eye, mode, status): ps1_hooks.h

@@ -29,6 +29,16 @@ export PSX3D_COMMIT=${PSX3D_COMMIT:-$(git -C "$root" rev-parse HEAD 2>/dev/null 
 # The build ID the remote status reports (devcontrol.o); git cannot run inside the container.
 export PSX3D_DESCRIBE=${PSX3D_DESCRIBE:-$(git -C "$root" describe --always --abbrev=12 --dirty 2>/dev/null || true)}
 
+# In a linked git worktree `.git` is a file that points outside the mounted tree. Mount the
+# worktree's git directory and the shared one (read-only, same paths) so git works inside.
+gitdirs=()
+if [[ -f $root/.git ]]; then
+	wt=$(sed -n 's/^gitdir: //p' "$root/.git")
+	if [[ -d $wt ]]; then gitdirs=("$wt" "$(cd "$wt" && cd "$(cat commondir)" && pwd)"); fi
+fi
+gitmounts=()
+for d in "${gitdirs[@]}"; do gitmounts+=(-v "$d:$d:ro"); done
+
 # CI settings a caller (or the workflow's env) may set; passed through only when set.
 passenv=()
 for var in BB_BUILD_JOBS BASELINE_BUILD_REFERENCE BASELINE_JOBS; do
@@ -41,7 +51,7 @@ docker)
 	docker image inspect "$tag" >/dev/null 2>&1 || docker build -t "$tag" -f "$here/Dockerfile" "$here"
 	tty=(); [[ -t 0 && -t 1 ]] && tty=(-t)
 	exec docker run --rm -i "${tty[@]}" --user "$(id -u):$(id -g)" -e HOME=/tmp -e SOURCE_DATE_EPOCH \
-		-e PSX3D_COMMIT -e PSX3D_DESCRIBE "${passenv[@]/#/--env=}" -v "$root:/work" -w /work "$tag" "$@"
+		-e PSX3D_COMMIT -e PSX3D_DESCRIBE "${passenv[@]/#/--env=}" "${gitmounts[@]}" -v "$root:/work" -w /work "$tag" "$@"
 	;;
 bwrap)
 	rootfs=${PSX3D_ROOTFS:-${XDG_CACHE_HOME:-$HOME/.cache}/psx3d-build/$digest}
@@ -73,6 +83,7 @@ bwrap)
 	fi
 	sandbox+=(--setenv SOURCE_DATE_EPOCH "$SOURCE_DATE_EPOCH" --setenv PSX3D_COMMIT "$PSX3D_COMMIT" --setenv PSX3D_DESCRIBE "$PSX3D_DESCRIBE")
 	for var in "${passenv[@]}"; do sandbox+=(--setenv "$var" "${!var}"); done
+	for d in "${gitdirs[@]}"; do sandbox+=(--ro-bind "$d" "$d"); done
 	exec "${sandbox[@]}" --bind "$root" /work --chdir /work "$@"
 	;;
 *)

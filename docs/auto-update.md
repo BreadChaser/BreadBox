@@ -5,7 +5,7 @@ in the [README](getting-started.md#updates).
 
 ## What the app does
 
-Settings → Updates offers **Automatic** (the default), **Ask first**, **Off** and
+Settings → Updates offers **Ask first** (the default), **Automatic**, **Off** and
 **Check now**. A manual check always asks before installing, even with Off. The
 room checks at launch and after about 24 hours idle, and on wake-up when the
 last check is old enough (one hour; six hours after two failed checks, 24 hours

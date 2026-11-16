@@ -5,7 +5,7 @@
 
 Writes DIR/presets-d<D>-s<S>.json (the manifest the app fetches) and
 DIR/presets-d<D>-s<S>-v<N>.pack, where D is defaults.ini's defaults_version,
-S is PRESET_SCHEMA_VERSION from app/ui/presetupdate.h and N is the pack
+S is PRESET_SCHEMA_VERSION from include/breadbox/presetupdate.h and N is the pack
 VERSION. Runs tools/presets/check.py first. Publishes nothing.
 
 Pack format (read by systems/ps1/presetupdate.c pu_unpack):
@@ -42,7 +42,7 @@ def main():
 
     if not a.no_check:
         subprocess.run([sys.executable, str(REPO / "tools/presets/check.py")], check=True)
-    header = (REPO / "app/ui/presetupdate.h").read_text()
+    header = (REPO / "include/breadbox/presetupdate.h").read_text()
     schema = int(re.search(r"^#define PRESET_SCHEMA_VERSION (\d+)$", header, re.M).group(1))
     schema_min = a.schema_min or schema
     if not 1 <= schema_min <= schema:

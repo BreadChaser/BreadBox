@@ -3,9 +3,9 @@
 from pathlib import Path
 import subprocess, tempfile
 root=Path(__file__).resolve().parents[2]
-s=(root/'systems/ps1/library.inc').read_text()
+s=(root/'systems/ps1/ps1_library_import.c').read_text()
 def extract(name):
- start=s.index(name); start=s.rfind('static ',0,start); brace=s.index('{',start); level=1; end=brace+1
+ start=s.rfind('\n',0,s.index(name))+1; brace=s.index('{',start); level=1; end=brace+1
  while level:
   if s[end]=='{': level+=1
   if s[end]=='}': level-=1
@@ -30,13 +30,13 @@ typedef uint8_t u8; typedef uint32_t u32;
 typedef enum { BB_DISC_OTHER, BB_DISC_UNREAD, BB_DISC_PS1 } bb_disc_kind;
 static bb_disc_kind bb_disc_chd_kind(const char *p) { return strstr(p,"good.chd") ? BB_DISC_PS1 : strstr(p,"unread.chd") ? BB_DISC_UNREAD : BB_DISC_OTHER; }
 '''
- source+='\n'.join(extract(n) for n in ['ext_of(', 'trim(', 'cue_name(', 'ps1_image_at('])
+ source+='\n'.join(extract(n) for n in ['ps1_library_ext_of(', 'ps1_library_trim(', 'cue_name(', 'ps1_library_image_at('])
  source+='''
 int main(void) { char path[512];
  const char *good[]={"ps1.bin","ps1.mdf","good.cue","good.m3u","good.chd","unread.chd"};
  const char *bad[]={"pc.iso","psp.iso","bad.mdf","bad.cue","bad.m3u","loop.m3u","missing.m3u","bad.chd"};
- for (unsigned i=0;i<sizeof(good)/sizeof(*good);i++) assert(ps1_image_at((snprintf(path,sizeof(path),"./%s",good[i]),path),0));
- for (unsigned i=0;i<sizeof(bad)/sizeof(*bad);i++) assert(!ps1_image_at((snprintf(path,sizeof(path),"./%s",bad[i]),path),0));
+ for (unsigned i=0;i<sizeof(good)/sizeof(*good);i++) assert(ps1_library_image_at((snprintf(path,sizeof(path),"./%s",good[i]),path),0));
+ for (unsigned i=0;i<sizeof(bad)/sizeof(*bad);i++) assert(!ps1_library_image_at((snprintf(path,sizeof(path),"./%s",bad[i]),path),0));
 }
 '''
  (p/'check.c').write_text(source)

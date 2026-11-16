@@ -23,7 +23,6 @@
 #include "bb_platform.h"
 #include "platform_video.h"
 #include "dev_switches.h"
-#include "savestates.h"
 #include "app_input.h"
 #include "ui_pause.h"
 #include "ui.h"
@@ -34,6 +33,7 @@
 #include "play_together.h"
 #include "hand_styles.h"
 #include "home.h"
+#include "ps1_hooks.h"
 #include "games_dir.h"
 #include "app_main.h"
 #include "devtools.h"
@@ -643,7 +643,7 @@ static void coming_soon(const char *what)
 			sfx_play(SFX_BACK);
 			return;
 		}
-		clock_s += UI_METRIC_1_0F / UI_METRIC_60_0F;
+		clock_s += 1.0f / 60.0f;
 		music_update(); HT("music");
 		ui_begin();
 		video_present_vsync(false, soon_top, soon_bottom, (void *)what);
@@ -780,7 +780,7 @@ int home_run(bool games, char *path, size_t len, home_launch_t *out)
 		if (act >= 0 && act != E_LIBRARY && act != E_SETTINGS && act != E_SHARE)
 			sfx_play(act == E_CONTINUE ? SFX_LAUNCH : SFX_SELECT);
         if(screen==DEV_UI_SETTINGS)act=E_SETTINGS;
-        u32 swap_key=UI_METRIC_0;
+        u32 swap_key=0;
         if(swap_act<0 && act==E_CONTINUE) {swap_act=act;swap_key=UI_SWAP_REMOTE;}
         if(ui_swap_keys(swap_key,UI_SWAP_REMOTE)&UI_SWAP_REMOTE) {act=swap_act;swap_act=-1;}
         else if(swap_act>=0)act=-1;
@@ -878,7 +878,7 @@ int home_run(bool games, char *path, size_t len, home_launch_t *out)
 		if (bb_platform_saves(BB_SAVES_MENU) == BB_SAVES_CLOSE)   // closed inside its dialog: no more drawing
 			break;
 		music_update(); HT("music");
-		const float dt = UI_METRIC_1_0F / UI_METRIC_60_0F * (float)video_ui_steps();   // 2 frames long on the Old's 30 fps room
+		const float dt = 1.0f / 60.0f * (float)video_ui_steps();   // 2 frames long on the Old's 30 fps room
 		clock_s += dt;
 		{
 			u64 tv0=svcGetSystemTick();
@@ -893,10 +893,10 @@ int home_run(bool games, char *path, size_t len, home_launch_t *out)
 		if (title_for != s) {
 			title_for = s;
 			title_t = 0;
-			pop = UI_METRIC_0_9F;
+			pop = 0.9f;
 			pop_v = 0;
 		}
-		ui_motion_settle(&pop, &pop_v, UI_METRIC_1_0F, UI_MOTION_SETTLE_RATE, dt);
+		ui_motion_settle(&pop, &pop_v, 1.0f, UI_MOTION_SETTLE_RATE, dt);
 		if (title_t < 1) title_t = fminf(1, title_t + dt * 5);
 		if (fade > 0) fade = fmaxf(0, fade - dt * 3);
 		for (int i = 0; i < 5 && i < library_count(); i++)
@@ -913,10 +913,10 @@ int home_run(bool games, char *path, size_t len, home_launch_t *out)
 		// A published snapshot is usable during background validation. Never hold
 		// the room dark waiting for a long walk; shelves can fill after reveal.
 		room_intro_wait += dt;
-		if (room_intro < UI_METRIC_1 && ((bb_index_complete() && bb_system_total()>0) || room_intro_wait >= UI_MOTION_BOOT_WAIT_S)) {
-			if (room_intro == UI_METRIC_0) room_scene_library_follow(true);
+		if (room_intro < 1 && ((bb_index_complete() && bb_system_total()>0) || room_intro_wait >= UI_MOTION_BOOT_WAIT_S)) {
+			if (room_intro == 0) room_scene_library_follow(true);
 			if (!room_intro_tick) room_intro_tick=svcGetSystemTick();
-            room_intro = fminf(UI_METRIC_1, (float)(svcGetSystemTick()-room_intro_tick)/SYSCLOCK_ARM11/ROOM_INTRO_SECONDS);
+            room_intro = fminf(1, (float)(svcGetSystemTick()-room_intro_tick)/SYSCLOCK_ARM11/ROOM_INTRO_SECONDS);
 		}
 
 	}
@@ -1029,8 +1029,8 @@ int home_empty_library_run(void)
 			}
 		}
 		music_update(); HT("music");
-		clock_s += UI_METRIC_1_0F / UI_METRIC_60_0F;
-		if (fade > 0) fade = fmaxf(0, fade - UI_METRIC_3_0F / UI_METRIC_60_0F);
+		clock_s += 1.0f / 60.0f;
+		if (fade > 0) fade = fmaxf(0, fade - 3.0f / 60.0f);
 		if (empty_msg_frames > 0) empty_msg_frames--;
 		// HOME > Close can end a library_load above (it polls aptMainLoop): nothing may be drawn after it
 		if (!aptMainLoop() || !gspHasGpuRight()) { r = 0; break; }

@@ -345,13 +345,13 @@ with tempfile.TemporaryDirectory(prefix='covers-exit-') as d:
 #define BB_MAX_SYSTEMS 2
 typedef uint64_t u64;typedef struct Thread_tag *Thread;typedef struct {int id;} C3D_Tex;
 static struct Thread_tag {int id;} w[WORKERS];
-static Thread workers[WORKERS];static void *video_pre_draw=(void*)1;static int apt_cookie,wake;
-static bool quit,initialized=true,soc_started=true;static int join_ok[WORKERS];
-static struct {void *pixels;bool tex_ok;C3D_Tex tex;} slots[SLOTS];
-static struct {bool tex_ok;C3D_Tex tex;} tslots[TSLOTS];
-static struct {void *px;int n;} logos[BB_MAX_SYSTEMS];
-static void *own_pngs,*thumb_tried,*easy,*share;static int dummy;
-static int released,texes,thumbs,nets,flushes,misses,curls,socs,unhooks,thread_frees;
+static Thread workers[WORKERS];static void *video_pre_draw=(void*)1;static int apt_cookie,covers_wake;
+static bool covers_quit,initialized=true,soc_started=true;static int join_ok[WORKERS];
+static struct {void *pixels;bool tex_ok;C3D_Tex tex;} covers_slots[SLOTS];
+static struct {bool tex_ok;C3D_Tex tex;} covers_tslots[TSLOTS];
+static struct {void *px;int n;} covers_logos[BB_MAX_SYSTEMS];
+static void *covers_own_pngs,*covers_thumb_tried,*covers_curl_easy,*covers_curl_share;static int dummy;
+static int released,texes,covers_thumbs,nets,flushes,misses,curls,socs,unhooks,thread_frees;
 #define free(p) do{if(p)released++;}while(0)
 #define log_printf(...) ((void)0)
 static void aptUnhook(int *c){(void)c;unhooks++;}
@@ -359,9 +359,9 @@ static void LightEvent_Signal(int *e){(void)e;}
 static int threadJoin(Thread t,u64 ns){(void)ns;return join_ok[t->id]?0:0x09401BFE;}
 static void threadFree(Thread t){(void)t;thread_frees++;}
 static void C3D_TexDelete(C3D_Tex *t){(void)t;texes++;}
-static void thumbs_free(void){thumbs++;}
-static void net_close(void){nets++;}
-static void state_flush(void){flushes++;}
+static void covers_thumbs_free(void){covers_thumbs++;}
+static void covers_net_close(void){nets++;}
+static void covers_state_flush(void){flushes++;}
 static void boxart_misses_free(void){misses++;}
 static void curl_easy_cleanup(void *c){(void)c;curls++;}
 static void curl_share_cleanup(void *c){(void)c;curls++;}
@@ -369,30 +369,30 @@ static void curl_global_cleanup(void){curls++;}
 static void socExit(void){socs++;}
 static void arm(void){
  for(int i=0;i<WORKERS;i++){w[i].id=i;workers[i]=&w[i];join_ok[i]=1;}
- for(int i=0;i<SLOTS;i++){slots[i].pixels=&dummy;slots[i].tex_ok=true;}
- for(int i=0;i<TSLOTS;i++)tslots[i].tex_ok=true;
- for(int i=0;i<BB_MAX_SYSTEMS;i++)logos[i].px=&dummy;
- own_pngs=thumb_tried=easy=share=&dummy;soc_started=true;
- released=texes=thumbs=nets=flushes=misses=curls=socs=thread_frees=0;}
-#define UNTOUCHED (!released && !texes && !thumbs && !nets && !flushes && !misses && !curls && !socs && easy && share && soc_started && own_pngs)
+ for(int i=0;i<SLOTS;i++){covers_slots[i].pixels=&dummy;covers_slots[i].tex_ok=true;}
+ for(int i=0;i<TSLOTS;i++)covers_tslots[i].tex_ok=true;
+ for(int i=0;i<BB_MAX_SYSTEMS;i++)covers_logos[i].px=&dummy;
+ covers_own_pngs=covers_thumb_tried=covers_curl_easy=covers_curl_share=&dummy;soc_started=true;
+ released=texes=covers_thumbs=nets=flushes=misses=curls=socs=thread_frees=0;}
+#define UNTOUCHED (!released && !texes && !covers_thumbs && !nets && !flushes && !misses && !curls && !socs && covers_curl_easy && covers_curl_share && soc_started && covers_own_pngs)
 '''+cx+r'''
 int main(void){
  arm();join_ok[1]=0;
- assert(!covers_exit() && quit && UNTOUCHED && workers[1] && !workers[0] && thread_frees==1);
+ assert(!covers_exit() && covers_quit && UNTOUCHED && workers[1] && !workers[0] && thread_frees==1);
  join_ok[1]=1;
  assert(covers_exit() && !workers[1] && thread_frees==2);
- assert(released==SLOTS+BB_MAX_SYSTEMS+2 && texes==SLOTS+TSLOTS && thumbs==1 && nets==1 && flushes==1 && curls==3 && socs==1 && !soc_started);
- arm();join_ok[0]=0;quit=false;
- assert(!covers_network_exit(5000000000ULL) && quit && UNTOUCHED && workers[0]);
+ assert(released==SLOTS+BB_MAX_SYSTEMS+2 && texes==SLOTS+TSLOTS && covers_thumbs==1 && nets==1 && flushes==1 && curls==3 && socs==1 && !soc_started);
+ arm();join_ok[0]=0;covers_quit=false;
+ assert(!covers_network_exit(5000000000ULL) && covers_quit && UNTOUCHED && workers[0]);
  join_ok[0]=1;
  assert(covers_network_exit(5000000000ULL) && !workers[0] && nets==1 && curls==3 && socs==1 && !released);
  return 0;}
 ''')
  subprocess.run([os.environ.get('CC','cc'),'-std=gnu11','-Wall','-Wextra','-Werror','-Wno-unused-function','-Wno-unused-variable','-Wno-misleading-indentation','-fsanitize=address,undefined','-g',str(p/'covers.c'),'-o',str(p/'covers')],check=True)
  subprocess.run([str(p/'covers')],check=True)
-worker=(root/'app/ui/covers.c').read_text()
-worker=worker[worker.index('static void worker_main(void *arg)'):worker.index('void covers_init(void)')]
-assert 'while (paused && !quit)\n\t\t\t\tsvcSleepThread(100000000LL);\n\t\t\tif (quit)\n\t\t\t\tbreak;' in worker
+worker=(root/'app/services/covers_fetch.c').read_text()
+worker=worker[worker.index('void covers_worker_main(void *arg)'):]
+assert 'while (covers_paused && !covers_quit)\n\t\t\t\tsvcSleepThread(100000000LL);\n\t\t\tif (covers_quit)\n\t\t\t\tbreak;' in worker
 print('covers exits: a timed-out worker keeps pixels, curl and sockets; the join that succeeds frees them once PASS')
 
 # PS1 HOME > Close: the real adapter run() and the real session end. run_game returns true

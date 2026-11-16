@@ -22,7 +22,7 @@
 #include "../../../include/breadbox/dev_switches.h"
 #include "../../../include/breadbox/gamecfg.h"
 #include "../../../include/breadbox/cheat_codes.h"
-#include "../../../include/breadbox/emu.h"
+#include "../../../systems/ps1/emu.h"
 #include "../../../include/breadbox/audio.h"
 #include "../../../include/breadbox/app_input.h"
 #include "../../../include/breadbox/presets.h"

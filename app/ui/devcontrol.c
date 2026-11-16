@@ -19,7 +19,7 @@
 #include "core_hooks.h"
 #include "dev_switches.h"
 #include "pmu.h"
-#include "emu.h"
+#include "ps1_hooks.h"
 #include "app_input.h"
 #include "presets.h"
 #include "library.h"
@@ -36,7 +36,6 @@ int bb_remote_slot=-1, bb_remote_stereo=-1;
 #include "../../core/plugins/gpu_pica/gpu_pica_debug.h"
 #include "benchstate.h"
 #include "widescreen.h"
-#include "gpustereo.h"
 #include "presetupdate.h"
 #include <ctype.h>
 #include <errno.h>
@@ -159,7 +158,6 @@ static unsigned linear_free(void)
 extern int psx3d_idle_skip, psx3d_idle_pointer, psx3d_idle_delay;
 
 /* Recorder commands and status. */
-bool emu_record_start(void);
 static void clip_status_json(char *out, size_t size)
 {
     snprintf(out,size,",\"record\":%s,\"record_seconds\":%d,\"replay\":%d,"

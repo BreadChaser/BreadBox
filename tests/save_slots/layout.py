@@ -12,7 +12,7 @@ def function(text,name):
  if not m:sys.exit('missing '+name)
  return m[0]
 inc=(src/'components/postcards.inc').read_text();ctl=(src/'postcards.c').read_text()
-defs='\n'.join(l for l in (src/'postcards.h').read_text().splitlines() if re.match(r'#define PC_',l))
+defs='\n'.join(l for l in (root/'include/breadbox/postcards.h').read_text().splitlines() if re.match(r'#define PC_',l))
 program=r'''#include <assert.h>
 #include <math.h>
 #include <stdbool.h>

@@ -9,5 +9,5 @@
 PSX3D_COLD void ui_card_notice_strip(float x, float y, float z, float w, float h, u32 color, u32 lines)
 {
 	C2D_DrawRectSolid(x, y, z, w, h, color);
-	C2D_DrawRectSolid(x, y + UI_CARD_NOTICE_H - UI_CARD_FOOT_MARGIN, UI_CARD_Z_NOTICE_LINE, w, UI_METRIC_1, lines);
+	C2D_DrawRectSolid(x, y + UI_CARD_NOTICE_H - UI_CARD_FOOT_MARGIN, UI_CARD_Z_NOTICE_LINE, w, 1, lines);
 }

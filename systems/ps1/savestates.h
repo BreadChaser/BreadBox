@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include "history.h"
+#include "ps1_hooks.h"
 
 // savestates.c - save state browser with screenshots
 #define STATE_AUTO -1
@@ -29,7 +30,6 @@ int states_run(bool saving, const char *prefix, const char *title, int *slot, st
 // a slot deleted in the browser went into the ring as this entry
 typedef struct { bool done; int slot; hist_entry_t entry; } states_deleted_t;
 extern states_deleted_t states_deleted;
-bool states_auto_read(const char *prefix, u32 *saved, u16 *px, bool *picture, bool (*cancel)(void *), void *arg);
 bool states_auto_texture(C3D_Tex *tex, const u16 *px);
 bool states_auto_peek(const char *prefix, u32 *saved, C3D_Tex *tex, bool *tex_ok);
 void states_thumb_draw(C3D_Tex *t, float x, float y, float w, float h, float z);

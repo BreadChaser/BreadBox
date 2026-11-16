@@ -3,6 +3,8 @@
 #include "sdk.h"
 #include <stdatomic.h>
 #include "../../../app/ui/covers.c"
+#include "../../../app/ui/covers_match.c"
+#include "../../../app/services/covers_fetch.c"
 bool breadbox_import_pause(void){return true;}
 void breadbox_import_resume(void){}
 static bool cart_cover(int index,bb_cover_item *out) {assert(index==0 || index==1);*out=(bb_cover_item){.title=game.title,.key=game.cover_key,.code=game.group,.path=game.ndiscs?game.discs[0]:NULL};return true;}
@@ -24,26 +26,26 @@ static void log_printf(const char *fmt,...)
   while(atomic_load(&hold_load)) usleep(100);
  }
 }
-static void *run_worker(void *arg) { worker_main(arg);return NULL; }
+static void *run_worker(void *arg) { covers_worker_main(arg);return NULL; }
 static void *release_worker(void *arg)
 {
  (void)arg;
  // Release only AFTER the rebuilding UI has paused claims. Its drain must
  // still be waiting: the old key and path remain owned until busy reaches 0.
  for (;;) {
-  LightLock_Lock(&lock);bool stopped=paused;LightLock_Unlock(&lock);
+  LightLock_Lock(&covers_list_lock);bool stopped=covers_paused;LightLock_Unlock(&covers_list_lock);
   if(stopped) break;
   usleep(100);
  }
  assert(game.cover_key && game.title && game.discs[0]);
- assert(busy==WORKERS);
+ assert(covers_busy_workers==WORKERS);
  atomic_store(&hold_load,false);
  return NULL;
 }
 int main(void)
 {
  covers_init();sw_nonet=true;
- thumbs_loaded=own_pngs_ok=true;
+ covers_thumbs_loaded=covers_own_pngs_ok=true;
  game.cover_key=strdup("key0");game.title=strdup("Title 0");
  game.ndiscs=1;game.discs[0]=strdup("disc0.cue");
  cover_t c={.data=calloc(1,COVER_PACK_BYTES),.w=32,.h=32};assert(c.data);
@@ -58,23 +60,23 @@ int main(void)
   pthread_t release;assert(!pthread_create(&release,NULL,release_worker,NULL));
   covers_library_begin(); // must wait for the worker holding &game
   assert(!pthread_join(release,NULL));
-  assert(paused && !busy && library_changes==1);
-  for(int j=0;j<SLOTS;j++) assert(slots[j].game==-1 && !slots[j].pixels);
+  assert(covers_paused && !covers_busy_workers && library_changes==1);
+  for(int j=0;j<SLOTS;j++) assert(covers_slots[j].game==-1 && !covers_slots[j].pixels);
   free(game.cover_key);free(game.title);free(game.discs[0]);
   memset(&game,0,sizeof(game));
   // Same index and same count, different identity. No partial-list requests
   // may survive and display the previous game's pixels after publication.
   assert(!covers_get(TEST_BASE,NULL));
-  covers_resume();assert(paused);
+  covers_resume();assert(covers_paused);
   covers_library_begin();assert(library_changes==2);
-  covers_library_end();assert(paused);
+  covers_library_end();assert(covers_paused);
   game.cover_key=strdup(i%2?"key0":"key1");game.title=strdup("Replacement");
   game.ndiscs=1;game.discs[0]=strdup("replacement.cue");
-  covers_library_end();assert(!paused && !library_changes);
+  covers_library_end();assert(!covers_paused && !library_changes);
  }
  covers_stop_wait();
- covers_library_begin();covers_library_end();assert(paused); // retain gameplay pause
- quit=true;paused=false;
+ covers_library_begin();covers_library_end();assert(covers_paused); // retain gameplay pause
+ covers_quit=true;covers_paused=false;
  for(int i=0;i<WORKERS;i++) assert(!pthread_join(threads[i],NULL));
  assert(atomic_load(&loads)>=200*WORKERS);
  covers_exit();free(game.cover_key);free(game.title);free(game.discs[0]);

@@ -11,5 +11,5 @@ static void draw_bottom(void *unused)
  (void)unused;
  ui_begin();
  shelf_scene_bottom(&view);
- ui_bar_draw(bar(),UI_METRIC_4);
+ ui_bar_draw(bar(),4);
 }

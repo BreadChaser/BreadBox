@@ -109,7 +109,10 @@ run retro-tooling    python3 tests/retro_host/tooling.py
 run retro-host       bash tests/retro_host/run.sh
 run shell-guard      python3 tools/architecture/shell-guard.py --strict
 run ownership-guard  python3 tools/architecture/ownership-guard.py --strict
+run include-graph    python3 tests/include_graph/check.py
 run ownership-guard-controls python3 tests/ownership/check.py
+run arch-gates       python3 tests/arch_gates/check.py
+run trunk-gate       bash tests/trunk_gate/run.sh
 run main-lifecycle python3 tests/main_lifecycle/check.py
 run docs-current     python3 tests/docs_current/check.py
 run build-contract   python3 tests/layout_baseline/build_contract.py
@@ -199,6 +202,7 @@ run save-names       bash tests/app/saveid/run.sh
 run c3d-abi          bash tests/c3d_abi/run.sh
 run covers-worker    python3 tests/app/covers/worker.py
 run covers-rebuild   bash tests/app/covers/rebuild.sh
+run covers-match     python3 tests/app/covers/match.py
 run core-microtests bash tests/core/run.sh
 run title-version   python3 tests/title_version/check.py
 # Core/renderer/video code extracted from the sources and run on the host.
