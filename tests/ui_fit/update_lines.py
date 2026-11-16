@@ -15,6 +15,11 @@ progress = src[src.index('static bool update_progress_text('):]
 progress = progress[:progress.index('\n}\n')]
 lines = re.findall(r'"((?:[^"\\]|\\.)*)"', table) + re.findall(r'return "((?:[^"\\]|\\.)*)"', body + why) + \
     [re.sub(r'%u%%', '100%', t) for t in re.findall(r'"((?:[^"\\]|\\.)*)"', progress)]
+# Largest supported CIA requires at most 206 MB; also exercise the fallback.
+lines = [line.replace('%u', '207') for line in lines]
+assert 'Ready. Reopen to install' in lines
+assert 'Battery low. Plug in' in lines
+assert 'Free 207 MB on the SD card' in lines
 wide=set('mwMWDOQGCNHUABKRV');narrow=set("iltfjr.,' I:;-!|")
 # Exact twentieth units keep the calibrated boundary identical across Python
 # versions (sum() gained compensated floating-point summation in Python 3.12).

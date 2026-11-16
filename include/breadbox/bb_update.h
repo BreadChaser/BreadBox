@@ -30,6 +30,8 @@ bb_update_hash_result bb_update_hash_check(const char *,const bb_update_manifest
 bool bb_update_hash(const char *path,const bb_update_manifest *);
 /* Main thread only; worker handoffs are internal. tick is called only by Home. */
 bool bb_update_tick(void); /* true: AM committed; bypass scene cleanup and shut down immediately */
+/* Shared menu frame: continue staging only; the room alone installs. */
+void bb_update_menu_tick(void);
 void bb_update_draw_notice(void);
 bool bb_update_installing(void);
 bool bb_update_committed(void);

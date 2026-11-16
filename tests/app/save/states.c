@@ -113,6 +113,8 @@ bool __real_retro_serialize(void *data, size_t size)
 }
 
 static int load_calls;
+static unsigned pad_toggles;   // ps1_pad_settle(): two per loaded state
+int padToggleAnalog(unsigned int index) { (void)index; return ++pad_toggles & 1; }
 static int model_extra;   // a core with one more record the check doesn't know
 // misc.c LoadState and the component freezes: the same reads/seeks, the
 // same early refusals (header, version), the same "skip a broken SPU size"
@@ -186,9 +188,11 @@ static size_t spu_end, tail_at, ndrc_size_at, pad_at;
 static state_result_t try_load(const void *buf, size_t size)
 {
 	unsigned long long before = live_hash();
+	unsigned toggles = pad_toggles;
 	bool ok = __wrap_retro_unserialize(buf, size);
 	state_result_t r = state_last_result;
 	CHECK(ok == (r == STATE_OK));
+	CHECK(pad_toggles - toggles == (ok ? 2u : 0u));   // the pad never switches mode by itself
 	if (r == STATE_NOT_A_STATE || r == STATE_DAMAGED || r == STATE_VERSION)
 		CHECK(live_hash() == before);
 	return r;

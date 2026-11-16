@@ -228,6 +228,10 @@ remain consistent.
 routine BIOS and enabled-hack notices go to the diagnostic log, while actionable
 warnings and game feedback still reach the OSD.
 
+`ps1-pad` sends pad-library byte sequences to the core's pad code (with `ps1_pad.h`) and checks the
+ID a game reads (0x41 digital, 0x73 analog): a probed pad stays digital until the
+game or the player picks analog, and state loads keep the chosen mode.
+
 Old 3DS speed depends on code and data addresses. Keep `core-first.ld`, core
 archive/library order, core string isolation, the pinned frontend, and
 `NDRC_LAYOUT_PAD=3492` for the current core body. Layout checks compare core

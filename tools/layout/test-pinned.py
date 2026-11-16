@@ -12,6 +12,7 @@ import hashlib,json,os,struct,subprocess,sys,tempfile
 def hashlib_sha(p):return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 import compare
 base,new,build=sys.argv[1:4];gate=Path(__file__).with_name('check-pinned.py')
+subprocess.run([sys.executable,str(Path(__file__).with_name('test-recording-metadata.py')),base,new],check=True)
 elf=compare.load(new);address=elf['syms']['video_present_screens'][0]
 def run(path,env=None):
  e=dict(os.environ);e.update(env or {})

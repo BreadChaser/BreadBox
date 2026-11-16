@@ -210,7 +210,7 @@ int rewind_step(void)
 	return -1;
 }
 
-// a state was loaded or the game reset: the history no longer leads here
+// A state was loaded or the game reset: the history no longer leads here.
 void rewind_reset(void)
 {
 	if (!active)

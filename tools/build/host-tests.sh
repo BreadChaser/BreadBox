@@ -100,6 +100,7 @@ run ui-mark bash -c 'python3 tools/ui/mark_masks.py --check && cc -std=gnu11 -Wa
 run ui-paper bash -c 'cc -std=gnu11 -Wall -Wextra -Werror -fsanitize=address,undefined -g -Iinclude/breadbox tests/ui_paper/check.c -lm -o "$1/ui-paper" && "$1/ui-paper"' _ "$out"
 run text-baseline bash tests/text_baseline/run.sh
 run play-controls    bash tests/play_controls/run.sh
+run ps1-pad          bash tests/ps1_pad/run.sh
 run ps1-messages     python3 tests/ps1_messages/check.py
 run ps1-save-osd     python3 tests/ps1_messages/osd_saved.py
 run ps1-card-close   python3 tests/ps1_card_question/check.py

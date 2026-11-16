@@ -13,6 +13,8 @@
 #include <unistd.h>
 #include <string.h>
 #define SYSCLOCK_ARM11 1000000ULL
+static unsigned menu_turns;
+void bb_update_menu_tick(void){menu_turns++;}
 static u64 fake_tick=100;
 static u64 svcGetSystemTick(void){return fake_tick;}
 #include "../../app/ui/breadbox_import_ui.c"
@@ -90,7 +92,7 @@ static void settings_count(void)
 }
 int main(void)
 {
- ui=pthread_self();paused=true;breadbox_import_init();assert(recoveries==1); // unconditional even paused
+ ui=pthread_self();paused=true;breadbox_import_poll();assert(menu_turns==1);breadbox_import_init();assert(recoveries==1); // unconditional even paused
  breadbox_import_resume();game_live=true;breadbox_import_start(true);assert(!job);game_live=false;idle=false;breadbox_import_start(true);assert(!job && !runs);
  idle=true;
  assert(bb_writers_try_exclusive());breadbox_import_poll();assert(!job);

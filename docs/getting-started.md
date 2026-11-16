@@ -90,5 +90,10 @@ day while it sits idle, and when the 3DS wakes up if the last check was over an
 hour ago. It never checks during a
 game. It asks before it installs an update (**Ask first**, the default).
 **Settings → Updates** switches to **Automatic**, where a short countdown runs
-and any button puts it off, or to **Off**; **Check now** looks right away. The tested
+and any button puts it off, or to **Off**; **Check now** looks right away and asks before
+downloading. Downloads keep going while you browse Settings. After you accept, return to the room to install, or close BreadBox:
+it installs the downloaded update the next time you open it. An interrupted
+update retries on the next start. If the battery is below 10%, plug in the charger; if there
+is another problem, the room and Updates tell you what to do. Keep power on while it
+installs. Updates need the HOME Menu app installed on SD. The tested
 settings for PlayStation games also update by themselves from the room.

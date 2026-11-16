@@ -8,6 +8,7 @@
 #include "home.h"
 #include "breadbox_import.h"
 #include "bb_index.h"
+#include "bb_update.h"
 #include "bb_save.h"
 #include "bb_writers.h"
 #include "bb_registry.h"
@@ -163,6 +164,8 @@ static PSX3D_COLD bool retire_job(void)
 }
 PSX3D_COLD void breadbox_import_poll(void)
 {
+ /* ui_begin calls this cold background turn on every menu, including dialogs. */
+ bb_update_menu_tick();
  retry_cleanup();
  if(job && __atomic_load_n(&job->cancelled,__ATOMIC_ACQUIRE)){
   if(retire_job())finished=false;

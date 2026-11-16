@@ -25,6 +25,7 @@
 #include "../../core/libpcsxcore/gpu.h"
 #include "../../core/include/psemu_plugin_defs.h"
 #include "statefile.h"
+#include "ps1_pad.h"
 
 bool __real_retro_serialize(void *data, size_t size);
 bool __real_retro_unserialize(const void *data, size_t size);
@@ -428,5 +429,6 @@ bool __wrap_retro_unserialize(const void *data, size_t size)
 		state_last_result = STATE_PARTLY;
 		return false;
 	}
+	ps1_pad_settle();   // the state brought its own pad (ps1_pad.h)
 	return true;
 }

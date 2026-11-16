@@ -22,7 +22,8 @@ one-time import from `sdmc:/3ds/PSX3D` remain live BreadBox compatibility code.
   `app/ui/card_notice.c` the card notice's strip and ruled line (its own file: `ui.o`'s cold code sits right ahead of the GBA save dialogs, so growth there moves them);
   `app/ui/ui_mark.c` the selection highlighter (`ui_mark.h`, masks from `tools/ui/mark_masks.py`);
   `app/ui/ui_font.c` where the loaded fonts' letters stand (`UI_PAPER_TOP` puts text on ruled lines with any font; test `tests/text_baseline`);
-  `app/services/`: updater, sharing and `covers_fetch.c` (the cover worker thread, HTTP, cache files);
+  `app/services/`: updater (`update_pending.inc` keeps accepted downloads across starts;
+  the cold menu turn in `breadbox_import_ui.c` advances staging), sharing and `covers_fetch.c` (the cover worker thread, HTTP, cache files);
   `app/ui/covers.c` the cover API and textures, `covers_match.c` cover names (host test `covers-match`),
   shared state in the private `covers_internal.h`.
 - `platform/3ds/`: device boundaries, video, audio, input and networking.
@@ -30,7 +31,9 @@ one-time import from `sdmc:/3ds/PSX3D` remain live BreadBox compatibility code.
   `systems/common/retro_host.c` owns libretro callbacks/core validity;
   `retro_ctr.c` is the shared runner. PS1 runs in `systems/ps1/emu.c`,
   `systems/ps1/ps1_messages.c` routes routine BIOS/game-fix notices to the log,
-  `card_question.c` asks about an unreadable memory card before a game runs;
+  `card_question.c` asks about an unreadable memory card before a game runs,
+  `ps1_pad.h` suppresses automatic analog enable; `statefile.c` settles loaded
+  pads, and `presets.c` settles resets at the BIOS-initialized log callback;
   `library.c` the PS1 list, cache and index import, `ps1_disc_groups.c` titles and
   disc groups, `ps1_library_import.c` .cue/.m3u references (private `ps1_library.h`);
   a system's `components/*.inc` are its drawing parts;
@@ -63,7 +66,7 @@ one-time import from `sdmc:/3ds/PSX3D` remain live BreadBox compatibility code.
   `gi.py` Cycles light per vertex, `soft.py` the soft texture finish
   (test: `tests/room/soft-textures.py`, needs NumPy), `lights.json`/`refine.json` data;
   `tools/room/README.md`).
-- `tests/`: host suites (`tests/ps1_messages/check.py` covers both libretro
+- `tests/`: host suites (`tests/ps1_pad` drives the core pad code; `tests/ps1_messages/check.py` covers both libretro
   message callbacks and the production notice router); `docs/`: player docs,
   `docs/dev/` developer docs (index `docs/dev/README.md`).
 

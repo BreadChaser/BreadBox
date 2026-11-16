@@ -9,7 +9,7 @@ reason; a function only in NEW has no baseline code and is reported as new."""
 import collections, json, os, subprocess, sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import accepted, baseline_guard, compare, hotcode
+import accepted, baseline_guard, compare, hotcode, recording_metadata
 NM = '/opt/devkitpro/devkitARM/bin/arm-none-eabi-nm'
 base, new, build = [a for a in sys.argv[1:] if not a.startswith('--')][:3]
 record = '--record' in sys.argv
@@ -88,7 +88,13 @@ for name in hot:
  if asize[name]!=bsize[name]:
   changed=None
  else:
-  refs,changed=img.words(aa,bb,asize[name])
+  if name=='clip_start':
+   try:
+    refs,changed=recording_metadata.words(img,aa,bb,asize[name],recording_metadata.header_for(base),recording_metadata.ROOT/'apps/breadbox/version.h')
+   except (OSError,ValueError) as error:
+    print('FAIL recording metadata',error);bad+=1;continue
+  else:
+   refs,changed=img.words(aa,bb,asize[name])
  if name in accept:
   # A reviewed change: exactly this before/after, nothing else (accepted.py).
   used_accept.add(name)

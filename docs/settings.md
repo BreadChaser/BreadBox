@@ -79,6 +79,7 @@ value.
   Unlike other control rows it uses the technical layer order (see Where a value comes from), because
   the right value depends on the game. Touch L3/R3 and the Old touch stick
   continue to follow analog mode.
+  If the controls don't respond after loading an older save state, switch Controller to Analog and back to Digital once.
 - **Bottom-screen buttons** (New only): Right side or Left side.
 - **Memory cards.** Per game, per disc, shared or off. A change takes effect on the next game start.
 - **Rewind** (New only, game only). It needs free memory

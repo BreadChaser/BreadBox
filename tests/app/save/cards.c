@@ -192,7 +192,9 @@ static void card1(void)
 	// no file: blank card, nothing written until the game changes it
 	reset();
 	snprintf(ctx, sizeof(ctx), "new card");
+	unsigned toggles = host_pad_toggles;
 	cards_begin("game.srm");
+	CHECK(host_pad_toggles - toggles == 2);   // the pad never switches to analog by itself
 	CHECK(!cards_check() && size_of("game.srm") < 0);
 	memcpy(ram, a, CARD);
 	CHECK(cards_check() && file_is("game.srm", a));

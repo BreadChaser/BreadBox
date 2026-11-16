@@ -18,6 +18,7 @@
 #include "memory_cards.h"
 #include "emu.h"
 #include "bb_final.h"
+#include "ps1_pad.h"
 #include "clip.h"
 #include "history.h"
 
@@ -370,6 +371,9 @@ static bool core_cards_save(bool now)
 
 void cards_begin(const char *srm)
 {
+	// The first call after emu.c plugs the pad into the same port:
+	// suppress automatic analog enable before the game reads it (ps1_pad.h).
+	ps1_pad_settle();
 	snprintf(srm_path, sizeof(srm_path), "%s", srm);
 	card_hist_init(&srm_hist, srm_path);
 	srm_load();

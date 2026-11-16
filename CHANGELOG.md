@@ -2,6 +2,11 @@
 
 What changed in each release, newest first. A few lines each; details are in the docs.
 
+## Unreleased
+
+- Fixed: PlayStation controls keep responding in games such as Tomb Raider, including after Reset game.
+- If the controls don't respond after loading an older save state, switch Controller to Analog and back to Digital once.
+
 ## v0.9.2 (public beta)
 
 - Fixed: PlayStation games in .chd files are found again and start.

@@ -166,7 +166,7 @@ static void build_rows(settings_state *s)
   page_row(s,APP_CUSTOMIZE,"Customize","The room's style and the shortcuts every system shares.");
   page_row(s,APP_SYSTEMS,"Systems","Picture, controls and saves for each game system.");
   page_row(s,APP_COLLECTION,"Collection","Where your games are, and importing from PSX3D.");
-  page_row(s,APP_UPDATES,"Updates","Automatic updates, or check for one now.");
+  page_row(s,APP_UPDATES,"Updates","Downloads keep going through Settings. Return to the room or reopen BreadBox to install an accepted update. Below 10% battery, plug in the charger. Interrupted updates retry the next time you open BreadBox.");
   page_row(s,APP_ABOUT,"About","Credits, licenses and how to install BreadBox.");
   break;
  case PAGE_CUSTOMIZE:customize_rows(s);break;
