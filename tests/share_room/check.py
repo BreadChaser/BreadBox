@@ -24,10 +24,12 @@ code=r'''
 #include <string.h>
 #include <stdlib.h>
 #include "room.h"
+#include "home_view.h"
 #include "share.h"
 #include "ui_motion.h"
 #include "qrcode.h"
 #include "title_version.h"
+bool theme_is_room(void){return true;}   /* the Room: Share glides there and back */
 typedef unsigned u32;typedef unsigned short u16;typedef unsigned long long u64;typedef int Handle;
 #define KEY_A 1u
 #define KEY_B 2u
@@ -172,5 +174,5 @@ int main(void){
 '''
 with tempfile.TemporaryDirectory(prefix='share-room-',dir=os.environ.get('TMPDIR')) as tmp:
  p=Path(tmp);(p/'test.c').write_text(code)
- subprocess.run(['cc','-std=gnu11','-Wall','-Wextra','-Wno-unused-function','-Werror','-Iinclude/breadbox','-Iapp/ui',str(p/'test.c'),'app/ui/room_bbr.c','app/ui/qrcode.c','-lm','-o',str(p/'check')],cwd=r,check=True)
+ subprocess.run(['cc','-std=gnu11','-Wall','-Wextra','-Wno-unused-function','-Werror','-Iinclude/breadbox','-Iapp/ui',str(p/'test.c'),'app/ui/home_view.c','app/ui/room_bbr.c','app/ui/qrcode.c','-lm','-o',str(p/'check')],cwd=r,check=True)
  subprocess.run([str(p/'check')],cwd=r,check=True)

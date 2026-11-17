@@ -1,3 +1,4 @@
+#include "ui_terms.h"
 #include <string.h>
 #include <sys/types.h>
 #include "app_policy.h"
@@ -413,7 +414,7 @@ bool bb_pause_run(void)
             case K_RESUME: goto done;
             case K_UNDO: if(undo_ready && load_state(11)) {undo_ready=false;goto done;} else message("Nothing to undo yet."); break;
             case K_SAVE: case K_LOAD: {
-                if(it.kind==K_LOAD && !used_count){message(UI_PC_NOTHING_SAVED);break;}
+                if(it.kind==K_LOAD && !used_count){message(ui_term(UI_TERM_NOTHING_SAVED));break;}
                 int result=slots_run(it.kind==K_SAVE);
                 if(result==-2){quit=true;goto done;}
                 if(result>=0)goto done;

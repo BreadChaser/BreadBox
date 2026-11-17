@@ -39,33 +39,33 @@ cc -std=gnu11 -g -Wall -Wextra -Werror -Wno-unused-function -Wno-misleading-inde
  app/ui/bb_save.c app/ui/bb_final.c app/ui/save_writer.c app/ui/safefile.c app/ui/history.c -lz -o "$out/faults"
 mkdir "$out/faults-sd"
 "$out/faults" "$out/faults-sd"
-# review fix r1b: the pause's Continue point and the unanswered Continue question, real later thread
+# The pause's Continue point and the unanswered Continue question, real later thread
 cc -std=gnu11 -g -Wall -Wextra -Werror -Wno-unused-function -Wno-misleading-indentation \
  -DSAVE_WRITER_TEST -fsanitize=address,undefined -pthread \
  -Iapp/ui -Iinclude/breadbox -Iplatform/3ds -Itests/gba_saves tests/save_service/continue.c \
  app/ui/bb_save.c app/ui/bb_final.c app/ui/save_writer.c app/ui/safefile.c app/ui/history.c -lz -o "$out/continue-point"
 mkdir "$out/continue-point-sd"
 "$out/continue-point" "$out/continue-point-sd"
-# review fix r1c: the one writer of Continue points (allocation failure, overlap, late failure, Start over errors)
+# The one writer of Continue points (allocation failure, overlap, late failure, Start over errors)
 cc -std=gnu11 -g -Wall -Wextra -Werror -Wno-unused-function -Wno-misleading-indentation \
  -DSAVE_WRITER_TEST -fsanitize=address,undefined -pthread -Wl,--wrap=malloc,--wrap=calloc,--wrap=fopen,--wrap=stat,--wrap=rename \
  -Iapp/ui -Iinclude/breadbox -Iplatform/3ds -Itests/gba_saves tests/save_service/continue_writer.c \
  app/ui/bb_save.c app/ui/bb_final.c app/ui/save_writer.c app/ui/safefile.c app/ui/history.c -lz -o "$out/continue-writer"
 mkdir "$out/continue-writer-sd"
 "$out/continue-writer" "$out/continue-writer-sd"
-# review fix r1d: the final files' metadata lock sleeps when busy (one core, strict priorities: Old 3DS)
+# The final files' metadata lock sleeps when busy (one core, strict priorities: Old 3DS)
 cc -std=gnu11 -g -Wall -Wextra -Werror -fsanitize=address,undefined -pthread -Wl,--wrap=nanosleep \
  -Iapp/ui -Iinclude/breadbox tests/save_service/final_lock.c app/ui/bb_final.c -o "$out/final-lock"
 "$out/final-lock"
 python3 tests/save_service/continue_question.py
-# J-01: a damaged battery/clock with no good copy: ask, put a backup back or start empty, keep .bad
+# A damaged battery/clock with no good copy: ask, put a backup back or start empty, keep .bad
 cc -std=gnu11 -g -Wall -Wextra -Werror -Wno-unused-function -Wno-misleading-indentation \
  -DSAVE_WRITER_TEST -fsanitize=address,undefined -pthread \
  -Iapp/ui -Iinclude/breadbox -Iplatform/3ds -Isystems/gba -Itests/gba_saves tests/save_service/damaged.c \
  app/ui/bb_save.c app/ui/bb_final.c app/ui/save_writer.c app/ui/safefile.c app/ui/history.c -lz -o "$out/damaged"
 mkdir "$out/damaged-sd"
 "$out/damaged" "$out/damaged-sd"
-# ... with a power cut at every step of Restore and a full SD card (review finding 2)
+# ... with a power cut at every step of Restore and a full SD card
 cc -std=gnu11 -g -Wall -Wextra -Werror -Wno-unused-function -Wno-misleading-indentation \
  -DSAVE_WRITER_TEST -DSAFEFILE_TEST -fsanitize=address,undefined -pthread \
  -Iapp/ui -Iinclude/breadbox -Iplatform/3ds -Isystems/gba -Itests/gba_saves tests/save_service/damaged.c \
@@ -79,7 +79,7 @@ cc -std=gnu11 -g -Wall -Wextra -Werror -Wno-unused-function -Wno-misleading-inde
  app/ui/bb_save.c app/ui/bb_final.c app/ui/save_writer.c app/ui/safefile.c app/ui/history.c -lz -o "$out/combined"
 mkdir "$out/combined-sd"
 "$out/combined" "$out/combined-sd"
-# merge review B1: "Use it" for a smaller save, the process killed at every file step, four real sizes
+# "Use it" for a smaller save, the process killed at every file step, four real sizes
 cc -std=gnu11 -g -Wall -Wextra -Werror -Wno-unused-function -Wno-misleading-indentation \
  -DSAVE_WRITER_TEST -fsanitize=address,undefined -pthread \
  -Wl,--wrap=fopen,--wrap=fwrite,--wrap=fclose,--wrap=rename,--wrap=remove \
@@ -87,7 +87,7 @@ cc -std=gnu11 -g -Wall -Wextra -Werror -Wno-unused-function -Wno-misleading-inde
  app/ui/bb_save.c app/ui/bb_final.c app/ui/save_writer.c app/ui/safefile.c app/ui/history.c -lz -o "$out/foreign-cuts"
 mkdir "$out/foreign-cuts-sd"
 "$out/foreign-cuts" "$out/foreign-cuts-sd"
-# harsh review 0.9.0 finding 1: SD read errors on the battery/backup/sole tmp/clock are never "no save"
+# SD read errors on the battery/backup/sole tmp/clock are never "no save"
 cc -std=gnu11 -g -Wall -Wextra -Werror -Wno-unused-function -Wno-misleading-indentation \
  -DSAVE_WRITER_TEST -fsanitize=address,undefined -pthread -Wl,--wrap=stat,--wrap=fopen,--wrap=fread,--wrap=fclose,--wrap=rename \
  -Iapp/ui -Iinclude/breadbox -Iplatform/3ds -Itests/gba_saves tests/save_service/read_errors.c \

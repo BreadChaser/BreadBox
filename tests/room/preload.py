@@ -26,6 +26,7 @@ static u64 svcGetSystemTick(void){return 1;}
 static void ensure_built(void){assert(paused);built=true;generation=2;boxes=&built;}
 #define log_printf(...) ((void)0)
 #define shelf_scene_prepare() ((void)0)
+#define theme_is_room() true
 #define theme() 0
 #define theme_room(t) false
 #define room_hands_preload_step() true
@@ -51,4 +52,4 @@ with tempfile.TemporaryDirectory() as td:
 home=(r/'app/ui/home.c').read_text()
 assert 'else shelf_preload_end(true);' in home
 assert 'if(k || screen != DEV_UI_NONE)shelf_preload_end(true);' in home
-assert 'shelf_preload_end(false);' in home[home.index('static void leave(void)'):home.index('static void launch_leave(void)')]
+assert 'shelf_preload_end(false);' in home[home.index('void leave(void)'):home.index('static void launch_leave(void)')]

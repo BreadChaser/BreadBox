@@ -3,7 +3,7 @@
 // colour from the tint, alpha from the mask), so a theme recolours them for free.
 //
 // A selected picture draws itself on along its strokes in 0.8 s, then its glow
-// breathes (motion style 1, owner's pick). The draw-on is computed on the CPU
+// breathes (motion style 1). The draw-on is computed on the CPU
 // for those 0.8 s only: mask x ramp(stroke order) into a small texture, one
 // table lookup per texel. The glow is a pre-blurred mask added on top of the
 // screen (additive blend), under the icon. Nothing here runs in a game.

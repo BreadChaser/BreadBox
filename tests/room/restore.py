@@ -82,5 +82,3 @@ with tempfile.TemporaryDirectory() as td:
  subprocess.run(['cc','-std=gnu11','-Wall','-Wextra','-Werror','-fsanitize=address,undefined',str(p/'test.c'),'-o',str(p/'test')],check=True)
  subprocess.run([str(p/'test')],cwd=td,check=True)
 print('Kept boxes (live metadata/geometry preserved, no relayout, timed retries, complete mismatch drop): immediate catalog, later owned adoption, first-present gate, bounded enqueue fallback, cancellation and stale catalog PASS')
-
-subprocess.run(["python3",str(root/"tests/room/selection.py")],check=True)

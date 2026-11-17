@@ -3,7 +3,7 @@
 from pathlib import Path
 import re,subprocess,tempfile,os
 root=Path(__file__).resolve().parents[2]
-s=(root/'app/ui/shelf_scene.c').read_text()
+s=(root/'app/ui/shelf_scene_draw.c').read_text()
 buf=re.search(r'char last\[[^\n]+',s).group()
 a=s.index('char tail[24 * 4 + 8];');b=s.index('snprintf(last, sizeof(last), "Can\'t read: %s", tail);',a)+len('snprintf(last, sizeof(last), "Can\'t read: %s", tail);')
 code='#include <string.h>\n#include <stdio.h>\n#include "ui_format.h"\n#define PATH_LEN 256\nint main(int argc,char **argv){(void)argc;const char *bb_unreadable_dir=argv[1];'+buf+s[a:b]+'puts(last);}\n'

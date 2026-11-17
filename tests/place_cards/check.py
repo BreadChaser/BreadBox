@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""The room's place cards before A (owner 2026-11-12, app/ui/place_cards.c): Collection's counts per system, Settings'
-version / updates / room style, Quit's play today and last game.
+"""The room's place cards before A (app/ui/place_cards.c): Collection's counts per system, Settings'
+version / updates / theme, Quit's play today and last game.
 
 check.c runs the production logic (counts from a fake index: two systems, one system only, 0 games known and
 not yet known, the first scan's partial counts, huge numbers, more systems than lines; play-time spelling; the
 card gets no line until something is known) and prints every line it makes. Here each printed line, and the
 shipped strings (every system's name from systems/*/sys_*.c, the version from version.h, every update state from
-update.c's bb_update_glance, the room styles from theme.c), must fit the room card's info row at real metrics:
-label + gap + value inside the ruled width at the text floor (shelf_scene.c info_row), with the conservative font
+update.c's bb_update_glance, the theme names from theme.c), must fit the room card's info row at real metrics:
+label + gap + value inside the ruled width at the text floor (shelf_scene_draw.c info_row), with the conservative font
 model of tests/ui_fit/strings.py, never shrunk below the floor or cut. The last game's name is the one line that may
 be cut (a long title; it has the whole line). A negative control (a too-long label) must fail.
 """
@@ -39,7 +39,7 @@ def shipped():
     body = upd[upd.index('const char *bb_update_glance(void)'):]
     body = body[:body.index('\n}\n')]
     states = re.findall(r'"([^"]+)"', body)
-    styles = re.findall(r'\.name = "([^"]+)"', (root / 'app/ui/theme.c').read_text())
+    styles = re.findall(r'\.name\s*=\s*"([^"]+)"', (root / 'app/ui/theme.c').read_text())
     assert len(states) >= 4 and len(styles) >= 2, (states, styles)
     for v in (version, '0.9.0', '10.10.10'):
         for s in states + ['']:
@@ -75,10 +75,10 @@ with tempfile.TemporaryDirectory() as d:
     out = subprocess.run([build(d)] + args, check=True, capture_output=True, text=True).stdout
     lines = [l.split('\t') for l in out.splitlines()]
     bad = check(lines, {'Crash Bandicoot', 'Supercalifragilisticexpialidociousnamewithoutspaces'})
-    if check([('settings', 'Room style of a much longer name here', 'Night')], set()) == []:
+    if check([('settings', 'Theme of a much longer name here and more', 'Room (Night)')], set()) == []:
         bad.append('negative control: a too-long label passed')
     for b in bad: print('FAIL', b)
     if bad: sys.exit(1)
     print(f'Place cards PASS: {len(lines)} lines (counts per system, total and favorites incl. 65,535 per system; settings for '
-          f'{nstates} update states x {len(styles)} room styles x 3 versions; play today) fit the room card at the floor; '
+          f'{nstates} update states x {len(styles)} themes x 3 versions; play today) fit the room card at the floor; '
           'nothing drawn until the scan knows; one system has no total')

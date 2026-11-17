@@ -12,6 +12,7 @@
 #include "cheat_codes.h"
 #include "app_input.h"
 #include "presets.h"
+#include "ps1_pad.h"
 #include "app_main.h"
 #include <ctype.h>
 #include <dirent.h>
@@ -455,6 +456,14 @@ void game_presets_disc_log(const char *message)
 // never applies to those games (tools/presets/check.py also rejects them).
 void game_presets_core_log(const char *message)
 {
+	// Both BIOS paths report initialization after padReset and before any
+	// BIOS/game execution. retro_reset only requests that deferred reset.
+	if (!strcmp(message, "HLE BIOS initialized.\n") || !strncmp(message, "BIOS: ", 6)) {
+		if (config_controller() && !padAnalogMode(0))
+			padToggleAnalog(0);
+		ps1_pad_settle();
+	}
+
 	if (strncmp(message, "using cycle_multiplier_override", 31))
 		return;
 	core_clock = true;

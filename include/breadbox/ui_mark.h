@@ -1,8 +1,8 @@
 #ifndef UI_MARK_H
 #define UI_MARK_H
-/* The selection highlighter (owner 2026-11-12: "a yellow highlighter with some randomness and scratchiness"):
+/* The selection highlighter uses a yellow, irregular, scratchy stroke:
  * a marker stroke multiplied over the paper behind the selected row of every notebook card (ui_card_draw) and
- * of the room's and Collection's lists (shelf_scene.c). One routine, ui_mark_row (app/ui/ui_mark.c).
+ * of the room's and Collection's lists (shelf_scene_draw.c). One routine, ui_mark_row (app/ui/ui_mark.c).
  *
  * The stroke is a 3-slice of one of UI_MARK_VARIANTS masks (tools/ui/mark_masks.py -> ui_mark_masks.h, an
  * 8 KiB L8 texture): the nib's start cap, the middle stretched to the text, the dry tail. The variant, a 0/1 px

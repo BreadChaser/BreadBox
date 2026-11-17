@@ -13,7 +13,7 @@
 #include "retro_rewind.h"
 #include "gba_speed.h"
 bool g_new3ds = true;
-GbaSettings gba_settings = { 1, 0, 0, 0, 1, 5, 1 };
+GbaSettings gba_settings = GBA_SETTINGS_DEFAULT;
 static u32 masks[2] = { KEY_SELECT | KEY_R, KEY_SELECT | KEY_L };
 u32 input_hotkey_mask(int i) { return masks[i]; }
 static uint32_t heap = 40u << 20;
@@ -38,6 +38,8 @@ void bb_rewind_reset(void) { resets++; }
 size_t bb_rewind_bytes(void) { return 0; }
 #include "../../systems/gba/gba_speed.c"
 
+static unsigned picture_resets;
+void gba_picture_reset(void){picture_resets++;}
 int main(void)
 {
 	gba_speed_begin(KEY_SELECT | KEY_R);   // still held from the menu
@@ -51,7 +53,7 @@ int main(void)
 	assert(gba_speed_input(KEY_SELECT | KEY_L) == 0 && gba_speed_rewinding() && !gba_speed_ff());   // rewind wins, ends FF
 	assert(gba_speed_input(0) == 0 && !gba_speed_rewinding() && !gba_speed_ff());
 	gba_speed_input(KEY_SELECT | KEY_R); gba_speed_input(0); assert(gba_speed_ff());
-	gba_speed_pause(KEY_A); assert(!gba_speed_ff());   // the menu ends fast-forward (PS1)
+	gba_speed_pause(KEY_A); assert(!gba_speed_ff() && picture_resets==1);   // the menu ends fast-forward (PS1)
 	// steps: two shown frames per step, then the engine; results reach the caller
 	bool restart;
 	assert(gba_speed_rewind_frame(&restart) == GBA_REWIND_STEPPED && gba_speed_rewind_frame(&restart) == GBA_REWIND_STEPPED);

@@ -91,7 +91,7 @@ int main(void)
  assert(g_cfg.theme == before.theme && g_cfg.hand_skin == before.hand_skin && g_cfg.hand_glove == before.hand_glove);
  assert(input_hotkey_get(0) == hk0 && input_hotkey_get(1) == hk1);
  assert(g_cfg.show_fps == show_fps0 && g_cfg.smooth == smooth0);
- {   /* the saved games folder against a fallback root (review 11Z): a fallback is for this session only */
+ {   /* the saved games folder against a fallback root: a fallback is for this session only */
   static char saved_line[PATH_LEN + 16];
   config_reset_defaults();
   snprintf(g_cfg.games_dir, sizeof g_cfg.games_dir, "sdmc:/games/custom");   // a custom folder; it cannot be read right now

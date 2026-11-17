@@ -25,7 +25,7 @@ typedef struct {char *title,*cover_key,*group;int ndiscs;char *discs[8];} game_t
 static bool covers_library_try_begin(void) {return true;}
 static bool playlog_poll_adoptions(void) {return false;}
 int bb_system_cover_id(const bb_system_t *s,int row) {(void)s;return row;}
-static void covers_library_begin(void) {}
+static bool covers_library_begin(void) {return true;}
 static void covers_library_end(void) {}
 typedef uint32_t u32; typedef uint64_t u64;
 static struct { char games_dir[512]; } g_cfg;
@@ -119,5 +119,5 @@ with tempfile.TemporaryDirectory() as d:   # the same storage with the GBA on-sc
 with tempfile.TemporaryDirectory() as d:
  p=Path(d)
  flags=subprocess.check_output(['pkg-config','--cflags','--libs','freetype2'],text=True).split()
- subprocess.run(['cc','-I'+str(root/'app/ui'),'-I'+str(root/'include/breadbox'),'-I'+str(root/'platform/3ds'),'-I'+str(root/'systems/gba'),'-std=gnu11','-g','-Wall','-Wno-unused-function','-Wno-format-truncation','-Wno-sign-compare','-fsanitize=address,undefined','-ffunction-sections','-Wl,--gc-sections','-I'+str(root/'tests/app/host'),'-I'+str(root/'app/ui'),'-I'+str(root/'include/breadbox'),'-I'+str(root/'platform/3ds'),'-I'+str(root/'systems/gba'),'-I'+str(root/'core/deps/libretro-common/include'),'-DPSX3D_TEST_PRESETS="'+str(root/'assets/romfs/presets')+'"','-DPSX3D_PS1_OVERCLOCK_PRESETS',str(root/'tests/gba_library/scope.c'),str(root/'systems/ps1/clip.c'),str(root/'app/ui/safefile.c'),str(root/'tools/input-replay/mock-core.c'),*flags,'-lz','-lm','-o',str(p/'scope')],check=True)
+ subprocess.run(['cc','-I'+str(root/'app/ui'),'-I'+str(root/'include/breadbox'),'-I'+str(root/'platform/3ds'),'-I'+str(root/'systems/gba'),'-std=gnu11','-g','-Wall','-Wno-unused-function','-Wno-format-truncation','-Wno-sign-compare','-fsanitize=address,undefined','-ffunction-sections','-Wl,--gc-sections','-I'+str(root/'tests/app/host'),'-I'+str(root/'app/ui'),'-I'+str(root/'include/breadbox'),'-I'+str(root/'platform/3ds'),'-I'+str(root/'systems/gba'),'-I'+str(root/'core/deps/libretro-common/include'),'-I'+str(root/'systems/ps1'),'-DPSX3D_TEST_PRESETS="'+str(root/'assets/romfs/presets')+'"','-DPSX3D_PS1_OVERCLOCK_PRESETS',str(root/'tests/gba_library/scope.c'),str(root/'systems/ps1/clip.c'),str(root/'app/ui/safefile.c'),str(root/'tools/input-replay/mock-core.c'),*flags,'-lz','-lm','-o',str(p/'scope')],check=True)
  subprocess.run([str(p/'scope')],cwd=p,check=True)

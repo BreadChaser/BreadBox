@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Room textures, "finish": "soft" (tools/room/lamplight/soft.py, texture round 2026-11-11): a texture set with the soft
+"""Room textures, "finish": "soft" (tools/room/lamplight/soft.py): a texture set with the soft
 finish keeps every texture's size (the atlas layout), at most 16 colours, every colour on the RGB555 grid, and is
 calmer than the crisp set (lower neighbour-to-neighbour luma steps on wood, floor, wallpaper and cushions); a set
 without it is drawn exactly as before. NumPy only (no Blender)."""

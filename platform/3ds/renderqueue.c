@@ -4,7 +4,7 @@
 #include <string.h>
 #include "app_log.h"
 #include "platform_video.h"
-#include "gpustereo.h"
+#include "ps1_hooks.h"
 #include <c3d/base.h>
 #include <c3d/renderqueue.h>
 #include <stdlib.h>

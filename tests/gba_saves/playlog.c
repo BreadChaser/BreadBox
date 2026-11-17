@@ -62,7 +62,7 @@ int main(void) {
  int queued=nq;playlog_adopt_key_later("BOUND_OLD1","gba:BOUND1");assert(nq==queued);
  deferred=0;
  puts("GBA legacy favorite adoption, preserved legacy entry, durable unstar: PASS");
- /* one ordered owner (round 10): a game's end queues its snapshot; a migration asked after it
+ /* one ordered owner: a game's end queues its snapshot; a migration asked after it
   * cannot be overwritten by it, and its marker lands only after its log was written */
  const char *LOG="sdmc:/3ds/BreadBox/saves/playlog.ini";
  playlog_begin("OLDKEY");playlog_end();
@@ -83,7 +83,7 @@ int main(void) {
  playlog_adopt_key("OLD2","gba:N2");assert(nq==0);         /* queued already: its marker stays the writer's */
  playlog_flush();run_queue();                              /* the failed write, asked again (exit, the next write) */
  assert(file_has(LOG,"[gba:N2]") && !access("sdmc:/3ds/BreadBox/saves/gba_N2.playlog-id",F_OK));
- /* round 11, N4: a second adoption of a game whose marker the writer owns (queued, its .tmp
+ /* A second adoption of a game whose marker the writer owns (queued, its .tmp
   * open) must not touch that marker's files */
  deferred=0;assert(playlog_toggle_favourite("TMPOLD"));deferred=1;
  playlog_adopt_key("TMPOLD","gba:TMPNEW");assert(nq==1);
@@ -91,7 +91,7 @@ int main(void) {
  playlog_adopt_key("TMPOLD","gba:TMPNEW");playlog_adopt_key("TMPOLD","gba:TMPNEW");
  assert(!access("sdmc:/3ds/BreadBox/saves/gba_TMPNEW.playlog-id.tmp",F_OK));   /* untouched by the menu thread */
  run_queue();assert(!access("sdmc:/3ds/BreadBox/saves/gba_TMPNEW.playlog-id",F_OK));
- /* N5 (the reviewer's reproduction, the other way round): 20 migrations before the writer runs:
+ /* 20 migrations before the writer runs:
   * every marker is written; an unstarred one stays unstarred on the next adoption */
  deferred=0;assert(playlog_toggle_favourite("OVERFLOW_OLD"));deferred=1;
  for(int j=0;j<20;j++){char key[40];snprintf(key,sizeof(key),"gba:OVERFLOW_%02d",j);playlog_adopt_key("OVERFLOW_OLD",key);}

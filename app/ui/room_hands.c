@@ -193,7 +193,7 @@ static bool load_part(int part)
 		return false;
 	}
 	if (!room_show_hands) break;   // compact case/camera tracks: no hand meshes or rest solver
-	if (!hands_has_sleeve(&H.f)) {   // review N5: tex[0] below
+	if (!hands_has_sleeve(&H.f)) {   // tex[0] below must be available
 		log_printf("hands: %s: no sleeve texture\n", HANDS_PATH);
 		return false;
 	}

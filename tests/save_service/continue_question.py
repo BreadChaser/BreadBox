@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""The Continue question against the real save service (review fix r1b, finding 2; the reviewer's lifecycle
-probe made a test). The production bb_pause_prompt(), bb_continue_input(), bb_pause_suspend()/restore() and the
+"""The Continue question against the real save service (including lifecycle
+edge cases). The production bb_pause_prompt(), bb_continue_input(), bb_pause_suspend()/restore() and the
 GBA apt_event() run on scripted frames and APT events, linked with the real bb_save.c, final files, later thread,
 safe files and history on a temporary SD card. Before every case the game has a Continue point (99) and its
 backup (98); B, sleep/wake again and again, HOME > Close and power-off at the unanswered question, then the GBA
@@ -150,7 +150,7 @@ int main(int argc,char **argv)
 '''
 with tempfile.TemporaryDirectory() as td:
     td = Path(td)
-    answers = re.search(r'enum \{ BB_CONTINUE_ASK[^;]*;\n#define BB_CONTINUE_BUTTONS[^\n]*\n', (root / 'app/ui/bb_pause.h').read_text())[0]
+    answers = re.search(r'enum \{ BB_CONTINUE_ASK[^;]*;\n#define BB_CONTINUE_BUTTONS[^\n]*\n', (root / 'include/breadbox/bb_pause.h').read_text())[0]
     (td / 'bb_pause_answers.h').write_text(answers)
     src = td / 'question.c'
     src.write_text(code.replace('static int file_bytes', 'static int file_position(const char *path){FILE *f=fopen(path,"rb");if(!f)return -1;int p=fseek(f,28,SEEK_SET)?-1:fgetc(f);fclose(f);return p;}\nstatic int file_bytes'))

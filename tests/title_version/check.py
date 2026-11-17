@@ -27,13 +27,13 @@ class Versions(unittest.TestCase):
                 v.encode_psx3d(version)
 
     def test_breadbox_mapping(self):
-        for version, counter in [('0.9.0', 25615), ('0.9.1', 25631), ('0.10.0', 26639), ('1.0.0', 32783),
+        for version, counter in [('0.9.0', 25615), ('0.9.1', 25631), ('0.9.2', 25647), ('0.9.3', 25663), ('0.10.0', 26639), ('1.0.0', 32783),
                                  ('1.0.1', 32799), ('1.1.0', 33807), ('2.15.63', 65535)]:
             self.assertEqual(v.encode(version), counter)
-        # The first public release installs over every private test CIA the owner's consoles ran (all 16xxx,
+        # The first public release installs over every previous development CIA (all 16xxx,
         # the highest 16641 at the 0.9.0 release) and the header's version is the one packaged.
         self.assertGreater(v.encode('0.9.0'), 16641 + 1000)
-        self.assertEqual(v.header_version(ROOT / 'apps/breadbox/version.h'), '0.9.2')
+        self.assertEqual(v.header_version(ROOT / 'apps/breadbox/version.h'), '0.9.3')
 
     def test_no_alias_or_field_carry(self):
         for version in ['0.16.0', '3.0.0', '2.16.0', '0.0.64', '1.0.64',

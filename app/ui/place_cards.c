@@ -75,7 +75,7 @@ PSX3D_COLD int place_settings(place_lines *out, const char *version, const char 
 	out->n = 0;
 	if (version && version[0]) add(out, "Version", version);
 	if (update && update[0]) add(out, update, NULL);
-	if (style && style[0]) add(out, "Room style", style);
+	if (style && style[0]) add(out, "Theme", style);
 	return out->n;
 }
 

@@ -19,16 +19,19 @@
 #include "core_hooks.h"
 #include "dev_switches.h"
 #include "pmu.h"
-#include "emu.h"
+#include "ps1_hooks.h"
 #include "app_input.h"
 #include "presets.h"
 #include "library.h"
 #include "covers.h"
 #include "app_main.h"
 #include "ui_font.h"
+#include "ui_fixture.h"
+#include "ui_trace.h"
 #include "bb_registry.h"
 void breadbox_return_system(const bb_system_t *system, const char *path);   // breadbox_systems.c: the Library opens on that game
 #include "bb_registry.h"
+static const char notes_command[] __attribute__((section(".gnu.linkonce.r.bb_notes_command"))) = "whatsnew";
 static char system_pending_path[PATH_LEN];
 int bb_remote_slot=-1, bb_remote_stereo=-1;
 #include "clip.h"
@@ -36,7 +39,6 @@ int bb_remote_slot=-1, bb_remote_stereo=-1;
 #include "../../core/plugins/gpu_pica/gpu_pica_debug.h"
 #include "benchstate.h"
 #include "widescreen.h"
-#include "gpustereo.h"
 #include "presetupdate.h"
 #include <ctype.h>
 #include <errno.h>
@@ -159,7 +161,6 @@ static unsigned linear_free(void)
 extern int psx3d_idle_skip, psx3d_idle_pointer, psx3d_idle_delay;
 
 /* Recorder commands and status. */
-bool emu_record_start(void);
 static void clip_status_json(char *out, size_t size)
 {
     snprintf(out,size,",\"record\":%s,\"record_seconds\":%d,\"replay\":%d,"
@@ -240,6 +241,9 @@ static void publish_status(void)
 	                           : "library",
 	         title, sw_state, running ? "gpu" : "", settings, err, cmd_id,
 	         command_result, batch_active ? "true" : "false", batch_id, run_index, run_count, samples);
+#ifdef BB_UI_FIXTURES
+ size_t len=strlen(json);snprintf(json+len-1,sizeof(json)-len+1,",\"ui\":%s}",ui_trace_json());
+#endif
 	devnet_status(json);
 	status_at = osGetTime();
 }
@@ -465,7 +469,7 @@ bool dev_tick(bool playing)
 			error_reply("only ui-key and shot on this screen");
 		} else if (clip_active && strcmp(command,"quit") && strcmp(command,"exit") && strcmp(command,"shot")) {
 			error_reply("clip active; quit to cancel before changing settings/UI");
-		} else if (!strcmp(command, "ui-key")) {
+		} else if (ui_fixture_command(command,args)) { } else if (!strcmp(command, "ui-key")) {
 			if (batch_active || !(
                 (bb_session_system() && bb_session_system()->dev && bb_session_system()->dev->key && dev_ui_pending()==DEV_UI_NONE && bb_session_system()->dev->key(args,1)) ||
                 settings_ui_debug_key(args) || input_remote_key(args)))
@@ -480,7 +484,7 @@ bool dev_tick(bool playing)
 			             !strcmp(args, "states") ? DEV_UI_STATES :
 			             !strcmp(args, "resume") ? DEV_UI_RESUME :
 			             !strcmp(args, "continue") ? DEV_UI_CONTINUE :
-			             !strcmp(args, "welcome") ? DEV_UI_WELCOME : DEV_UI_NONE;
+			             !strcmp(args, "welcome") ? DEV_UI_WELCOME : !strcmp(args, notes_command) ? DEV_UI_WHATSNEW : DEV_UI_NONE;
 			int slot = option && !strncmp(option, "slot=", 5) ? field_int(option, "slot", 0) : 0;
 			bool valid = screen && slot >= 0 && slot < SLOT_COUNT;
 			const game_t *selection = NULL;
@@ -494,8 +498,8 @@ bool dev_tick(bool playing)
 					if (picked) selection = picked; else valid = false;
 				} else if (screen != DEV_UI_STATES || strncmp(option, "slot=", 5)) valid = false;
 			}
-			if (!valid || batch_active || (!playing && screen != DEV_UI_LIBRARY && screen != DEV_UI_SETTINGS && screen != DEV_UI_WELCOME) ||
-			    (playing && screen == DEV_UI_WELCOME))
+			if (!valid || batch_active || (!playing && screen != DEV_UI_LIBRARY && screen != DEV_UI_SETTINGS && screen != DEV_UI_WELCOME && screen != DEV_UI_WHATSNEW) ||
+			    (playing && (screen == DEV_UI_WELCOME || screen == DEV_UI_WHATSNEW)))
 				error_reply("ui library [select=title] | pause | settings | welcome | states [slot=" SLOT_RANGE "] | resume | continue; idle batch required");
 			else {
 				char at[PATH_LEN];   // the Library (the room's bookcase) opens on that game, by the path it starts from
@@ -553,7 +557,7 @@ bool dev_tick(bool playing)
 				error_reply("presets-update reset requires the idle library");
 			else {
 				if (reset) {
-					covers_stop_wait();
+					if(!covers_stop_wait()){load_pending=batch_active=change=command_loading=false;covers_resume();error_reply("Background work still active");return dev_transition();}
 					bool done = presets_update_dev_reset();
 					covers_resume();
 					if (!done) { error_reply("presets-update reset: could not remove a folder"); goto presets_done; }
@@ -592,7 +596,7 @@ bool dev_tick(bool playing)
                 snprintf(system_pending_path,sizeof(system_pending_path),"%s",path);
                 bb_remote_slot=slot;bb_remote_stereo=stereo;
                 ui_request=DEV_UI_NONE;load_pending=change=command_loading=true;
-                covers_stop_wait();
+                if(!covers_stop_wait()){load_pending=batch_active=change=command_loading=false;covers_resume();error_reply("Background work still active");return dev_transition();}
             }
 		} else if (!strcmp(command, "load")) {
             system_pending_path[0]=0;bb_remote_slot=bb_remote_stereo=-1;
@@ -601,7 +605,7 @@ bool dev_tick(bool playing)
 				error_reply("batch active; quit to cancel first");
 			else if (!*args || !load_request(args))
 				error_reply("load requires a game or path (max 675 bytes)");
-			else covers_stop_wait();
+			else if(!covers_stop_wait()){load_pending=batch_active=change=command_loading=false;covers_resume();error_reply("Background work still active");return dev_transition();}
 			// load reply is sent only once loading + initial state have completed.
 		} else if (!strcmp(command, "ff")) {
 			if (!playing || batch_active || (strcmp(args, "on") && strcmp(args, "off"))) error_reply("ff on|off requires game and idle batch");
@@ -655,7 +659,7 @@ bool dev_tick(bool playing)
                     snprintf(path,sizeof(path),PSX3D_STATE_DIR "/%s.st%u",picked->cover_key,slot);
                     if (!stat(path,&st) || errno != ENOENT) error_reply("benchmark slot already exists or cannot be checked");
                     else {
-                        covers_stop_wait();
+                        if(!covers_stop_wait()){load_pending=batch_active=change=command_loading=false;covers_resume();error_reply("Background work still active");return dev_transition();}
                         devnet_import_reply(path,hash);
                     }
                 }
@@ -675,7 +679,7 @@ bool dev_tick(bool playing)
         else if (!strcmp(command,"recover-probe")) {
             extern bool safe_recovery_probe(void);
             if(playing || batch_active || breadbox_import_busy())error_reply("recovery probe requires idle library/import");
-            else {covers_stop_wait();bool ok=safe_recovery_probe();covers_resume();if(ok)dev_reply("{\"ok\":true,\"missing_errno\":2,\"restored\":true,\"removed\":true}");else error_reply("recovery probe failed; stop and inspect test files");}
+            else {if(!covers_stop_wait()){load_pending=batch_active=change=command_loading=false;covers_resume();error_reply("Background work still active");return dev_transition();}bool ok=safe_recovery_probe();covers_resume();if(ok)dev_reply("{\"ok\":true,\"missing_errno\":2,\"restored\":true,\"removed\":true}");else error_reply("recovery probe failed; stop and inspect test files");}
         }
 #endif
         else if (!strcmp(command, "sd-bench")) {
@@ -708,7 +712,7 @@ bool dev_tick(bool playing)
 			else if (!begin_batch(args))
 				error_reply("invalid batch; max 32 runs/2047 bytes each");
 			if (batch_active) {
-				covers_stop_wait();
+				if(!covers_stop_wait()){load_pending=batch_active=change=command_loading=false;covers_resume();error_reply("Background work still active");return dev_transition();}
 				dev_reply("{\"ok\":true,\"bench\":\"started\"}");
 			}
 			else
@@ -740,7 +744,7 @@ bool dev_tick(bool playing)
 			if (batch_active || !*args || strlen(args) >= sizeof(update_pending))
 				error_reply("update requires URL and no active batch");
 			else {
-				covers_stop_wait();
+				if(!covers_stop_wait()){load_pending=batch_active=change=command_loading=false;covers_resume();error_reply("Background work still active");return dev_transition();}
 				strcpy(update_pending, args);
 				change = true;
 				if (!playing)

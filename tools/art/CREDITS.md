@@ -74,3 +74,6 @@ and boot-executable identities and guard original values for rollback. Their
 CC BY-SA licence and source references are retained with the adapted data.
 Other third-party codes are not relabelled MIT or CC BY-SA. See
 `docs/widescreen.md` for technical validation and per-console availability.
+
+`assets/gfx/psx3d_backdrop.png` is baked by `psx3d_backdrop.py` from the
+PSX3D sky/grid scene and the CC0 `palms_pair_a.png` / `palms_pair_b.png` silhouettes above.

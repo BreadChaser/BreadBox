@@ -7,5 +7,6 @@
 void libui_init(void);
 C2D_Font libui_font(void);
 void libui_exit(void);
+void libui_release_menu(void);
 // behind menus that draw no top screen of their own
 void libui_draw_backdrop(void);

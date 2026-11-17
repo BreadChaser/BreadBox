@@ -49,7 +49,7 @@ static const char *const hidden_prefix[] = {
 	"pcsx_rearmed_drc",          // chosen automatically (Luma SVC access)
 };
 
-// PSX3D only runs on the 3DS: options with one right value per console are
+// BreadBox only runs on the 3DS: options with one right value per console are
 // fixed in defaults.ini [forced.*] and have no menu row (docs/settings.md).
 // Only the developer o: switch overrides them, per load.
 static const char *forced_value(const char *key)
@@ -400,7 +400,7 @@ const char *options_cycle(int i, int dir)
 
 // ---------------------------------------------------------------- help
 // What each option does and what it costs, shown on the top screen while
-// it's selected. PSX3D's own notes win over the core's text; the impact
+// it's selected. BreadBox's own notes win over the core's text; the impact
 // line is ours (measured on 3DS where it says so).
 static const char *const notes[][3] = {
 	{ "pcsx_rearmed_memcard1", "Reopen the game to apply", "Per game uses " APP_NAME "'s usual memory card file for each game. Per disc keeps a separate card for each disc; Shared uses one card across games. Off removes this card." },

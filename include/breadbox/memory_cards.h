@@ -5,7 +5,7 @@
 #include "history.h"
 
 // cards.c - memory cards on the SD card, crash-safe
-void cards_begin(const char *srm_path);   // a game starts: read its cards
+void cards_begin(const char *srm_path);   // a game starts: read its cards, settle the pad
 bool cards_check(void);                   // write changed cards; true if one was
 typedef enum { CARD_WRITE_CLEAN, CARD_WRITE_SAVED, CARD_WRITE_FAILED } card_write_result;
 card_write_result cards_finalize(void); /* retains failures in shared final-save owner */

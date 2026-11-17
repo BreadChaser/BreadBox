@@ -37,7 +37,7 @@ static void cancellation_job(void *unused){(void)unused;assert(bb_index_cancelle
 static void until(int *value){for(int i=0;i<1000 && !__atomic_load_n(value,__ATOMIC_ACQUIRE);i++)usleep(1000);assert(*value);}
 static double clock_ms(void){struct timespec t;clock_gettime(CLOCK_MONOTONIC,&t);return t.tv_sec*1000.0+t.tv_nsec/1e6;}
 /* The shutdown's own waits, counted on the calling (UI) thread instead of timed: a loaded host can stretch 45
- * sleeps of 1 ms past any tight wall-clock limit (merge review: 85 ms once), but the bound is the number of them.
+ * sleeps of 1 ms past any tight wall-clock limit, but the bound is the number of them.
  * The device waits once in threadJoin for 45 ms (bb_index.c). Linked with -Wl,--wrap=usleep (run.sh). */
 int __real_usleep(useconds_t);
 static int counting,shutdown_polls;static unsigned long shutdown_sleep_us;

@@ -11,7 +11,7 @@
 #include "app_log.h"
 #include "platform_video.h"
 #include "dev_switches.h"
-#include "emu.h"
+#include "ps1_hooks.h"
 #include "audio.h"
 #include "app_input.h"
 #include "ui_list.h"
@@ -46,6 +46,7 @@ static u64 cpu_diag[3];
 #define DIAG_END(name,n) ((void)0)
 #endif
 #include "gba_settings.h"
+#include "gba_picture_host.h"
 #include "gba_speed.h"
 #include "gba_touch.h"
 #include "retro_rewind.h"
@@ -159,7 +160,7 @@ __attribute__((noinline)) static void gba_track_alternation(const void *data, si
 
 static void gba_stereo_prepare(bool late) {
     float slider=slider_get();
-    unsigned strength=gba_settings.stereo && gba_3d_available() && !gba_settings.color_correction && !gba_settings.frame_blend && slider>.01f ? (unsigned)(slider*256.0f) : 0;
+    unsigned strength=gba_settings.stereo && gba_3d_available() && !gba_settings.core_color_correction && !gba_settings.core_frame_blend && slider>.01f ? (unsigned)(slider*256.0f) : 0;
     if(!strength && right_ready && gspHasGpuRight()) { gpsp_gba_stereo_config(NULL,0); video_gpu_idle(); C3D_TexDelete(&right_texture); free(right_pixels); right_pixels=NULL; right_ready=stereo_frame=false; }
     if(strength && !right_ready && gspHasGpuRight()) { right_pixels=malloc(240*160*2); if(right_pixels && C3D_TexInit(&right_texture,256,256,GPU_RGB565)) { right_ready=true; memset(right_texture.data,0,right_texture.size); C3D_TexSetWrap(&right_texture,GPU_CLAMP_TO_EDGE,GPU_CLAMP_TO_EDGE); } else { free(right_pixels); right_pixels=NULL; } }
     if(right_ready) C3D_TexSetFilter(&right_texture,gba_settings.smoothing?GPU_LINEAR:GPU_NEAREST,gba_settings.smoothing?GPU_LINEAR:GPU_NEAREST);
@@ -254,8 +255,8 @@ static bool environment(unsigned cmd, void *data)
         else if (!strcmp(v->key, "gpsp_frameskip")) value = "disabled";
         else if (!strcmp(v->key, "gpsp_rtc_time_source")) value = "system";
         else if (!strcmp(v->key, "gpsp_rtc")) value = "auto";
-        else if (!strcmp(v->key, "gpsp_color_correction")) value = gba_settings.color_correction ? "enabled" : "disabled";
-        else if (!strcmp(v->key, "gpsp_frame_mixing")) value = gba_settings.frame_blend ? "enabled" : "disabled";
+        else if (!strcmp(v->key, "gpsp_color_correction")) value = gba_settings.core_color_correction ? "enabled" : "disabled";
+        else if (!strcmp(v->key, "gpsp_frame_mixing")) value = gba_settings.core_frame_blend ? "enabled" : "disabled";
         else if (!strcmp(v->key, "gpsp_serial")) value = "disabled";
         else if (!strcmp(v->key, "gpsp_rumble")) value = "disabled";
         v->value = value; return value != NULL;
@@ -318,7 +319,7 @@ static void video_callback(const void *data, unsigned w, unsigned h, size_t pitc
     }
     GSPGPU_FlushDataCache(out, texture.size);
     }
-    stereo_frame=ui_wants_3d && gpsp_gba_stereo_valid() && !gba_settings.color_correction && !gba_settings.frame_blend;
+    stereo_frame=ui_wants_3d && gpsp_gba_stereo_valid() && !gba_settings.core_color_correction && !gba_settings.core_frame_blend;
     bb_session_set_stereo(stereo_frame);
     ui_wants_3d=stereo_frame;
     if(stereo_frame && !indexed_picture) { out=right_texture.data; if(gba_remote_cpuopt&8) gba_upload_tiles_local(out,right_pixels,240*2);else if(gba_remote_cpuopt&1) gba_upload_tiles(out,right_pixels,240*2);else for(unsigned y=0;y<h;y++) for(unsigned x=0;x<w;x++) out[((y>>3)*32+(x>>3))*64+morton(x,y)]=right_pixels[y*240+x]; GSPGPU_FlushDataCache(out,right_texture.size); }
@@ -361,7 +362,7 @@ static bool host_rtc_set(const void *p,size_t n){if(n!=3*sizeof(u32))return fals
 static const bb_retro_ext extensions={.environment=environment,.rtc_size=host_rtc_size,.rtc_get=host_rtc_get,.rtc_set=host_rtc_set,.battery_generation=host_generation};
 static bb_retro_desc descriptor={.system=&bb_system_gba,.core=&bb_retro_gba,.ext=&extensions,
     .system_dir=APP_SD_ROOT "/bios",.save_dir=GBA_SAVES,.max_width=240,.max_height=160,
-    .fps_num=16777216,.fps_den=280896,.video_refresh=video_callback,
+    .fps_num=16777216,.fps_den=280896,.video_refresh=gba_picture_video,
     .keys={[RETRO_DEVICE_ID_JOYPAD_A]=KEY_A,[RETRO_DEVICE_ID_JOYPAD_B]=KEY_B,
     [RETRO_DEVICE_ID_JOYPAD_START]=KEY_START,[RETRO_DEVICE_ID_JOYPAD_SELECT]=KEY_SELECT,
     [RETRO_DEVICE_ID_JOYPAD_L]=KEY_L,[RETRO_DEVICE_ID_JOYPAD_R]=KEY_R,
@@ -483,7 +484,7 @@ static bool settings_menu(void)
         if(dev_tick(true)) return true;
         input_poll();
         int rows=gba_setting_rows();
-        static const ui_button_t bar[]={{KEY_B,"Back",UI_ICON_BACK,false},{KEY_LEFT,"Change",UI_ICON_LEFT,false},{KEY_RIGHT,"Change",UI_ICON_RIGHT,false}};
+        static const ui_button_t bar[] __asm__("bar.1")={{KEY_B,"Back",UI_ICON_BACK,false},{KEY_LEFT,"Change",UI_ICON_LEFT,false},{KEY_RIGHT,"Change",UI_ICON_RIGHT,false}};
         u32 k=ui_list_input(&settings_list,rows,&setting_row,ui_bar_input(bar,3,input_keys_down()),false);
         k=ui_swap_keys(k,KEY_B|KEY_Y);
         if(k&KEY_B) return false;
@@ -544,7 +545,7 @@ static u32 debug_key;static unsigned debug_key_frames;
 bool gba_debug_key(const char *key) {
  if(!dev_remote || !game_active || bb_pause_active() || debug_key_frames)return false;
  static const char *names[]={"a","b","start","select","up","down","left","right","l","r"};
- static const u32 keys[]={KEY_A,KEY_B,KEY_START,KEY_SELECT,KEY_UP,KEY_DOWN,KEY_LEFT,KEY_RIGHT,KEY_L,KEY_R};
+ static const u32 keys[] __asm__("keys.8")={KEY_A,KEY_B,KEY_START,KEY_SELECT,KEY_UP,KEY_DOWN,KEY_LEFT,KEY_RIGHT,KEY_L,KEY_R};
  for(unsigned i=0;i<10;i++)if(!strcmp(key,names[i])) {debug_key=keys[i];debug_key_frames=6;return true;}
  return false;
 }
@@ -644,7 +645,7 @@ int gba_run(const char *path)
     history_session_begin((gba_remote_cpuopt&4)!=0,save_id);
     gpsp_gba_cpu_config(gba_remote_cpuopt);
     journal_atlas=gba_remote_journal==2?linearAlloc(6*2048*64*4):NULL;
-    indexed_picture=false;indexed_ready=gba_remote_indexed && !gba_settings.color_correction && !gba_settings.frame_blend && gba_index_gpu_init(gba_remote_indexed);
+    indexed_picture=false;indexed_ready=gba_remote_indexed && !gba_settings.core_color_correction && !gba_settings.core_frame_blend && gba_index_gpu_init(gba_remote_indexed);
     gpsp_gba_journal_config(journal_atlas?2:indexed_ready||gba_remote_journal==1?1:0,journal_atlas);
 
     unsigned available=bb_heap_available();
@@ -836,7 +837,7 @@ int gba_run(const char *path)
         skip_video=!ff && gba_clock_skip(&clock,before);
         bool late=skip_video || before>clock.next+SYSCLOCK_ARM11/2000;
         gba_stereo_prepare(late);
-        phase_lock=lock_hold && !ui_wants_3d && !gba_settings.frame_blend && !ff;
+        phase_lock=lock_hold && !ui_wants_3d && !gba_settings.core_frame_blend && !ff;
         probe_frame=false;
         if(phase_lock && (frames&1)) {probe_frame=!skip_video && (probe_count++&7)<2;skip_video=true;}
         picture_ready=false;
@@ -1090,7 +1091,7 @@ static void gba_track_alternation(const void *data, size_t pitch)
      * Larger statics would move gba.c's other data and, through the section
      * anchors, change code in the pinned frame functions. */
     static u32 last[20], before[20];
-    static u8 streak[20];
+    static u8 streak[20] __asm__("streak.5");
     static unsigned last_frame, before_frame, checks;
     bool consecutive=last_frame==frames-1 && before_frame==frames-2, evidence=false;
     for(unsigned i=0;i<20;i++) {
@@ -1144,3 +1145,14 @@ __attribute__((noinline)) static void set_menu_title(const char *name)
 {
     ui_clean_title(name,menu_title,sizeof(menu_title));
 }
+
+/* Data-only presentation boundary: the established frame entries stay intact.
+ * Explicit assembler names on local data preserve their identities
+ * when an extra callback reference changes GCC's private static numbering. */
+const gba_picture_host gba_picture_bridge __attribute__((section(".gba_picture.const")))={
+ .original=video_callback,.texture={&texture,&right_texture},.right_pixels=&right_pixels,
+ .texture_ready=&texture_ready,.probe=&probe_frame,.picture_ready=&picture_ready,
+ .stereo_frame=&stereo_frame,.indexed_picture=&indexed_picture,.boot_hold=&boot_hold,.failed=&run_stalled,
+ .last_video=&last_video,.nulls=&picture_null,.blank=&picture_blank,.repeat=&picture_repeat,
+ .hash=&picture_hash,.lock_hold=&lock_hold,.drawn=&dev_drawn,.track=gba_track_alternation,.sample=boot_sample
+};

@@ -12,6 +12,7 @@
 #include "libui.h"
 #include "app_main.h"
 #include "gba_settings.h"
+#include "gba_color.h"
 #include "devtools.h"
 #include "bb_feature_ui.h"
 
@@ -39,7 +40,7 @@ int gba_setting_field(int row)
 	return row>=0 && row<n ? f[row] : GBA_SET_SCREEN;
 }
 const char *gba_setting_label(int row,void *ud) {
- (void)ud;return (const char *[]){"Screen size","Smoothing","Color correction","Frame blend","3D","Sunlight","Rewind",
+ (void)ud;return (const char *[]){"Screen size","Filter","Color","LCD ghosting","3D","Sunlight","Rewind",
 	 "FF keys","Rewind keys"}[gba_setting_field(row)];
 }
 static const char *hotkey_value(int i)
@@ -53,7 +54,7 @@ const char *gba_setting_value(int row,void *ud) {
  if(f==GBA_SET_SOLAR) return (const char *[]){"0 · Covered","1","2","3","4","5 · Daylight","6","7","8","9","10 · Bright"}[gba_settings.solar];
  if(f==GBA_SET_HOTKEY_FF || f==GBA_SET_HOTKEY_REWIND) return hotkey_value(f-GBA_SET_HOTKEY_FF);
  return (const char *[]){gba_settings.screen_size==0?"Original":gba_settings.screen_size==1?"Fit":"Stretch",
-	 gba_settings.smoothing?"Smooth":"Sharp",gba_settings.color_correction?"On":"Off",gba_settings.frame_blend?"On":"Off",
+	 gba_settings.smoothing?"Smooth":"Sharp",gba_color_name(gba_settings.color_correction),gba_settings.frame_blend?"On":"Off",
 	 "",NULL,gba_settings.rewind?"On":"Off"}[f];
 }
 const char *gba_setting_source(int row)

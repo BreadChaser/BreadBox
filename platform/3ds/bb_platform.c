@@ -22,6 +22,8 @@
 #include "room.h"
 #include "bb_memprobe.h"
 #include "bb_save.h"
+#include "libui.h"
+#include "whatsnew.h"
 extern char *fake_heap_end;
 uint32_t bb_heap_available(void)
 {
@@ -91,19 +93,6 @@ void bb_sync_texture_copy(u32 *in, u32 indim, u32 *out, u32 outdim, u32 size, u3
  video_gpu_idle();
 }
 
-void bb_platform_release_menu(void)
-{
- bb_save_settle();   /* the last game's files written after it (bb_later): on the card first */
- bb_last_picture_release();
- /* Drain importer cleanup before stopping its worker. */
- covers_stop_wait();
- bb_index_shutdown();
- video_gpu_idle();covers_release_gpu();music_unload();
- icons_release();
- shelf_release();room_scene_release();room_hands_release();
- if(home_release_cache())room_scene_tv_maps_release();
- bb_mem_probe("menu released, system starting",NULL);
-}
 void bb_platform_restore_menu(void)
 {
  room_pace_return_start();
@@ -113,6 +102,7 @@ void bb_platform_restore_menu(void)
   /* the room's 400x240 target before the bookshelf's spine atlases take the
    * VRAM (after a game the library opens first): the order of a fresh start */
   if(gspHasGpuRight())room_scene_open();
+  if(gspHasGpuRight()){libui_init();bb_whatsnew_prepare();}
   bb_index_start(g_cfg.games_dir,false);
   shelf_restore_request();
  }

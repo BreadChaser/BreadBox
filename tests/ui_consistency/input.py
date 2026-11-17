@@ -26,8 +26,9 @@ static u32 held;
 static touchPosition touch;
 u32 input_keys_held(void){return held;}
 void hidTouchRead(touchPosition *p){*p=touch;}
+void ui_card_touch(touchPosition *p){hidTouchRead(p);}   /* a straight card: the tilt has its own test (tests/card_tilt) */
 enum {SFX_MOVE};static int moves;static void sfx_now(int e){(void)e;moves++;}
-'''+h[a:b]+'\n'+'\n'.join(function(n) for n in ['flist_dt','flist_update','flist_snap','flist_row_at','list_keys','ui_list_input','ui_card_update','ui_card_input'])+r'''
+'''+'#include "ui_card_scroll.h"\n'+'\n'.join(function(n) for n in ['flist_dt','flist_update','flist_snap','flist_row_at','list_keys','ui_list_input','ui_card_update','ui_card_input'])+r'''
 int main(void){
  flist_t f={0};int sel=0;
  flist_snap(&f,0,315,7);assert(f.scroll==0);
@@ -68,10 +69,26 @@ int main(void){
   cs=0;k=ui_card_input(&c,12,&cs,KEY_UP);assert(cs==0);k=ui_card_input(&c,12,&cs,KEY_DOWN|KEY_RIGHT);assert(cs==1 && (k&KEY_RIGHT));
   cs=11;ui_card_input(&c,12,&cs,KEY_DOWN);assert(cs==11);
  }
+ // Read-only cards use these same production repeat and motion functions.
+ {
+  flist_t reader={0};ui_card_scroll_t scroll={0};input_contact_t contact={0};
+  held=KEY_CPAD_DOWN;ui_card_scroll_input(&scroll,&reader,12,held,contact);
+  for(int i=0;i<180;i++)ui_card_scroll_input(&scroll,&reader,12,0,contact);
+  assert(scroll.top==6 && reader.scroll==6 && !reader.scroll_v);
+  held=KEY_UP;ui_card_scroll_input(&scroll,&reader,12,held,contact);
+  for(int i=0;i<180;i++)ui_card_scroll_input(&scroll,&reader,12,0,contact);
+  assert(scroll.top==0 && reader.scroll==0);
+  held=0;contact=(input_contact_t){UI_CARD_TEXT_X,UI_CARD_ROWS_Y+4*UI_CARD_ROW,true,true};
+  ui_card_scroll_input(&scroll,&reader,12,0,contact);contact.down=false;contact.y-=3*UI_CARD_ROW;
+  for(int i=0;i<180;i++)ui_card_scroll_input(&scroll,&reader,12,0,contact);
+  assert(scroll.top==3 && reader.scroll==3 && !reader.scroll_v);
+  contact.held=false;assert(ui_card_scroll_input(&scroll,&reader,12,KEY_B,contact)==KEY_B);
+  ui_card_scroll_input(&scroll,&reader,3,KEY_DOWN,contact);assert(!scroll.top);
+ }
 }
 '''
 with tempfile.TemporaryDirectory() as t:
  p=Path(t);(p/'check.c').write_text(code)
- subprocess.run(['cc','-std=gnu11','-Wall','-Wextra','-Werror','-Wno-misleading-indentation','-fsanitize=address,undefined','-I'+str(root/'tests/app/host'),'-I'+str(root/'app/ui'),'-I'+str(root/'include/breadbox'),'-I'+str(root/'platform/3ds'),str(p/'check.c'),'-lm','-o',str(p/'check')],check=True)
+ subprocess.run(['cc','-std=gnu11','-Wall','-Wextra','-Werror','-Wno-misleading-indentation','-include','stddef.h','-fsanitize=address,undefined','-I'+str(root/'tests/app/host'),'-I'+str(root/'app/ui'),'-I'+str(root/'include/breadbox'),'-I'+str(root/'platform/3ds'),str(p/'check.c'),str(root/'app/ui/card_scroll.c'),'-lm','-o',str(p/'check')],check=True)
  subprocess.run([str(p/'check')],check=True)
 print('Shared list canonical geometry, section navigation, tap/open, repeat, empty/clamped scroll, pause card scroll and touch rows PASS')

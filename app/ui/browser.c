@@ -19,6 +19,7 @@
 #include "ui_list.h"
 #include "ui_pause.h"
 #include "ui.h"
+#include "ui_trace_card.h"
 #include "library.h"
 #include "uisound.h"
 #include "libui.h"

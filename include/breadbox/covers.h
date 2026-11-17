@@ -16,7 +16,7 @@ C3D_Tex *covers_small(int game, Tex3DS_SubTexture *sub);
 bool covers_full(int game);   // BreadBox: its full-size cover is shown (or none is coming)
 void covers_reset(void);
 // UI-thread transaction: drain workers before mutating library entries.
-void covers_library_begin(void);
+bool covers_library_begin(void);
 void covers_library_end(void);
 void covers_focus(int game);
 void covers_pump(void);
@@ -27,7 +27,13 @@ bool covers_busy(void);
 bool covers_home_frame(void);   // a menu frame: HOME held back during cover downloads (true: it went HOME)
 bool covers_stop(void);
 bool covers_library_try_begin(void);   // covers_library_begin that never waits: false until the worker is idle
-void covers_stop_wait(void);
+/* Failure retains every resource still reachable by background work. */
+#define COVERS_STOP_DEADLINE_MS 65000
+bool covers_stop_wait(void);
+bool covers_wait_home(void); /* retain a rejected HOME press for the menu */
+bool covers_stop_wait_apt(void); /* inside an APT hook: no recursive aptMainLoop */
+const char *covers_wait_error(void);
+const char *covers_stop_pending(void); /* NULL: paused and drained; otherwise the busy operation */
 void covers_resume(void);
 
 void covers_release_gpu(void);

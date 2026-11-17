@@ -2,8 +2,9 @@
 
 `check.py` enforces the controller / shared presentation / style-data boundary
 without the SDK and inspects both conditional app paths in the original source.
-Controllers cannot call raw drawing primitives. Components cannot contain numeric
-metrics; these live in `ui_style.h`. Existing game-frame, backdrop and debug
+Controllers cannot call raw drawing primitives. Components may not gain numeric
+literals: they are counted per file (`literals.json`, lowered with `--record`, never raised), so a new
+number needs a token in `ui_style.h`. Existing game-frame, backdrop and debug
 renderers are reviewed, fingerprinted exceptions. Adding a new screen-specific
 rectangle, text renderer, header or bar fails even if its geometry matches today.
 
@@ -18,7 +19,7 @@ Library feel: shelf_scene.c's reviewed exception changes only room_step camera
 invalidation: preserve its current pose/velocity on catalog rebuilds and settle
 with ui_motion. Drawing primitives, style roles and shared composition are unchanged.
 
-Library review follow-up: shelf_scene.c adds one shared, state-dependent L/R
+shelf_scene.c adds one shared, state-dependent L/R
 hint to the existing shelf card (L R glyphs: Jump 5 games / Turn the box; none when L/R do nothing).
 components/gba_settings_ui.inc adds the existing Use default action to the shared
 bar and updates the help text to X, matching the GBA controller and pause card.

@@ -12,7 +12,11 @@ typedef struct { TGLP_s *tglp; int ascent, lineFeed; } FINF_s;
    compare against it, not against the UI's own baseline token (tests/text_baseline). */
 #define HOST_SHEET_BASELINE 25
 typedef struct { float left, glyphWidth, charWidth; } charWidthInfo_s;
+#ifdef BB_MENU_SCRIPT
+typedef struct {void *data;unsigned size,width,height;} C3D_Tex;
+#else
 typedef void C3D_Tex;
+#endif
 typedef struct { unsigned short width, height; float left, top, right, bottom; } Tex3DS_SubTexture;
 typedef void C3D_RenderTarget;
 enum { C2D_WithColor=1, C2D_AlignCenter=2, C2D_AlignRight=4, C2D_WordWrap=8, C2D_AtBaseline=16 };

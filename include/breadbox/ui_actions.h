@@ -1,6 +1,6 @@
 #ifndef UI_ACTIONS_H
 #define UI_ACTIONS_H
-/* What a dialog's answer does, as an icon (owner 2026-11-05: no words on buttons, an icon must say what it does).
+/* What a dialog's answer does, as an icon.
  * The shared dialog API (ui_confirm_choice, ui_confirm_action, ui_confirm_pick, ui_help_pages) maps each caller's
  * answer ("A  Try again", "B  Other choices", "Next", ...) through this one table; an unknown answer keeps the
  * fallback (check for A, cross for B) and the host test fails, so a new answer must be given its icon here.

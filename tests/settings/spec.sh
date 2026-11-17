@@ -4,7 +4,7 @@ set -euo pipefail
 root=$(cd "$(dirname "$0")/../.." && pwd)
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
 cc -std=gnu11 -g -w -fsanitize=address,undefined -ffunction-sections -Wl,--gc-sections \
-	-I"$root/tests/app/host" -I"$root/app/ui" -I"$root/include/breadbox" -I"$root/platform/3ds" -I"$root/core/deps/libretro-common/include" \
+	-I"$root/tests/app/host" -I"$root/app/ui" -I"$root/include/breadbox" -I"$root/platform/3ds" -I"$root/core/deps/libretro-common/include" -I"$root/systems/ps1" \
 	-DPSX3D_TEST_PRESETS="\"$root/tests/settings/fixtures/presets\"" -DPSX3D_PS1_OVERCLOCK_PRESETS \
 	"$root/tests/settings/spec.c" "$root/tests/app/host/breadbox_stubs.c" "$root/systems/ps1/clip.c" "$root/app/ui/safefile.c" \
 	"$root/tools/input-replay/mock-core.c" $(pkg-config --cflags --libs freetype2) -lz -lm -o "$tmp/spec"

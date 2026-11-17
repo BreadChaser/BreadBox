@@ -1,5 +1,5 @@
-// The box in the hand turns round and round (owner 2026-11-12: "when you spin the game disc around it should loop
-// around"): shelf_input.h's sides for L / R / Front press sequences, and the case's yaw drawn every 60 Hz frame
+// The box in the hand turns continuously across the wrap:
+// shelf_input.h's sides for L / R / Front press sequences, and the case's yaw drawn every 60 Hz frame
 // from hands_for_shelf + hands_case_turn (as room_hands_draw applies it) with the shipped clips, both files
 // (case-motion.bbh, the default; hands.bbh with the hands), PS1 cases (jewel, PAL, multi-disc) and the GBA carton:
 // - R: front, spine, back, edge, front; L the other way; Front from each side by the shortest turn;

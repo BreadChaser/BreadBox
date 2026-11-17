@@ -8,7 +8,7 @@ static const char *time_of(unsigned s) { static char t[24]; ui_format_time(t, si
 static const char *games_of(int n) { static char t[24]; ui_format_games(t, sizeof t, n); return t; }
 static const char *clean(const char *in) { static char t[256]; ui_clean_title(in, t, sizeof t); return t; }
 static const char *tail(const char *in, int chars) { static char t[256]; ui_path_tail(t, sizeof t, in, chars); return t; }
-/* whole UTF-8 characters only (review r1b R1b-5: a cut inside a four-byte character) */
+/* whole UTF-8 characters only (a cut inside a four-byte character) */
 static int utf8_ok(const char *s)
 {
 	for (const unsigned char *p = (const unsigned char *)s; *p;) {

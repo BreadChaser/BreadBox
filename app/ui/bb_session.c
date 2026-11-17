@@ -16,11 +16,11 @@ bool bb_session_begin(const bb_system_t *s,const bb_launch *l)
 {
  (void)l;
  if(active || !s || s->abi!=BB_SYSTEM_ABI)return false;
+ if(!bb_platform_release_menu())return false;
  for(unsigned i=0;i<bb_system_count;i++) {
   const bb_shell_ops *ops=bb_systems[i]->shell;
   if(ops && ops->release_menu)ops->release_menu();
  }
- bb_platform_release_menu();
  if(!bb_platform_budget(s)) {bb_platform_restore_menu();return false;}
  active=s;
  if(!bb_platform_claim(s)) {active=NULL;bb_platform_restore_menu();return false;}

@@ -3,10 +3,14 @@
 from pathlib import Path
 import subprocess,tempfile
 r=Path(__file__).resolve().parents[2];s=(r/'app/ui/shelf.c').read_text();h=(r/'app/ui/shelf.h').read_text()
-types=h[h.index('#define SHELF_TITLE'):h.index('int shelf_run(char *path, size_t cap);')]
+model=(r/'app/ui/library_model.h').read_text()
+types=model[model.index('#define BB_LIBRARY_TITLE'):model.index('bool bb_library_item(')]
+types+=h[h.index('#define SHELF_TITLE'):h.index('int shelf_run(char *path, size_t cap);')]
+actions=(r/'app/ui/library_actions.c').read_text();actions=actions[actions.index('static const ui_button_t actions'):]
+
 helpers=s[s.index('static void pull('):s.index('// the box a game was started')]
-bars=s[s.index('static const ui_button_t bar_all'):s.index('static bool built, stats_stale, return_catalog;')]
-run=s[s.index('int shelf_run('):s.index('// Before a game:')]
+bars=s[s.index('static const ui_button_t *bar(void)'):s.index('static bool built, stats_stale, return_catalog;')]
+run=s[s.index('static PSX3D_COLD int shelf_publications('):s.index('// Before a game:')]
 prefix=r'''
 #include <assert.h>
 #include <stdbool.h>
@@ -18,6 +22,9 @@ prefix=r'''
 #include "3ds.h"
 #include "ui_motion.h"
 #include "shelf_input.h"
+#define PSX3D_COLD
+#define BB_LIBRARY_ACTIONS 4
+enum { BB_LIBRARY_SYSTEMS,BB_LIBRARY_GAMES,BB_LIBRARY_HELD,BB_LIBRARY_LIST };
 #define BB_TITLE_LEN 96
 #define BB_KEY_LEN 32
 #define MAX_ROWS 8
@@ -49,11 +56,11 @@ static float lerpf(float a,float b,float k){return a+(b-a)*k;}
 static int sounds;
 static void sfx_play(int s){sounds++;if(s==SFX_BACK)edge_sounds++;}
 static void sfx_cancel(void){}
-static bool item_of(const bb_system_t *s,int row,bb_catalog_item *i){(void)s;snprintf(i->key,sizeof(i->key),"%d",row);return true;}
-static void key_of(const bb_system_t*s,bb_catalog_item*i){(void)s;(void)i;}
-static bool playlog_toggle_favourite(const char*k){(void)k;toggles++;return false;}
+static bool bb_library_item(const bb_system_t *s,int row,bb_catalog_item *i){(void)s;snprintf(i->key,sizeof(i->key),"%d",row);return true;}
+static void bb_library_key(const bb_system_t*s,bb_catalog_item*i){(void)s;(void)i;}
+static bool bb_library_favorite(shelf_box *b,int n,const shelf_box *chosen,int *live){(void)b;(void)n;*live=chosen->row;toggles++;return true;}
 static void build(void){assert(view.pull<.002f || view.row!=0);builds++;generation=catalog_key;if(scenario==34 || scenario==35)strcpy(rows[1].box[0].key,"different-game");}
-static int box_item(const shelf_box*b,bb_catalog_item*i){return item_of(b->system,b->row,i)?b->row:-1;}
+static int bb_library_resolve(const shelf_box*b,bb_catalog_item*i){return bb_library_item(b->system,b->row,i)?b->row:-1;}
 bool aptMainLoop(void){return frame<frames;}
 static bool gspHasGpuRight(void){return true;}
 static void shelf_preload_end(bool menu){(void)menu;}
@@ -90,6 +97,10 @@ static bool launch(char*p,size_t n){(void)p;(void)n;if(scenario==27){paused=true
 #define video_room_3d() false
 #define music_play(...) ((void)0)
 static void covers_resume(void){paused=false;}
+#define theme_is_room() true
+#define list_look_library_hit(...) -1
+#define list_look_library_in_rows(...) false
+#define chosen_box() ((const shelf_box *)0)   /* the list themes' game (tests/shelf) */
 #define theme_room(...) false
 #define theme() 0
 #define room_pace_restart() ((void)0)
@@ -111,7 +122,7 @@ typedef int bb_index_status_t;
 #define room_pace_add(...) ((void)0)
 static bool library_settled(int still);
 static bool covers_stop(void){paused=true;return !worker_busy;}
-#define covers_library_begin() ((void)0)
+#define covers_library_begin() true
 #define covers_library_end() ((void)0)
 #define bb_system_total() (scenario==26?0:24)
 #define bb_index_complete() true
@@ -120,7 +131,9 @@ static bool covers_stop(void){paused=true;return !worker_busy;}
 #define settings_ui_run(...) ((void)(settings_open++))
 #define shelf_scene_strip_hit(...) -1
 #define shelf_scene_card_hit(...) -1
-#define covers_stop_wait() ((void)covers_stop())
+#define shelf_room_letter_hit(...) -1
+#define bb_library_letter_jump(row,selected,direction) (selected)   /* one letter: L / R stay (tests/library_letters) */
+#define covers_stop_wait() covers_stop()
 #define covers_reset() ((void)0)
 #define bb_games_dir_retry() ((void)0)
 #define settings_ui_take_folders() false
@@ -210,14 +223,14 @@ int main(void){
 with tempfile.TemporaryDirectory() as td:
  p=Path(td)
  settled=s[s.index('static bool library_settled(int still)'):s.index('static void first_view(void)')].replace('library_settled(', 'real_library_settled(')+ '\nstatic bool library_settled(int still){return scenario!=36 || real_library_settled(still); }\n'
- source=prefix+types+fakes+settled+s[s.index("static bool cover_drain_pending;"):s.index("// The shelves",s.index("static bool cover_drain_pending;"))].replace("static bool cover_drain_pending;", "")+helpers+bars+run+main
+ source=prefix+types+actions+fakes+settled+s[s.index("static bool cover_drain_pending;"):s.index("// The shelves",s.index("static bool cover_drain_pending;"))].replace("static bool cover_drain_pending;", "")+helpers+bars+run+main
  (p/'test.c').write_text(source)
  subprocess.run(['cc','-std=gnu11','-Werror=implicit-function-declaration','-Wno-unused-variable','-fsanitize=address,undefined','-I'+str(r/'tests/app/host'),'-I'+str(r/'include/breadbox'),'-I'+str(r/'app/ui'),str(p/'test.c'),'-lm','-o',str(p/'test')],check=True)
  subprocess.run([str(p/'test')],check=True)
 
  # Restore the orphaned-pause call site in a private source copy: the real loop
  # must fail at the cancel-frame assertion, not at unrelated cache setup.
- bad=source.replace('cover_drain(view.pull < .002f && view.pto == 0 && want_out < 0 && !launching && (publication_changed || generation != library_key()) && library_settled(still))', 'view.pull < .002f && view.pto == 0 && want_out < 0 && !launching && (publication_changed || generation != library_key()) && library_settled(still) && covers_stop()')
+ bad=source.replace('cover_drain(view.pull < .002f && view.pto == 0 && want_out < 0 && !launching && ((*publication_changed) || generation != library_key()) && library_settled(still))', 'view.pull < .002f && view.pto == 0 && want_out < 0 && !launching && ((*publication_changed) || generation != library_key()) && library_settled(still) && covers_stop()')
  assert bad!=source
  (p/'negative.c').write_text(bad)
  subprocess.run(['cc','-std=gnu11','-Werror=implicit-function-declaration','-I'+str(r/'tests/app/host'),'-I'+str(r/'include/breadbox'),'-I'+str(r/'app/ui'),str(p/'negative.c'),'-lm','-o',str(p/'negative')],check=True)
@@ -235,7 +248,7 @@ with tempfile.TemporaryDirectory() as td:
  print('Negative control: unconditional exit resume fails the production launch/close ownership assertion PASS')
 
  # A settled shared count is insufficient when an adapter's rows arrive later.
- bad=source.replace('(publication_changed || generation != library_key())', '(generation != library_key())')
+ bad=source.replace('((*publication_changed) || generation != library_key())', '(generation != library_key())')
  assert bad!=source
  (p/'publication-negative.c').write_text(bad)
  subprocess.run(['cc','-std=gnu11','-Werror=implicit-function-declaration','-I'+str(r/'tests/app/host'),'-I'+str(r/'include/breadbox'),'-I'+str(r/'app/ui'),str(p/'publication-negative.c'),'-lm','-o',str(p/'publication-negative')],check=True)

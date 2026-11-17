@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Review N2: the real boxes' mesh cache keys on the room file's light generation (room_file.gen, new on every
+"""The real boxes' mesh cache keys on the room file's light generation (room_file.gen, new on every
 room_style_use, which room_parse calls; tests/room/check.c covers both). This checks the rest of the wiring in
 room_scene.c: draw_boxes tests and records that same generation, and no private counter is back."""
 import pathlib, re

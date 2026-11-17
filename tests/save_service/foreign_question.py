@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Merge review B1: the question for a save that may be from another emulator, as the player meets it. The
+"""The question for a save that may be from another emulator, as the player meets it. The
 production ui_confirm_pick_n() (app/ui/ui.c) and the GBA question (systems/gba/gba.c save_damaged_ask) run on
 scripted frames and APT events, linked with the real bb_save.c, safe files and history on a temporary SD card,
 with a 128 KiB battery and a first-seen 32 KiB .sav. B, HOME > Close, power-off, sleep/wake again and again and

@@ -1,3 +1,4 @@
+#include "ui_terms.h"
 #include "ht_trace.h"
 #include "bb_save.h"
 #include "ui_format.h"
@@ -317,11 +318,11 @@ bool bb_save_state(unsigned slot,bool save)
  int card=bb_slot_card((int)slot);char said[96];
  if(poisoned)notice("Postcard load failed. Restart the game to continue.");
  else if(!save){
-  if(!ok)notice(UI_PC_LOAD_FAILED);
-  else if(card>=0){snprintf(said,sizeof(said),info.from==SAFE_CURRENT?UI_PC_LOADED:UI_PC_LOADED " from its backup",bb_slot_shown(card));notice(said);}
+  if(!ok)notice(ui_term(UI_TERM_LOAD_FAILED));
+  else if(card>=0){snprintf(said,sizeof(said),ui_term(info.from==SAFE_CURRENT?UI_TERM_LOADED:UI_TERM_LOADED_BACKUP),bb_slot_shown(card));notice(said);}
  }
- else if(!ok)notice(UI_PC_SAVE_FAILED);
- else if(card>=0){snprintf(said,sizeof(said),UI_PC_SAVED,bb_slot_shown(card));notice(said);}
+ else if(!ok)notice(ui_term(UI_TERM_SAVE_FAILED));
+ else if(card>=0){snprintf(said,sizeof(said),ui_term(UI_TERM_SAVED),bb_slot_shown(card));notice(said);}
  return ok;
 }
 /* Files written after the menu is back (bb_later): a game's Continue state at its end
@@ -825,7 +826,7 @@ static bool use_foreign(void *ram,size_t n)
  if(!ok)snprintf(damage_error,sizeof(damage_error),"%s","The game save could not be used. Check the SD card.");
  return ok;
 }
-/* A damaged battery (or clock) file with no good copy (J-01): the shell asks before the game
+/* A damaged battery (or clock) file with no good copy: the shell asks before the game
  * runs. Put the newest backup back, or start empty; either way the damaged file is set aside
  * first. A battery file of a size another emulator writes for this cartridge adds "Use it"
  * (use_foreign); nothing is ever converted without that answer. Without a question

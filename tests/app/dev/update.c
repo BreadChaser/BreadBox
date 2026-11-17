@@ -21,7 +21,7 @@ typedef struct {
 	u16 version;
 } AM_TitleInfo;
 #define PATH_LEN 512
-#include "../../../app/ui/app_policy.h"
+#include "../../../include/breadbox/app_policy.h"
 #define PSX3D_DIR APP_SD_ROOT
 #define R_FAILED(x) ((x) < 0)
 #define R_SUCCEEDED(x) ((x) >= 0)

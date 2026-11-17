@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""HOME > Close at each question asked before a game runs (review finding 3).
+"""HOME > Close at each question asked before a game runs.
 
 PS1: the real card_question.c and the real early exit of run_game with its leave_unplayed()
 (taken out of emu.c verbatim) run against fakes, linked like the app: --wrap sends retro_unload_game,
@@ -171,7 +171,7 @@ int main(void)
 	return 0;
 }
 '''
-# GBA teardown after a refused start: every GPU call guarded (the review's existing path)
+# GBA teardown after a refused start: every GPU call guarded
 tear = gba[gba.index('gba: phase=teardown begin'):gba.index('prepare_failed:')]
 assert 'video_gpu_idle' in tear
 for line in tear.splitlines():
@@ -191,8 +191,11 @@ with tempfile.TemporaryDirectory() as d:
                               'bool ui_confirm_choice(const char *,const char *,const char *,const char *,bool);\n'
                               'void ui_format_when(char *,size_t,time_t);\nvoid emu_osd(const char *);\nvoid emu_osd_alert(const char *);\n')
     (d / 'real.c').write_text(real)
+    # a copy, so its own folder's emu.h does not hide the stub
+    question = d / 'card_question.c'
+    question.write_text((root / 'systems/ps1/card_question.c').read_text())
     subprocess.run(flags[:1] + [f'-I{stub}'] + flags[1:] + [str(d / 'early.c'), str(d / 'real.c'),
-                   str(root / 'systems/ps1/card_question.c'), str(root / 'app/ui/breadbox_handoff.c'),
+                   str(question), str(root / 'app/ui/breadbox_handoff.c'),
                    '-Wl,--wrap=retro_init,--wrap=retro_deinit,--wrap=retro_unload_game,--wrap=video_game_end',
                    '-o', str(d / 'early')], check=True)
     subprocess.run([str(d / 'early')], check=True)

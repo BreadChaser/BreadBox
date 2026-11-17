@@ -1,6 +1,6 @@
 #include "bb_writers.h"
 #include "app_policy.h"
-// Settings file: sdmc:/3ds/PSX3D/config.ini
+// Settings file: sdmc:/3ds/BreadBox/config.ini
 //   lines "name=value" set frontend settings,
 //   lines "core.<option>=value" override PCSX-ReARMed core options.
 #include <stdio.h>
@@ -16,6 +16,7 @@
 #include "app_paths.h"
 #include "app_log.h"
 #include "app_config.h"
+#include "whatsnew.h"
 #include "cold_code.h"
 #include "core_options.h"
 #include "dev_switches.h"
@@ -34,8 +35,11 @@
 #include "system_3d.h"
 
 #define MAX_OVERRIDES 128
+static const char seen_key[] __attribute__((section(".gnu.linkonce.r.bb_seen_key"))) = "seen_version";
+static const char seen_format[] __attribute__((section(".gnu.linkonce.r.bb_seen_format"))) = "seen_version=%s\n";
 
 psx3d_config g_cfg;
+char config_seen_version[BB_SEEN_VERSION_CAP];
 
 static struct { char *key, *value; } ovr[MAX_OVERRIDES];
 static int novr;
@@ -237,6 +241,10 @@ static unsigned config_parse(FILE *f, bool import)
 		char *k = trim(l), *v = trim(eq + 1);
 		if (retired(k) || (!strncmp(k, "core.", 5) && forced_core(k + 5)) || (import && !importable(k, v)))
 			continue;
+		if (!strcmp(k, seen_key)) {
+			if (!import && strlen(v) < sizeof(config_seen_version)) snprintf(config_seen_version, sizeof(config_seen_version), "%s", v);
+			continue;
+		}
 		if (!strcmp(k, "welcome")) {   // the first-launch welcome's flag (welcome.c): not a setting
 			if (!import) config_welcome = atoi(v) ? 1 : 0;
 			continue;
@@ -338,6 +346,7 @@ void config_load(void)
 	nuser = 0;
 	set_defaults();
 	config_welcome = -1;
+	config_seen_version[0] = 0;
 	safe_recover(PSX3D_CONFIG);
 	f = fopen(PSX3D_CONFIG, "r");
 	if (!f) {migrate_touch_side();return;}
@@ -349,7 +358,7 @@ void config_load(void)
 	config_sync_stereo();
 }
 
-/* J-06: a PSX3D player's app-wide settings come over on BreadBox's very first start: PSX3D's
+/* a PSX3D player's app-wide settings come over on BreadBox's very first start: PSX3D's
  * config.ini is only read, never changed. It is read like BreadBox's own (config_parse), minus its
  * Continue lines (the save import brings Continue), and BreadBox writes its own file from what it
  * understood (config_save): unknown keys and values stay behind. Never when BreadBox has settings
@@ -452,6 +461,7 @@ void config_save(void)
 #undef SAVE_INT
 	if (g_cfg.debug)
 		fprintf(f, "debug=1\n");
+	if (config_seen_version[0]) fprintf(f, seen_format, config_seen_version);
 	if (config_welcome >= 0)   // kept by every reset: it is not a setting
 		fprintf(f, "welcome=%d\n", config_welcome);
 	for (int i = 0; i < novr; i++) {

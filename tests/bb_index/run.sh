@@ -80,7 +80,7 @@ PY
 done
 
 # A slow alphabetically earlier disc tree: system folders are still visited by priority, and with no scan deadline
-# (2026-11-12) both systems' games are all found.
+# both systems' games are all found.
 mkdir -p "$tmp/slow-root/(1994) Sony PlayStation" "$tmp/slow-root/(2001) Nintendo Game Boy Advance"
 cp "$tmp/roms/GBA/native.gba" "$tmp/slow-root/(2001) Nintendo Game Boy Advance/late.gba"
 for n in $(seq 1 50); do touch "$tmp/slow-root/(1994) Sony PlayStation/$n.cue"; done
@@ -91,7 +91,7 @@ cat > "$tmp/slow.c" <<'C'
 int main(void) {
  bb_index_start("slow-root",true);
  while(bb_index_busy())usleep(10000);
- /* no deadline any more (owner 2026-11-12): the old 250 ms budget flag below is ignored, every game is found */
+ /* no deadline any more: the old 250 ms budget flag below is ignored, every game is found */
  assert(bb_index_gba_count()==1);
  assert(bb_index_ps1_count()==50);
  assert(bb_index_status()==BB_INDEX_COMPLETE);
@@ -110,3 +110,25 @@ cp "$tmp/roms/GBA/native.gba" "$tmp/roms/GBA/added.gba"
 (cd "$tmp" && ./check changes 4)
 rm "$tmp/roms/GBA/added.gba"
 (cd "$tmp" && ./check changes 3)
+
+# The folders waiting to be walked: trees trunk completes complete here (cold), their memory is bounded over the whole traversal,
+# and a limit, an allocation failure or a cancel frees it all and keeps the cached games.
+${CC:-cc} -std=gnu11 -Wall -Wextra -Werror -g ${TEST_CFLAGS:-} \
+ -ffunction-sections -fdata-sections -Wl,--gc-sections -DBB_INDEX_TEST -DBB_INDEX_CACHE='"pending-index"' -I"$root/app/ui" -I"$root/include/breadbox" -I"$root/platform/3ds" \
+ $(pkg-config --cflags minizip) "${BB_INDEX_SOURCE:-$root/app/ui/bb_index.c}" \
+ "$root/systems/gba/sys_gba_scan.c" "$root/systems/ps1/sys_ps1_scan.c" "$root/tests/bb_index/registry.c" "$root/app/ui/bb_session.c" "$root/app/ui/bb_order.c" "$root/systems/gba/gba_saveid.c" "$root/systems/gba/gba_cart.c" "$root/app/ui/safefile.c" "$root/tests/bb_index/pending.c" \
+ -pthread $(pkg-config --libs minizip) -lz -o "$tmp/pending"
+mkdir "$tmp/branch-root"
+# no thread cache: glibc then reuses freed chunks whole, the allocator state tests/bb_index/pending.c fragments on purpose
+(cd "$tmp/branch-root" && GLIBC_TUNABLES=glibc.malloc.tcache_count=0 ../pending)
+
+# Re-enumeration must preserve raw prefix identities and treat metadata read failures as errors.
+${CC:-cc} -std=gnu11 -Wall -Wextra -Werror -g ${TEST_CFLAGS:-} \
+ -ffunction-sections -fdata-sections -Wl,--gc-sections -DBB_INDEX_TEST -DBB_INDEX_CACHE='"reread-index"' -I"$root/app/ui" -I"$root/include/breadbox" -I"$root/platform/3ds" \
+ $(pkg-config --cflags minizip) "${BB_INDEX_SOURCE:-$root/app/ui/bb_index.c}" \
+ "$root/systems/gba/sys_gba_scan.c" "$root/systems/ps1/sys_ps1_scan.c" "$root/tests/bb_index/registry.c" "$root/app/ui/bb_session.c" "$root/app/ui/bb_order.c" "$root/systems/gba/gba_saveid.c" "$root/systems/gba/gba_cart.c" "$root/app/ui/safefile.c" "$root/tests/bb_index/reread.c" \
+ -pthread -Wl,--wrap=opendir -Wl,--wrap=readdir -Wl,--wrap=closedir -Wl,--wrap=lstat $(pkg-config --libs minizip) -lz -o "$tmp/reread"
+for scenario in metadata-error balanced-rename case-permutation allocation-sweep; do
+ mkdir "$tmp/$scenario"
+ (cd "$tmp/$scenario" && ../reread "$scenario")
+done

@@ -1,9 +1,9 @@
-// BreadBox R10: the room main menu as a real 3D scene. The room and every object are PS1-style
+// BreadBox: the room main menu as a real 3D scene. The room and every object are PS1-style
 // low-poly models built by script in Blender (room3d/blender/*.py) and exported to a small binary
 // file per room style (BBR1, room3d/SPEC.md); this mock loads those files and draws them with
 // WebGL at the 3DS's native 400x240 (nearest textures, 16-bit atlas, baked vertex light).
-// Navigation is R9's: focus a place, A glides the camera there, B glides back.
-// Round 2: the library is part of the 3D room (a wall unit, one shelf row per system; a row scrolls
+// Navigation: focus a place, A glides the camera there, B glides back.
+// the library is part of the 3D room (a wall unit, one shelf row per system; a row scrolls
 // without end by recycling the bay geometry and streaming spines), the hand is a 3D model per room
 // style, Settings is an oscilloscope, and every way back is a glide from where the camera really is.
 'use strict';
@@ -20,7 +20,7 @@ const BreadBoxR10=(()=>{
  const CHANNELS=[{id:'display',label:'DISPLAY'},{id:'controls',label:'CONTROLS'},{id:'saves',label:'SAVES'},{id:'about',label:'ABOUT'},{id:'room',label:'ROOM'},{id:'hand',label:'HAND'}];
  const TRACE_NAME=['Lissajous 3:2','square wave','heartbeat','rose','circle','a hand'];
  const ROOM_CH=4,HAND_CH=5,NCH=CHANNELS.length;
- // sound hook (round 3): every animation moment dispatches a named 'bb-sfx' event (js/breadbox-sfx.js listens);
+ // sound hook: every animation moment dispatches a named 'bb-sfx' event (js/breadbox-sfx.js listens);
  // fired at the moment of contact in the animation, timed by the world clock; sim = an offline capture world
  function sfx(w,name,x){window.dispatchEvent(new CustomEvent('bb-sfx',{detail:Object.assign({name,t:w.t,sim:!!w.sim},x||{})}));}
  // fire marks when a tracked value crosses them (dir 1 = going up, -1 = going down, 0 = both)
@@ -39,7 +39,7 @@ const BreadBoxR10=(()=>{
   for(let i=0;i<nPart;i++,o+=48)parts.push({name:str(o,12),mode:u8[o+12],tex:u8[o+13],flags:u8[o+14],grp:str(o+16,12),first:dv.getUint32(o+28,true),count:dv.getUint32(o+32,true),
    pivot:[dv.getFloat32(o+36,true),dv.getFloat32(o+40,true),dv.getFloat32(o+44,true)]});
   for(let i=0;i<nAnc;i++,o+=56){const v=[];for(let k=0;k<10;k++)v.push(dv.getFloat32(o+16+k*4,true));anchors[str(o,16)]=v;}
-  // round 4 (version 2): light probes (an ambient cube each: +x -x +y -y +z -z, light / 2) after the anchors
+  // Version 2: light probes (an ambient cube each: +x -x +y -y +z -z, light / 2) after the anchors
   const ver=dv.getUint16(4,true),probes=[];
   if(ver>=2)for(let i=0,n=dv.getUint16(6,true);i<n;i++,o+=32)probes.push({p:[0,1,2].map(k=>dv.getFloat32(o+k*4,true)),c:[...Array(18)].map((_,k)=>u8[o+12+k]/255)});
   const vb=u8.slice(o,o+nV*stride),ib=new Uint16Array(u8.buffer.slice(o+nV*stride,o+nV*stride+nI*2));
@@ -117,7 +117,7 @@ const BreadBoxR10=(()=>{
  }`;
  // post pass: 15-bit colour (RGB555, what the PS1 wrote) with a light 4x4 ordered dither
  const PVS=`attribute vec2 aP;varying vec2 v;void main(){v=aP*.5+.5;gl_Position=vec4(aP,0.,1.);}`;
- // round 5: a slight vignette and a darkening film grain (3DS: one full-screen quad per eye, multiply blend: a 5x3
+ // a slight vignette and a darkening film grain (3DS: one full-screen quad per eye, multiply blend: a 5x3
  // vertex-colour grid for the vignette x a 64x64 I4 noise texture moved every frame; SPEC.md)
  const PFS=`precision mediump float;uniform sampler2D uTex;uniform float uDither,uOn,uVig,uGrain,uT;uniform vec2 uSize;varying vec2 v;
  float hh(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
@@ -198,7 +198,7 @@ const BreadBoxR10=(()=>{
  const nrm=v=>{const l=Math.hypot(...v)||1;return v.map(x=>x/l);};
  const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
 
- // ------------------------------------------------------------------ the library (round 3): 8 rows x 3 sections = 24 slots
+ // ------------------------------------------------------------------ the library: 8 rows x 3 sections = 24 slots
  // Every bay of a row is one system's section. Only owned systems are shown, packed from the top left in a
  // fixed order (gaps close up); unused slots stay empty shelf. Far away a section is ONE quad of a pre-baked
  // generic spine image (per spine style, baked once); the real spines (actual games, readable titles) exist only
@@ -228,7 +228,7 @@ const BreadBoxR10=(()=>{
   a2600:{name:'Atari 2600',plate:'ATARI 2600',short:'2600',n:66,box:{T:30,H:140,W:110},prop:'gba',style:'card',band:'#8a2a14',mock:true},
   a7800:{name:'Atari 7800',plate:'ATARI 7800',short:'7800',n:28,box:{T:30,H:140,W:110},prop:'gba',style:'card',band:'#6a6a6a',mock:true},
   jag:{name:'Jaguar',plate:'JAGUAR',short:'Jaguar',n:18,box:{T:30,H:140,W:122},prop:'gba',style:'card',band:'#a8141a',mock:true}};
- // the packing order (owner rule): Favorites first, then the systems by first release date, NEWEST first
+ // The packing order: Favorites first, then the systems by first release date, NEWEST first
  const RELEASED={psp:'2004-12-12',nds:'2004-11-21',gba:'2001-03-21',ws:'1999-03-04',dc:'1998-11-27',ngp:'1998-10-28',gbc:'1998-10-21',
   n64:'1996-06-23',vb:'1995-07-21',ps1:'1994-12-03',sat:'1994-11-22',s32x:'1994-11-21',jag:'1993-11-23',snes:'1990-11-21',gg:'1990-10-06',
   lynx:'1989-09-01',gb:'1989-04-21',md:'1988-10-29',pce:'1987-10-30',a7800:'1986-05-01',sms:'1985-10-20',nes:'1983-07-15',a2600:'1977-09-11'};
@@ -248,13 +248,13 @@ const BreadBoxR10=(()=>{
   while(out.size<n){const h=R8.ih(seed,i++,7),a=WA[Math.floor(h*WA.length)],b=WB[Math.floor(R8.ih(seed,i,9)*WB.length)],c=WC[Math.floor(R8.ih(seed,i,11)*WC.length)];out.add(a+' '+b+c);}
   return[...out].sort((x,y)=>x.localeCompare(y));
  }
- // round 8 (SPINE-SPEC-r8.md): PS1 jewel 10.5 (NA / JP), 17 (PAL), 25 (2+ discs); GBA 125 x 125 x 23 (NA / EU boxes)
+ // Case dimensions: PS1 jewel 10.5 (NA / JP), 17 (PAL), 25 (2+ discs); GBA 125 x 125 x 23 (NA / EU boxes)
  const MULTI_DISC=new Set(['Final Fantasy VII','Final Fantasy VIII','Final Fantasy IX','Metal Gear Solid','Chrono Cross','Xenogears','Resident Evil 2',
   'Parasite Eve','Parasite Eve II','The Legend of Dragoon','Lunar: Silver Star Story Complete','Lunar 2: Eternal Blue Complete','Valkyrie Profile',
   'Resident Evil 3: Nemesis','Fear Effect','Fear Effect 2: Retro Helix','Star Ocean: The Second Story','Wild Arms 2','Grandia','Thousand Arms','Dino Crisis 2']);
  const discsOf=g=>g.discs||(MULTI_DISC.has(g.title)?2:1);
  const BOXOF=g=>g.sys==='ps1'?{T:OPT.thick||(discsOf(g)>1?25:region(g)==='eu'?17:10.5),H:125,W:142}:g.sys==='gba'?{T:23,H:125,W:125}:SYS[g.sys].box;
- const LIBROWS=[];        // round 3: the owned SECTIONS (kept under the old name); index = section id
+ const LIBROWS=[];        // the owned SECTIONS (kept under the old name); index = section id
  function library(rm){
   if(LIBROWS.length)return LIBROWS;
   const C=rm.CASE;
@@ -282,7 +282,7 @@ const BreadBoxR10=(()=>{
  const SPINE={};
  const PUBS=['BREADSOFT','PIXEL HOUSE','NORTHWIND','KITE GAMES','RED OAK','LUMEN','ORBIT WORKS','TIDE','HOLLOW HILL','SUNDIAL'];
  function region(g){const h=R8.ih(g.title.length,g.title.charCodeAt(0),g.title.charCodeAt(g.title.length-1));return h<.7?'us':h<.9?'eu':'jp';}
- // round 8: a cover's dominant saturated colour (12 hue bins weighted by saturation x value; the top bin's mean,
+ // a cover's dominant saturated colour (12 hue bins weighted by saturation x value; the top bin's mean,
  // lightness kept in 18-82 %), the GBA spine's background when there is no scan
  function coverColor(fr){if(!fr)return null;const W=24,H=24,c=canvas(W,H),k=c.getContext('2d');k.drawImage(fr,0,0,W,H);const d=k.getImageData(0,0,W,H).data,bin=[];
   for(let i=0;i<d.length;i+=4){const r=d[i],g=d[i+1],b=d[i+2],mx=Math.max(r,g,b),mn=Math.min(r,g,b),v=mx/255,sat=mx?(mx-mn)/mx:0;if(sat<.2||v<.15)continue;
@@ -300,7 +300,7 @@ const BreadBoxR10=(()=>{
    k.font=`700 ${z}px ${SANS}`;if(shadow){k.fillStyle=shadow;k.fillText(g.title,1,1);}k.fillStyle=col;k.fillText(g.title,0,0);k.restore();};
   const vtext=(t,y0,col,px)=>{k.save();k.translate(16,y0);k.rotate(Math.PI/2);k.textBaseline='middle';k.font=`700 ${px}px ${SANS}`;k.fillStyle=col;k.fillText(t,0,0);k.restore();};
   const mark=(y,col)=>{k.strokeStyle=col;k.lineWidth=1.5;R8.rr(k,9,y,14,14,3);k.stroke();k.fillStyle=col;k.beginPath();k.moveTo(16,y+3);k.lineTo(20,y+7);k.lineTo(16,y+11);k.lineTo(12,y+7);k.fill();};
-  // the cover's art strip (PS1/GBA: R8's cover art; mock systems: their colours), so no two spines look alike
+  // the cover's art strip (PS1/GBA: cover art; mock systems: their colours), so no two spines look alike
   const fr=g.sys==='ps1'||g.sys==='gba'?R8.boxTex(R8.game(g.sys,g.title)).front:null;
   const artStrip=(y0,y1,a)=>{k.globalAlpha=a;if(fr){k.drawImage(fr,fr.width*.03,0,fr.width*.2,fr.height,0,y0,32,y1-y0);
     k.globalCompositeOperation='soft-light';k.fillStyle=`rgb(${art})`;k.fillRect(0,y0,32,y1-y0);k.globalCompositeOperation='screen';k.fillStyle=`rgba(${art},.28)`;k.fillRect(0,y0,32,y1-y0);k.globalCompositeOperation='source-over';}
@@ -308,10 +308,10 @@ const BreadBoxR10=(()=>{
     for(let i=0;i<6;i++){k.fillStyle=`rgba(255,255,255,${.06+.06*rnd(h*50+i)})`;k.fillRect(0,y0+rnd(h*70+i)*(y1-y0),32,6+rnd(i+h)*20);}}k.globalAlpha=1;};
   const titleBand=(y0,y1)=>{const gr=k.createLinearGradient(0,0,32,0);gr.addColorStop(0,'rgba(0,0,0,0)');gr.addColorStop(.3,'rgba(0,0,0,.42)');gr.addColorStop(.7,'rgba(0,0,0,.42)');gr.addColorStop(1,'rgba(0,0,0,0)');k.fillStyle=gr;k.fillRect(0,y0,32,y1-y0);};
   if(style==='jewel'||style==='clam'||style==='case'){
-   // authentic region styles (owner's pick, round 3): NTSC-U black with a white title; PAL black with a white
+   // authentic region styles: NTSC-U black with a white title; PAL black with a white
    // publisher band at the foot; JP spine card (white, coloured cap, black title). Neutral mark, no logos.
    if(style==='jewel'){
-    // round 8 (owner + refs, SPINE-SPEC-r8.md): NA black; PAL black or dark blue with PAL under the wordmark and a
+    // Region-specific spine layout: NA black; PAL black or dark blue with PAL under the wordmark and a
     // light foot band; JP the white spine card with the product code at the foot. The wordmark as plain text.
     const jp=rg==='jp',eu=rg==='eu',blue=eu&&h>.66,ink=jp?'#151515':'#f6f6f2';
     const gr=k.createLinearGradient(0,0,0,256);
@@ -331,7 +331,7 @@ const BreadBoxR10=(()=>{
     if(rg==='eu'&&style==='jewel'){k.fillStyle='#f4f4f4';k.fillRect(0,214,32,42);vtext(pub,218,'#111',7);}else vtext(pub,220,light?'#333':'#c8c8c8',7);
     k.fillStyle='rgba(255,255,255,.14)';k.fillRect(3,0,1,256);}
   }else if(style==='card'&&g.sys==='gba'){
-   // round 8 (owner: "zero consistency between GBA games"; SPINE-SPEC-r8.md): a real spine scan when one is fetched
+   // Consistent GBA spines: a real spine scan when one is fetched
    // (above), else one solid colour from the game's own cover (the dominant saturated colour), the title, and a
    // small GAME BOY ADVANCE in plain text at the foot
    const c=coverColor(fr)||art,L=.3*c[0]+.59*c[1]+.11*c[2],light=L>150,ink=light?'#141414':'#ffffff';
@@ -387,7 +387,7 @@ const BreadBoxR10=(()=>{
   const vtx=(x,y,z,u,v,l)=>{V.push([x,y,z,u*16,v*16,l,slot,uv2?uv2(x,y):[1,1]]);return n++;};
   const baked=OPT.lm&&rm.f.anchors['slm.0.0'];
   const quad=(x0,x1,y0,y1,z,u0,v0,u1,v1,l)=>{const a=vtx(x0,y1,z,u0,v0,l),b=vtx(x1,y1,z,u1,v0,l),c=vtx(x1,y0,z,u1,v1,l),d=vtx(x0,y0,z,u0,v1,l);I.push(a,c,b,a,d,c);};
-  const lit=baked?1.0:rm.id==='night'?.6:rm.id==='apartment'?1.0:.84;   // round 5: the baked slabs carry the light
+  const lit=baked?1.0:rm.id==='night'?.6:rm.id==='apartment'?1.0:.84;   // the baked slabs carry the light
   LIBROWS.forEach(sec=>{slot=sec.i===cur?2:sec.i===hsel?1:0;const[u,v]=tileOf(sec),f=sec.fill,b=sec.base;uv2=baked?(x,y)=>slmUV(rm,sec.r,sec.c,x,y):null;
    const fl=sec.i%2;   // every other section mirrors the tile, so neighbours don't repeat
    quad(sec.xin0,sec.xin0+sec.inner*f,b,b+C.gap-C.board,6,fl?u+128*f:u,v+.02,fl?u:u+128*f,v+64,lit);});
@@ -396,13 +396,13 @@ const BreadBoxR10=(()=>{
    quad(sec.cx-80,sec.cx+80,b-C.board+3,b-3,-2.5,x+.5,v+.5,x+127.5,v+15.5,1.0);});
   return STRIPMESH={key,m:meshFrom(pack(V,I)),count:I.length};
  }
- // round 5: vertices with a lightmap uv (v[7], texels) get the room's 20-byte layout
+ // vertices with a lightmap uv (v[7], texels) get the room's 20-byte layout
  function pack(V,I){const st=V.some(v=>v[7])?20:16,buf=new ArrayBuffer(V.length*st),dv=new DataView(buf);
   V.forEach((v,i)=>{const o=i*st;if(st===20){dv.setInt16(o+16,Math.round(v[7][0]*16),true);dv.setInt16(o+18,Math.round(v[7][1]*16),true);}dv.setInt16(o,Math.round(v[0]),true);dv.setInt16(o+2,Math.round(v[1]),true);dv.setInt16(o+4,Math.round(v[2]),true);dv.setInt16(o+6,v[6]||0,true);
    dv.setInt16(o+8,Math.round(v[3]),true);dv.setInt16(o+10,Math.round(v[4]),true);const l=Array.isArray(v[5])?v[5]:[v[5],v[5],v[5]];for(let c=0;c<3;c++)dv.setUint8(o+12+c,clamp(Math.round(l[c]*128),0,255));dv.setUint8(o+15,255);});
   return{vb:new Uint8Array(buf),ib:new Uint16Array(I),stride:st};}
 
- // ---- real boxes near the camera: a spine ring streamed as you scroll. Round 3: 32x256 cells (readable
+ // ---- real boxes near the camera: a spine ring streamed as you scroll. 32x256 cells (readable
  // titles), 512x512 = 32 cells, cell 31 is plain white (box tops and sides) -> 31 real boxes at most.
  const RCW=32,RCH=256,RCOLS=16,RCELLS=31;
  const RINGCV=canvas(512,512);let RING_T=null;const RING={cell:new Map(),slot:new Array(RCELLS).fill(null),loads:0,dirty:false};
@@ -418,9 +418,9 @@ const BreadBoxR10=(()=>{
  function boxMesh(rm,w,row,list){
   const C=rm.CASE,V=[],I=[];let n=0;
   const baked=OPT.lm&&rm.f.anchors['slm.0.0'];
-  const vtx=(x,y,z,u,v,c)=>{V.push([x,y,z,u*16,v*16,c,0,baked?slmUV(rm,row.r,row.c,x,y):[1,1]]);return n++;};   // round 5: the slab's baked light
+  const vtx=(x,y,z,u,v,c)=>{V.push([x,y,z,u*16,v*16,c,0,baked?slmUV(rm,row.r,row.c,x,y):[1,1]]);return n++;};   // the slab's baked light
   const quad=(W,uv,c)=>{const a=vtx(...W[0],uv[0],uv[1],c),b=vtx(...W[1],uv[2],uv[1],c),d=vtx(...W[2],uv[2],uv[3],c),e=vtx(...W[3],uv[0],uv[3],c);I.push(a,d,b,a,e,d);};
-  const lit=baked?1.0:rm.id==='night'?.8:rm.id==='apartment'?1.0:.92,WU=[(RCELLS%RCOLS)*RCW+15.5,Math.floor(RCELLS/RCOLS)*RCH+127.5];   // round 3: spines lit a little more (legibility)
+  const lit=baked?1.0:rm.id==='night'?.8:rm.id==='apartment'?1.0:.92,WU=[(RCELLS%RCOLS)*RCW+15.5,Math.floor(RCELLS/RCOLS)*RCH+127.5];   // spines lit a little more (legibility)
   for(const{g,x,dz,hl}of list){
    const cell=ringCell(row,g),cx=(cell%RCOLS)*RCW,cy=Math.floor(cell/RCOLS)*RCH,b=g.b,col=[lit*hl,lit*hl,lit*hl];
    const x0=x-b.T/2,x1=x+b.T/2,y0=row.base,y1=row.base+b.H,z0=4+dz,z1=4+b.W+dz;
@@ -440,7 +440,7 @@ const BreadBoxR10=(()=>{
  // ------------------------------------------------------------------ props (the held box / the case that opens)
  let PROPS=null;const CASECV=canvas(256,256);let CASE_T=null,CASE_KEY=null;
  function props(){if(PROPS)return PROPS;initGL();const f=parse(window.ROOM3D.props),m=meshFrom(f),parts={};f.parts.forEach(p=>parts[p.name]=p);CASE_T=texFrom(256,256,null,0);return PROPS={f,m,parts};}
- // round 10 (owner: authentic, no numbers): when we have no real back scan, a plain back in the real style instead
+ // Authentic case backs: when we have no real back scan, a plain back in the real style instead
  // of the library card: GBA cardboard back (the cover's colour, the system band down the left with GAME BOY
  // ADVANCE, the title, two screens cut from the cover art, blurb lines); PS1 jewel insert (dark, the spine strips
  // at both edges, the title, two screens, blurb lines). No codes or numbers.
@@ -509,7 +509,7 @@ const BreadBoxR10=(()=>{
   gl.enableVertexAttribArray(P.a.aPos);gl.vertexAttribPointer(P.a.aPos,4,gl.SHORT,false,16,0);
   gl.enableVertexAttribArray(P.a.aUV);gl.vertexAttribPointer(P.a.aUV,2,gl.SHORT,false,16,8);
   gl.enableVertexAttribArray(P.a.aCol);gl.vertexAttribPointer(P.a.aCol,4,gl.UNSIGNED_BYTE,true,16,12);
-  // round 4: the room's 20-byte vertices carry the lightmap uv; every other mesh points at the neutral texel
+  // the room's 20-byte vertices carry the lightmap uv; every other mesh points at the neutral texel
   if(m.stride===20){const st=20;gl.vertexAttribPointer(P.a.aPos,4,gl.SHORT,false,st,0);gl.vertexAttribPointer(P.a.aUV,2,gl.SHORT,false,st,8);gl.vertexAttribPointer(P.a.aCol,4,gl.UNSIGNED_BYTE,true,st,12);
    gl.enableVertexAttribArray(P.a.aUV2);gl.vertexAttribPointer(P.a.aUV2,2,gl.SHORT,false,st,16);}
   else{gl.disableVertexAttribArray(P.a.aUV2);gl.vertexAttrib2f(P.a.aUV2,16,16);}
@@ -537,7 +537,7 @@ const BreadBoxR10=(()=>{
   gl.uniform4f(u.uScP,S[6],S[9],S[7],0);gl.uniform2f(u.uLab,OPT.nolab?0:L[3],OPT.nolab?0:L[4]);
  }
  // the room (+ the library strips/boxes); `o.hideLib` leaves the boxes out (zoomed far away), `o.only` = 'card'
- // round 4: the room's Cycles lightmap (texture unit 1, bilinear by default, nearest with OPT.lmNearest)
+ // the room's Cycles lightmap (texture unit 1, bilinear by default, nearest with OPT.lmNearest)
  function lightmapBind(P,rm){const i=rm.f.tex.findIndex(t=>t.name==='light');if(i<0){OPT.lm=0;return;}const T=rm.T[i];
   gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,T.t);const f=OPT.lmNearest?gl.NEAREST:gl.LINEAR;
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,f);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,f);
@@ -553,13 +553,13 @@ const BreadBoxR10=(()=>{
   // floor: what must stay readable (box art, spines) never goes below it; the colour of the light is kept
   const r=c.map(v=>2*v/ws),m=Math.max(...r,1e-3);return m>=floor?r:r.map(v=>v*floor/m);}
  const tintMul=(a,b)=>a.map((v,i)=>v*b[i]);
- // round 5 (owner): the games stay white: box art takes the light's level, little of its colour
+ // Lighting: the games stay white: box art takes the light's level, little of its colour
  const neutral=(c,keep=.25)=>{const L=.299*c[0]+.587*c[1]+.114*c[2];return c.map(v=>L+(v-L)*keep);};
- // round 5 (owner): the hands carry a small warm fill of their own, so the night room's cool light doesn't turn
+ // Lighting: the hands carry a small warm fill of their own, so the night room's cool light doesn't turn
  // them grey-blue (part neutral, plus the fill, then the readability floor)
  const HANDFILL={night:[.16,.11,.05],rustic:[.06,.045,.03],apartment:[.04,.035,.03],nineties:[.06,.04,.05]};
  function handLight(rm,p,n){const f=HANDFILL[rm.id]||[0,0,0],h=neutral(probe(rm,p,n),.5).map((v,i)=>v+f[i]),m=Math.max(...h);return m>=.62?h:h.map(v=>v*.62/m);}
- // round 5: the shelf sections' baked light (lightbake.py slabs): anchor slm.<row>.<bay> = the cell's top-left
+ // the shelf sections' baked light (lightbake.py slabs): anchor slm.<row>.<bay> = the cell's top-left
  // lightmap texel, then the texel steps along x (left -> right) and along y (top -> bottom); [1,1] = neutral
  function slmUV(rm,r,k,x,y){const C=rm.CASE,a=OPT.lm&&rm.f.anchors[`slm.${r}.${k}`];if(!a)return[1,1];
   const x0=C.x0+k*C.bay+C.upr/2,x1=x0+C.bay-C.upr,y0=r*C.gap,y1=y0+C.gap-C.board,fx=clamp((x-x0)/(x1-x0),0,1),fy=clamp((y1-y)/(y1-y0),0,1);
@@ -593,7 +593,7 @@ const BreadBoxR10=(()=>{
   draw(P,T,pp.shadow.first,pp.shadow.count,{kind:1});
   gl.disable(gl.CULL_FACE);gl.blendFunc(gl.ONE,gl.ONE);
   scopeUniforms(P,rm,w);
-  // round 5: the god rays (part 'rays', just before 'glow') only in the room view: they fade out on the glide to a
+  // the god rays (part 'rays', just before 'glow') only in the room view: they fade out on the glide to a
   // place and back in on the way home (a second draw only during the glide); close-ups don't pay their fill
   const rk=!pp.rays?0:w.mode==='home'?1:w.mode==='go'?1-smooth((t-w.t0)/GLIDE):w.mode==='back'?smooth((t-w.t0)/GLIDE):0;
   if(rk>.001&&rk<.999)draw(P,T,pp.rays.first,pp.rays.count,{kind:2,mode:1,fade:rk});
@@ -611,9 +611,9 @@ const BreadBoxR10=(()=>{
    gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,FTEX);gl.uniform1f(PP.u.uDither,OPT.dither);gl.uniform1f(PP.u.uVig,OPT.vig?.26:0);gl.uniform1f(PP.u.uGrain,OPT.grain?.045:0);gl.uniform1f(PP.u.uT,POST_T);gl.uniform1f(PP.u.uOn,OPT.ps1?1:0);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);}
   return GLC;
  }
- const OPT={ps1:true,dither:1.0,skin:'2',glove:0,spines:'authentic',lm:1,lmNearest:0,vig:1,grain:1};let POST_T=0;   // lm: the Cycles lightmap (round 4)   // spines: authentic region styles (owner, round 3)
+ const OPT={ps1:true,dither:1.0,skin:'2',glove:0,spines:'authentic',lm:1,lmNearest:0,vig:1,grain:1};let POST_T=0;   // lm: the Cycles lightmap   // spines: authentic region styles
 
- // ---- the library in the room (round 3). Far: one draw of pre-baked quads (a generic tile per section + plates).
+ // ---- the library in the room. Far: one draw of pre-baked quads (a generic tile per section + plates).
  // Close: the section the camera glides into gets its real boxes (actual spines, readable titles), cross-faded in
  // over the generic tile as the camera arrives; the tile is then hidden (palette slot 2).
  const realFade=L=>smooth((L.zoom-.3)/.4);
@@ -625,7 +625,7 @@ const BreadBoxR10=(()=>{
   const cur=LIBROWS[L.row],fade=realFade(L),inLib=w.mode==='lib'||(w.mode!=='home'&&w.place==='library');
   const wallK=w.mode==='lib'?1-smooth(L.zoom):w.mode==='go'&&w.place==='library'?smooth((w.t-w.t0)/GLIDE):w.mode==='back'&&w.place==='library'?1-smooth((w.t-w.t0)/GLIDE):0;
   const S=stripMesh(rm,inLib&&L.zoom<.98?L.hsel:-1,inLib&&L.zoom>.001?L.row:-1);
-  lightmapBind(P,rm);const baked=OPT.lm&&rm.f.anchors['slm.0.0'];   // round 5: strips and real boxes sample their slab's baked light
+  lightmapBind(P,rm);const baked=OPT.lm&&rm.f.anchors['slm.0.0'];   // strips and real boxes sample their slab's baked light
   if(!baked){const rw=LIBROWS[L.row]||{cx:C.x0+C.bay*1.5,base:C.gap*3},pc=[rw.cx,rw.base+90,-60];tn=tintMul(tn,neutral(probe(rm,pc,[0,0,-1],.75)));}
   const pal=palette([{M:I4,T:[1-.25*wallK,1-.25*wallK,1-.22*wallK]},{M:I4,T:[1+.38*wallK,1+.3*wallK,1+.18*wallK]},{M:fade>.99?T4(0,0,4000):I4,T:[1,1,1]}]);
   bindMesh(P,S.m);gl.disable(gl.CULL_FACE);draw(P,SHELF_T,0,S.count,{tint:tn,pal,lm:baked});gl.enable(gl.CULL_FACE);
@@ -658,7 +658,7 @@ const BreadBoxR10=(()=>{
   c.restore();
  }
 
- // ---- the hands (round 3e): an articulated rig (js/room3d-hands.js). 17 bones per hand (sleeve, palm, three
+ // ---- the hands: an articulated rig (js/room3d-hands.js). 17 bones per hand (sleeve, palm, three
  // joints per finger and thumb), skinned in the vertex shader (one palette slot per vertex). Grips are solved
  // against the held object (js/room3d-grips.js: every joint curls until its bone rests on a surface; the max
  // penetration is reported per frame) and every hand moment blends between poses (eased). The left hand is the
@@ -669,7 +669,7 @@ const BreadBoxR10=(()=>{
  const HAND_WRIST=nrm([.34,-.46,.82]);
  const GLOVES=['bare','knit','leather','fingerless','work','mitten'];
  const GLOVE_NAME={bare:'bare hands',knit:'knit',leather:'leather',fingerless:'fingerless',work:'work gloves',mitten:'mittens'};
- const GLOVE_OFF=[[0,0],[128,0],[256,0],[0,128],[128,128],[256,128]];      // texel offset of each glove tile (hand.py UTILE, round 3g: 64x64 unwrap tiles)
+ const GLOVE_OFF=[[0,0],[128,0],[256,0],[0,128],[128,128],[256,128]];      // texel offset of each glove tile (hand.py UTILE, 64x64 unwrap tiles)
  const SKIN_NAME=['light','medium','dark','deep'];
  function rotAx(ax,a){const[x,y,z]=nrm(ax),c=Math.cos(a),s=Math.sin(a),t=1-c;
   return[t*x*x+c,t*x*y+s*z,t*x*z-s*y,0, t*x*y-s*z,t*y*y+c,t*y*z+s*x,0, t*x*z+s*y,t*y*z-s*x,t*z*z+c,0, 0,0,0,1];}
@@ -712,13 +712,13 @@ const BreadBoxR10=(()=>{
  const mixHandPose=(a,b,k)=>b.preOf&&b.preOf===a.g?RH.curlPose(b.pose,a.g,1-k):a.preOf&&a.preOf===b.g?RH.curlPose(a.pose,b.g,k):RH.stagePose(a.pose,b.pose,k);
  const mixS=(a,b,k)=>({B:blendM(a.B,b.B,k),pose:mixHandPose(a,b,k),ap:a.ap});
  const moveS=(s,M)=>({...s,B:mul(M,s.B),ap:nrm([0,1,2].map(i=>M[i]*s.ap[0]+M[4+i]*s.ap[1]+M[8+i]*s.ap[2]))});
- // a path through hand states [s0, s1, ...] with relative durations, u in 0..1 (round 3f): ONE ease over the whole
+ // a path through hand states [s0, s1, ...] with relative durations, u in 0..1: ONE ease over the whole
  // path (it starts and ends slowly, no stop at the waypoints); the wrist travels on a smooth curve through the
  // waypoints (cubic Hermite, Catmull-Rom tangents: arcs, no corners; a waypoint where the hand rests in place
  // has no tangent, so the hand never drifts while it holds on); the rotation turns per segment; the fingers run
  // a little behind the wrist (overlapping action)
  let PATHDBG=null;
- // round 7 (owner: "the animations are so rough"): 'arc' paths are retimed by their real motion. The path is
+ // Smooth motion: 'arc' paths are retimed by their real motion. The path is
  // sampled through the rig (every hand vertex), the largest vertex move between samples is summed, and time maps
  // to that distance through one smoothstep: the fastest point of the hand moves at an even, eased speed (peak 1.5x
  // the mean), whatever mix of wrist travel, wrist turn and finger curl the path has. Built once per path.
@@ -739,10 +739,10 @@ const BreadBoxR10=(()=>{
  }
  // the path itself at s (0..1, no easing): segment weights by length for 'arc' (palm, fingertip and finger travel)
  function pathAt(list,s,w){
-  const W_=w==='arc'?list._w||(list._w=list.slice(1).map((s_,i)=>{const a=list[i].B,b=s_.B;let d=0;for(const q of ARCPTS){const p=xf(a,q),r=xf(b,q);d=Math.max(d,Math.hypot(p[0]-r[0],p[1]-r[1],p[2]-r[2]));}return Math.max(50,d,poseTravel(list[i].pose,s_.pose));})):w||list.slice(1).map(()=>1),tot=W_.reduce((a,b)=>a+b,0);let x=clamp(s)*tot,i=0;   // round 7: smoothstep (peak speed 1.5x, was 3x)
+  const W_=w==='arc'?list._w||(list._w=list.slice(1).map((s_,i)=>{const a=list[i].B,b=s_.B;let d=0;for(const q of ARCPTS){const p=xf(a,q),r=xf(b,q);d=Math.max(d,Math.hypot(p[0]-r[0],p[1]-r[1],p[2]-r[2]));}return Math.max(50,d,poseTravel(list[i].pose,s_.pose));})):w||list.slice(1).map(()=>1),tot=W_.reduce((a,b)=>a+b,0);let x=clamp(s)*tot,i=0;   // smoothstep (peak speed 1.5x, was 3x)
   while(i<W_.length-1&&x>W_[i]){x-=W_[i];i++;}const k=clamp(x/W_[i]),a=list[i],b=list[i+1];
   const P=j=>{const q=list[Math.max(0,Math.min(list.length-1,j))].B;return[q[12],q[13],q[14]];},d2=(p,q)=>Math.hypot(p[0]-q[0],p[1]-q[1],p[2]-q[2]);
-  // Catmull-Rom tangents, clamped to the shorter neighbouring segment (round 7: no overshoot past a short end segment)
+  // Catmull-Rom tangents, clamped to the shorter neighbouring segment (no overshoot past a short end segment)
   const tan=j=>{if(j<=0||j>=list.length-1)return[0,0,0];const p=P(j-1),c=P(j),n=P(j+1),a=d2(p,c),b=d2(c,n);if(a<.5||b<.5)return[0,0,0];
    const m=[0,1,2].map(d=>(n[d]-p[d])*.5),k=Math.min(1,Math.min(a,b)/Math.max(1e-6,Math.hypot(...m)));return m.map(v=>v*k);};
   const p1=P(i),p2=P(i+1),m1=tan(i),m2=tan(i+1),k2=k*k,k3=k2*k,h00=2*k3-3*k2+1,h10=k3-2*k2+k,h01=-2*k3+3*k2,h11=k3-k2;
@@ -759,10 +759,10 @@ const BreadBoxR10=(()=>{
   const R=rigOf(rm),Sm=isMitt()?R.mitt:R.bare,A=st(gA),B=mB?moveS(st(gB),mB):st(gB);
   const evalP=list=>{let m=0;for(let i=0;i<=120;i++){const s=pathS(list,i/120,PW);m=Math.max(m,RH.pen(Sm,RH.fk(R,s.B,s.pose),boxes).max);if(m>3)break;}return m;};
   const Ap={...A,pose:fpre(gA,A),preOf:gA,g:null},Bp={...B,pose:fpre(gB,B),preOf:gB,g:null};let best=null;
-  // round 8: when nothing clears at `back`, the hand backs off further first (25 / 50 mm more: thick cases)
+  // when nothing clears at `back`, the hand backs off further first (25 / 50 mm more: thick cases)
   for(const bk of[back,back+25,back+50]){
    const Ab=backOff(Ap,bk),Bb=backOff(Bp,bk),mid=mixS(Ab,Bb,.5);
-   // round 8: + 350, 430 mm (thick cases)
+   // + 350, 430 mm (thick cases)
    for(const dist of[50,90,130,170,220,280,350,430])for(const d of[[0,1,0],[0,-1,0],[1,0,0],[-1,0,0],[.7,.7,0],[-.7,.7,0],[.7,-.7,0],[-.7,-.7,0],[0,.7,.7],[0,.7,-.7],[0,-.7,.7],[0,-.7,-.7]]){
     const W={B:mul(T4(d[0]*dist,d[1]*dist,d[2]*dist),mid.B),pose:openThumb(fpre(gA,A)),ap:mid.ap},list=[A,Ap,Ab,W,Bb,Bp,B],m=evalP(list);
     const sc=(m>.6?1000+m*100:0)+dist+bk;if(!best||sc<best.sc)best={sc,m,list,d,dist,back:bk};if(m<=.6)break;}
@@ -777,7 +777,7 @@ const BreadBoxR10=(()=>{
  function fpre(g,s){if(g.fpre)return g.fpre;const R=rigOf(ROOMS[Object.keys(ROOMS)[0]]),Sm=isMitt()?R.mitt:R.bare,ks=RH.CH('thumb'),only={};ks.forEach(k=>only[k]=1);
   let best=null;
   const D0=[[-.3,-.12,-.25],[.3,0,-.25],[0,-.2,-.35],[-.15,-.1,-.4],[0,0,-.45],[.15,-.15,-.3],[-.45,0,0],[.45,0,0]];
-  // round 8: the same lifts larger too (a thick case, PAL 17 mm, needed more than the round-3 set to clear 3 mm)
+  // Larger lifts for thicker cases (a thick case, PAL 17 mm, needs extra clearance to maintain a 3 mm gap)
   for(const d of[...D0,...D0.map(q=>q.map(v=>v*1.6)),...D0.map(q=>q.map(v=>v*2.2)),[0,0,0]]){
    const p=RH.copy(g.spec.pre);ks.forEach((k,j)=>{p[k*2]=s.pose[k*2]+d[j];p[k*2+1]=s.pose[k*2+1];});
    const gap=RH.pen(Sm,RH.fk(R,g.B,p),g.spec.boxes,only).gap,mag=Math.abs(d[0])+Math.abs(d[1])+Math.abs(d[2]),sc=(gap<=-3?0:100+gap*10)+mag;
@@ -787,11 +787,11 @@ const BreadBoxR10=(()=>{
  // ends (it slides onto its surface along the approach), moves in (clear by construction: the solver approached in
  // that pose), then the fingers curl onto the object along the solver's own path (index first, the others a moment
  // later). Letting go is the same backwards.
- // round 8: the open reaching hand with the thumb already in the grip's lifted approach position (the open
+ // the open reaching hand with the thumb already in the grip's lifted approach position (the open
  // pose's spread thumb cut through a thick case, PAL 17 mm, on the way in)
  const openThumb=pre=>{const p=RH.copy(P_OPEN());RH.CH('thumb').forEach(k=>{p[k*2]=pre[k*2];p[k*2+1]=pre[k*2+1];});return p;};
  function closeOn(g,k,back=30){const S=st(g),pre=fpre(g,S);
-  if(k<.55){const a=ease(clamp(k/.55)),p=RH.stagePose(openThumb(pre),pre,smooth(clamp(k/.5))),wb=bump(k,.08,.42);   // round 6: the fingers spread a little before they close (anticipation, still >= 4 mm off)
+  if(k<.55){const a=ease(clamp(k/.55)),p=RH.stagePose(openThumb(pre),pre,smooth(clamp(k/.5))),wb=bump(k,.08,.42);   // the fingers spread a little before they close (anticipation, still >= 4 mm off)
    if(wb>0)['index','middle','ring','pinky'].forEach((d,i)=>RH.CH(d).forEach((kk,j)=>{p[kk*2]-=wb*[.2,.16,.1][j];p[kk*2+1]+=wb*.04*(i-1.5);}));
    return{B:backOff(S,back*(1-a)).B,pose:p,ap:S.ap};}
   return{B:S.B,pose:RH.curlPose(pre,g,(k-.55)/.45),ap:S.ap};}
@@ -823,21 +823,21 @@ const BreadBoxR10=(()=>{
  }
  // a little "weight" bump: a damped bounce that starts at t = 0
  const settle=t=>t<=0?0:Math.sin(t*15)*Math.exp(-t*7);
- // round 6: overshoot-and-settle on a 0..1 move: on target at .82, swings ~A past it, settles exactly at 1 with zero
+ // overshoot-and-settle on a 0..1 move: on target at .82, swings ~A past it, settles exactly at 1 with zero
  // speed (clips still start and end on their poses); played backwards (put back, hands leaving) it is anticipation
- const overS=(v,A=.03)=>{v=clamp(v);return smooth(v/.82)+A*Math.sin(Math.PI*clamp((v-.62)/.38))**2;};   // round 7: smoothstep (peak speed 1.8x, was 3.7x)
+ const overS=(v,A=.03)=>{v=clamp(v);return smooth(v/.82)+A*Math.sin(Math.PI*clamp((v-.62)/.38))**2;};   // smoothstep (peak speed 1.8x, was 3.7x)
  const bump=(v,a,b)=>Math.sin(Math.PI*clamp((v-a)/(b-a)))**2;   // 0 -> 1 -> 0 over a..b, smooth at both ends
 
  // ------------------------------------------------------------------ the QR card: in its stand, or held up by the hand
- const CARD_GRAB=.34;   // round 7: .3 -> .34, a slower curl
+ const CARD_GRAB=.34;   // .3 -> .34, a slower curl
  function cardMatrix(rm,w,cam){
   const a=rm.A.card,piv=rm.parts.a_card.pivot,u=w.share.p;if(u<.002)return I4;
   const Rs=mul(rotY(a[3]),rotX(a[4]));
   const t=w.t,zoom=w.share.zoom,size=lerp(178,214,zoom),d=cam.F*a[6]/size,tilt=.05*Math.sin(IW*t),c=Math.cos(tilt),s=Math.sin(tilt);
   const r=[0,1,2].map(i=>cam.R[i]*c+cam.U[i]*s),up=[0,1,2].map(i=>cam.U[i]*c-cam.R[i]*s);
-  const off=lerp(-14,0,zoom)*d/cam.F,dy=(-6+2*Math.sin(IW*t+1.3))*d/cam.F;   // round 8: idles on the IDLE_P period (seamless loops)
+  const off=lerp(-14,0,zoom)*d/cam.F,dy=(-6+2*Math.sin(IW*t+1.3))*d/cam.F;   // idles on the IDLE_P period (seamless loops)
   const held=[0,1,2].map(i=>cam.pos[i]+cam.Fw[i]*d+cam.R[i]*off+cam.U[i]*dy);
-  const v=clamp((u-CARD_GRAB)/(1-CARD_GRAB)),k=overS(v,.03),lift=Math.sin(Math.PI*v)*60;   // round 3: the hand takes the card first, then lifts it
+  const v=clamp((u-CARD_GRAB)/(1-CARD_GRAB)),k=overS(v,.03),lift=Math.sin(Math.PI*v)*60;   // the hand takes the card first, then lifts it
   const sr=[Rs[0],Rs[1],Rs[2]],su=[Rs[4],Rs[5],Rs[6]];
   const R_=nrm([0,1,2].map(i=>lerp(sr[i],r[i],k))),U_=nrm([0,1,2].map(i=>lerp(su[i],up[i],k)));
   const N_=cross(R_,U_).map(v=>-v);
@@ -864,10 +864,10 @@ const BreadBoxR10=(()=>{
  }
  // ---- the library camera: the wall pose, gliding into one row (head-on), pulled back when scrolling fast
  function slotLX(row,f){const s=row.games,i=clamp(Math.floor(f),0,s.length-1),j=Math.min(s.length-1,i+1);return lerp(s[i].lx,s[j].lx,clamp(f-i,-.5,1.5));}
- // round 3 (owner, on a real 3DS): closer to the shelf so the titles on the spines are readable at 400x240
+ // At native device resolution: closer to the shelf so the titles on the spines are readable at 400x240
  const SHELF_D=360;
  function shelfPose(rm,w,pkTo){
-  const L=w.L,row=LIBROWS[L.row],hm=row.hmax||(row.hmax=Math.max(...row.games.map(g=>g.b.H))),D0=lerp(Math.max(325,540*(hm+26)/240),560,smooth(L.speed))   /* round 9: the device's close-up (room_section_pose, 10 % nearer) */,pk=pkTo!=null?pkTo:smooth((L.p-DOLLY[0])/(DOLLY[1]-DOLLY[0])),D=lerp(D0,660,pk),x=L.camx,y=row.base+hm/2+4+20*pk;   // a box in the hand: step back to look at it (round 11: over the first part of the take-out)
+  const L=w.L,row=LIBROWS[L.row],hm=row.hmax||(row.hmax=Math.max(...row.games.map(g=>g.b.H))),D0=lerp(Math.max(325,540*(hm+26)/240),560,smooth(L.speed))   /* the device's close-up (room_section_pose, 10 % nearer) */,pk=pkTo!=null?pkTo:smooth((L.p-DOLLY[0])/(DOLLY[1]-DOLLY[0])),D=lerp(D0,660,pk),x=L.camx,y=row.base+hm/2+4+20*pk;   // a box in the hand: step back to look at it (over the first part of the take-out)
   return{pos:[x,y+8,-D],look:[x,y,0],F:600,eye:lerp(12,18,L.speed),conv:D};
  }
  // the wall view: four rows of the case at a time, following the highlighted section's row
@@ -886,13 +886,13 @@ const BreadBoxR10=(()=>{
   return p;}
  function go(w,place){sfx(w,'glide',{to:place});w.from=curPose(w);w.place=place;w.mode='go';w.t0=w.t;w.share.zoom=w.share.zTo=0;if(place==='together')w.tog.sel=0;
   if(place==='library'){const L=w.L;L.level='wall';L.zoom=L.zFrom=L.zTo=0;}}
- // round 2 fix: the way back starts from the camera as it is NOW (round 1 read it after switching mode -> a cut)
+ // The way back starts from the current camera pose; reading it after switching mode causes a cut.
  function back(w){sfx(w,'back');sfx(w,'glide',{back:true,from:w.place});if(w.place==='settings')sfx(w,'settings-leave');const from=curPose(w);w.mode='back';w.t0=w.t;w.from=from;}
  function shareTo(w,to,dur){const s=w.share;s.from=s.p;s.to=to;s.t0=w.t;s.dur=dur;}
  function pull(L,to,dur,t){if(to===1){L.flip=L.flipFrom=L.flipTo=L.flipSide=0;}L.pFrom=L.p;L.pTo=to;L.pT0=t;L.pDur=dur;}
  function enterRow(w,r){sfx(w,'enter-row',{section:r,sys:LIBROWS[r].sid});const L=w.L,row=LIBROWS[r];L.row=r;L.level='shelf';L.cur=L.fsel=row.sel;L.cv=0;L.zFrom=L.zoom;L.zTo=1;L.zT0=w.t;L.arm=true;L.lastMove=w.t+1.1;
   L.lcam=slotLX(row,L.cur);L.camx=clamp(boxX(row,row.games[row.sel],secOff(row,L.lcam)),row.cx-58,row.cx+58);}
- // wall navigation (round 3): left / right within a row, up / down between rows (same column, or the row's last)
+ // wall navigation: left / right within a row, up / down between rows (same column, or the row's last)
  function wallMove(w,k){const L=w.L,n=LIBROWS.length,i=L.hsel,s=LIBROWS[i],nb=w.rm.CASE.nbay;let j=i;
   if(k==='LEFT'&&s.c>0)j=i-1;if(k==='RIGHT'&&s.c<nb-1&&i+1<n)j=i+1;
   if(k==='UP'&&i-nb>=0)j=i-nb;if(k==='DOWN'&&i+nb-s.c<n)j=Math.min(n-1,i+nb);
@@ -907,7 +907,7 @@ const BreadBoxR10=(()=>{
    if(k==='B'){back(w);return;}
    return;}
   const row=LIBROWS[L.row],n=row.games.length;
-  if((k==='L'||k==='R')&&L.pTo===1&&L.p>.98){L.flipSide=(L.flipSide+(k==='R'?1:2))%3;sfx(w,'flip',{side:['front','spine','back'][L.flipSide]});L.flipFrom=L.flip;L.flipTo=L.flipSide*Math.PI/2;   /* round 10: + turns the spine (-z) to the camera (- brought the free edge) */L.flipT0=w.t;return;}
+  if((k==='L'||k==='R')&&L.pTo===1&&L.p>.98){L.flipSide=(L.flipSide+(k==='R'?1:2))%3;sfx(w,'flip',{side:['front','spine','back'][L.flipSide]});L.flipFrom=L.flip;L.flipTo=L.flipSide*Math.PI/2;   /* + turns the spine (-z) to the camera (- brought the free edge) */L.flipT0=w.t;return;}
   if(k==='HOLDR'||k==='HOLDL'){if(L.pTo===1)pull(L,0,.4,w.t);L.hold=k==='HOLDR'?1:-1;L.holdT=w.t;L.fsel=row.sel;L.arm=true;return;}
   if(k==='REL'){L.hold=0;return;}
   if(k==='LEFT'||k==='RIGHT'||k==='L'||k==='R'){
@@ -932,8 +932,8 @@ const BreadBoxR10=(()=>{
   const L=w.L,rm=w.rm,C=rm.CASE,row=LIBROWS[L.row],n=row.games.length;
   L.zoom=lerp(L.zFrom,L.zTo,ease((w.t-L.zT0)/1.15));
   L.flipBase=lerp(L.flipFrom,L.flipTo,ease((w.t-L.flipT0)/TURN_T));
-  L.flip=lerp(L.flipFrom,L.flipTo,overS((w.t-L.flipT0)/TURN_T,.06));   // round 6: box and wrist turn a little past and settle (follow-through)
-  // round 7: the take-out clock runs linearly; every phase on it has its own ease (an eased clock under eased
+  L.flip=lerp(L.flipFrom,L.flipTo,overS((w.t-L.flipT0)/TURN_T,.06));   // box and wrist turn a little past and settle (follow-through)
+  // the take-out clock runs linearly; every phase on it has its own ease (an eased clock under eased
   // phases multiplied the speeds: the regrip took ~5 frames)
   L.p=lerp(L.pFrom,L.pTo,clamp((w.t-L.pT0)/L.pDur));
   L.flipLin=lerp(L.flipFrom,L.flipTo,clamp((w.t-L.flipT0)/TURN_T));
@@ -949,7 +949,7 @@ const BreadBoxR10=(()=>{
   // uprights and planks repeat every bay, so moving the window by one bay is invisible
   // inside a section the camera stays near its middle; the boxes slide along it and disappear behind the uprights
   if(L.zoom>.001||L.level==='shelf'){L.lcam=slotLX(row,L.cur);const tx=clamp(boxX(row,row.games[Math.round(clamp(L.cur,0,n-1))],secOff(row,L.lcam)),row.cx-58,row.cx+58);L.camx+=(tx-L.camx)*Math.min(1,dt*7);}
-  // round 8 (owner): no auto take-out on hover: browsing only tips the box out (TIP), A takes it
+  // Browsing: no auto take-out on hover: browsing only tips the box out (TIP), A takes it
  }
  function act(w,k){
   if(w.t-w.playT0<1.6)return;
@@ -980,18 +980,18 @@ const BreadBoxR10=(()=>{
   if(w.mode==='back'&&w.t-w.t0>=GLIDE){w.mode='home';const h=homePose(rm,w);w.att={pos:h.pos.slice(),look:h.look.slice()};w.attV={pos:[0,0,0],look:[0,0,0]};w.place=null;}
   libStep(w,dt);
   if(w.after&&w.t>=w.after.t){const f=w.after.f;w.after=null;if(f==='lift'&&w.mode==='at')shareTo(w,1,CARD_IN);if(f==='back')back(w);}
-  const s=w.share;s.p=lerp(s.from,s.to,clamp((w.t-s.t0)/s.dur));   // round 7: linear clock, eased phasess.zoom+=(s.zTo-s.zoom)*Math.min(1,dt*6);
+  const s=w.share;s.p=lerp(s.from,s.to,clamp((w.t-s.t0)/s.dur));   // linear clock, eased phasess.zoom+=(s.zTo-s.zoom)*Math.min(1,dt*6);
   w.tuneV+=(-90*(w.tune-w.tuneSel)-15*w.tuneV)*dt;w.tune+=w.tuneV*dt;
   for(let i=0;i<2;i++)w.tog.lift[i]+=((w.mode==='at'&&w.place==='together'&&w.tog.sel===i?1:0)-w.tog.lift[i])*Math.min(1,dt*7);
   w.play=w.playT0>0?clamp((w.t-w.playT0)/1.4):0;if(w.play>=1)w.playT0=-10;
   w.pick.k+=((w.pick.on&&w.mode==='at'&&w.place==='settings'?1:0)-w.pick.k)*Math.min(1,dt*4.5);
-  w.pick.s=clamp((w.pick.s||0)+(w.pick.on&&w.mode==='at'&&w.place==='settings'?1:-1)*dt/PICK_T);   // round 7: the hands' own linear clock
+  w.pick.s=clamp((w.pick.s||0)+(w.pick.on&&w.mode==='at'&&w.place==='settings'?1:-1)*dt/PICK_T);   // the hands' own linear clock
   if(w.mode!=='at')w.pick.on=false;
   events(w);
   const o=w.open;if(o){const e=openT(w);if(!o.done&&e>=openLen(o)+BLACK_T){o.done=true;o.t1=w.t;if(w.onStart)w.onStart(o.g);}if(o.done&&w.t-o.t1>.9+BACK_T)w.open=null;}
  }
  function events(w){const L=w.L;
-  // round 11: the hand rises, the case slides out (+ lifts off), the hand takes it; backwards: it slides home, the hand leaves
+  // the hand rises, the case slides out (+ lifts off), the hand takes it; backwards: it slides home, the hand leaves
   evTrack(w,'pull',L.p,[[REACH[0]+.03,'hand-in',1],[FLY[0]+.02,'slide-out',1],[FLY[0]+.02,'pick',1],[CLOSE[0]+.14,'catch',1],[FLY[0]+.14,'slide-in',-1],[REACH[0]+.1,'hand-out',-1]]);
   const o=w.open,ps=o&&SYS[o.g.sys].prop==='ps1';
   evTrack(w,'open',o&&!o.done?openE(openT(w)):-1,!o?[]:ps?[[.26,'hand-in',1],[.36,'catch',1],[.5,'open-ps1',1],[.6,'start',1,{sys:'ps1'}]]:
@@ -1005,23 +1005,23 @@ const BreadBoxR10=(()=>{
  // box-local (props) frame: x = thickness (front at +x), y = 0..H, z = width (spine at -z).
  // On the shelf the spine faces the room (-z): identity. Held: the front faces the camera.
  function boxBasis(th){const c=Math.cos(th),s=Math.sin(th);return[[c,0,s],[0,1,0],[-s,0,c]];}
- // round 7 (owner: "the animations are so rough"): every hand move <= 30 mm per 60 Hz frame (tools/breadbox-r10-motion.py)
- // round 11 (owner on the Old, 2610: "the CD should just fly into the hand"): the take-out and the put-back are 1.1 s, the
- // case flies (see pulledBox); everything else keeps its round 7 time
+ // Smooth motion: every hand move <= 30 mm per 60 Hz frame (tools/breadbox-r10-motion.py)
+ // Case motion: the take-out and the put-back are 1.1 s, the
+ // case flies (see pulledBox); other animations keep independent timing
  const PULL_T=1.1,PUT_T=1.1,PICK_T=.7,TURN_T=1.1,OPEN_K=1.2,OPEN_SLOW=[.1,.5,2.2],CARD_IN=2.1,CARD_OUT=2.1;
  // the opening's clock: seconds -> e (the pose timeline in openPose), OPEN_K slower overall and the hand's move to
  // the lid / flap (e .24-.5) OPEN_SLOW[2] slower again; openSec is its inverse
  function openE(t){const[a,b,f]=OPEN_SLOW,e=t/OPEN_K;return e<=a?e:e<=a+(b-a)*f?a+(e-a)/f:e-(b-a)*(f-1);}
  function openSec(e){const[a,b,f]=OPEN_SLOW;return(e<=a?e:e<=b?a+(e-a)*f:e+(b-a)*(f-1))*OPEN_K;}
- // Round 8 timeline of a take-out (owner: "grab it with the left, hold with the right"; u = L.p, 0 = the box tipped
+ // Two-hand take-out timeline (u = L.p, 0 = the box tipped
  // TIP mm out of its slot by the browsing code, 1 = held up; put back plays it backwards and ends tipped):
  //   left hand reaches in (0-.2) and closes on the tipped box (.11-.29), pulls it straight out (.3-.48), lifts it to
  //   the view and turns it to face the camera (.44-.7); the right hand comes in (.55-.7) and takes the free edge
  //   (.62-.82), the left lets go (.78-.97) and leaves (.9-1); the box settles into the hold. Sideways it only
  //   travels with the lift (one eased arc to the view's middle); nothing drifts while it is held. The hold idle repeats every IDLE_P seconds (any IDLE_P window loops seamlessly).
  const TIP=18,IDLE_P=4,IW=2*Math.PI/IDLE_P;
- let HOLD_DX=0,HOLD_DY=-9;   // round 9: the held case's screen centre at x = 200, y ~ 118 (it sat 13 px high)
- // Round 11 timeline (u = L.p over PULL_T = 1.1 s; no left hand, nothing pulls the case): browsing tips the case TIP mm out of
+ let HOLD_DX=0,HOLD_DY=-9;   // the held case's screen centre at x = 200, y ~ 118 (it sat 13 px high)
+ // timeline (u = L.p over PULL_T = 1.1 s; no left hand, nothing pulls the case): browsing tips the case TIP mm out of
  // its cubby; on A the case slides out along its own depth (the first half of the flight), then arcs up and over to the
  // hold in front of the camera and turns to face it (the turn only starts once it is clear of the cubby), one ease-out
  // (flyS: soft start, fast middle, soft landing, no overshoot). HAND_MODE 'rise': the right hand comes into the frame
@@ -1037,17 +1037,17 @@ const BreadBoxR10=(()=>{
   const L=w.L,C=rm.CASE,row=LIBROWS[L.row],g=row.games[row.sel],b=g.b,u=L.p,t=w.t;
   const sx=boxX(row,g,secOff(row,L.lcam)),S={x:sx,y:row.base,z:4+b.W/2-TIP};
   const s=landed?1:flyS((u-FLY[0])/(FLY[1]-FLY[0])),wi=smooth((u-CLOSE[1])/(1-CLOSE[1]));
-  // round 9 (owner: "not centered"): held in the middle of the view (was 30 mm left); centring checked in px by
+  // Case centring: held in the middle of the view (was 30 mm left); centring checked in px by
   // tools/breadbox-r10-framing.py at the device's clip camera
   // The case flies to where the hold will be once the camera has stepped back (the camera's dolly ends before the landing):
   // the live camera plus what is left of the dolly, so the target never moves under the case
   const d=600*b.H/172,sp0=shelfPose(rm,w),sp1=shelfPose(rm,w,1),
    hold={x:cam.pos[0]+HOLD_DX+sp1.pos[0]-sp0.pos[0],y:cam.pos[1]+2-b.H/2+HOLD_DY+sp1.pos[1]-sp0.pos[1],z:cam.pos[2]+d+sp1.pos[2]-sp0.pos[2]};
   // out of the cubby straight along its depth (the neighbours and the board above stay clear: no sideways move, no
-  // lift until the case is out, round 8's rule), then the arc and the turn to the camera: the first part of the flight
+  // lift until the case is out before turning), then the arc and the turn to the camera: the first part of the flight
   // is depth only, c = the share of the way that frees the cubby
   const c=clamp((b.W+18-TIP)/Math.max(1,S.z-hold.z),.15,.85),sl=smooth((s-c)/(1-c)),kt=sl;
-    // round 10: the hold's slight yaw (.16) fades out as the box turns to its spine (square to the camera) and back in on the back
+    // the hold's slight yaw (.16) fades out as the box turns to its spine (square to the camera) and back in on the back
   const fl=noFlip?0:L.flip*kt,yaw=.16*Math.cos(fl);
   let x=lerp(S.x,hold.x,sl),y=lerp(S.y,hold.y,sl)+FLY_ARC*bump(sl,0,1),z=lerp(S.z,hold.z,s),th=lerp(0,-Math.PI/2+yaw,kt)+fl;
   // idle (periodic, IDLE_P): a slow bob, a little yaw and pitch
@@ -1061,7 +1061,7 @@ const BreadBoxR10=(()=>{
  // the selected box's surroundings in the shelf, in its own space (box standing in its slot): the neighbours
  // (their own heights and depths) and the boards above and below; S0 = that space -> world
  function shelfAround(rm,row,g,L,tip=0){
-  // tip: the box stands tip mm out of its slot (round 8): the neighbours and boards sit tip mm further back
+  // tip: the box stands tip mm out of its slot: the neighbours and boards sit tip mm further back
   const C=rm.CASE,b=g.b,lo=[],hi=[];const ex=[];
   for(const n of row.games){if(n===g)continue;const dx=n.lx-g.lx;if(Math.abs(dx)>170)continue;
    ex.push([[dx-n.b.T/2,0,-b.W/2+tip],[dx+n.b.T/2,n.b.H,-b.W/2+n.b.W+tip]]);}
@@ -1074,16 +1074,16 @@ const BreadBoxR10=(()=>{
  const boxIn=(b,M)=>RH.box([-b.T/2,0,-b.W/2],[b.T/2,b.H,b.W/2],M);
  const lift=(s,d)=>({B:mul(T4(0,d,0),s.B),pose:s.pose,ap:s.ap});
  const P_OPEN=()=>RH.POSES.open;
- // the right hand on the pulled box (not opening). Round 3e timeline (u = L.p): the open hand reaches in over
+ // the right hand on the pulled box (not opening). timeline (u = L.p): the open hand reaches in over
  // the shelf (0-.2) and closes on the box (.13-.28): index and middle fingers over its top, the thumb down the
  // front of its spine; it pulls the box out (.26-.5); while the box lifts and turns to the view the hand lets go,
  // goes up and over it and closes on its free edge (.5-.78: the edge pinch, fingers round the back, thumb on
  // the front). Turning the box to its back moves the hand under it to the spine edge.
- // round 8: the right hand: it comes in as the box turns to the view and takes its free edge (the view grip), then
- // holds it (breathing on the idle period); turning the box to its back: under it to the spine edge (as round 3e)
+ // the right hand: it comes in as the box turns to the view and takes its free edge (the view grip), then
+ // holds it (breathing on the idle period); turning the box to its back: under it to the spine edge
  const MX=[-1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1];
  const mirrorX=s=>({B:mul(MX,s.B),pose:s.pose,ap:[-s.ap[0],s.ap[1],s.ap[2]]});
- // round 11: the hand is tied to where the case will be held (PBH, the landed pose), not to the flying case: it rises into
+ // the hand is tied to where the case will be held (PBH, the landed pose), not to the flying case: it rises into
  // the frame and waits open at the hold point (REACH), and closes (CLOSE) as the case lands; from the landing on the two
  // poses are the same
  function holdHand(rm,w,PB,cam){
@@ -1098,12 +1098,12 @@ const BreadBoxR10=(()=>{
   let ref=null;if(Math.abs(L.flip)>.002&&u>.98&&fk<.01){const M=mul(pulledBox(rm,w,cam,true).M,vw.B);ref={o:[M[12],M[13],M[14]],ex:[M[0],M[1],M[2]],ey:[M[4],M[5],M[6]],ez:[M[8],M[9],M[10]]};}
   return handOf(PBH.M,s,{slide:(1-reach)*320,ref,twist:.85,chk:[boxIn(b,PB.M)]});
  }
- // round 11: no left hand takes the box out any more (round 8's takeHand: the case flies to the right hand)
+ // The case flies to the right hand without a left-hand take-out.
  const LIDSWING=.3;   // the lid swings on a little after the hand lets go (it stops short of the left thumb)
- const OPEN={ps1:{len:openSec(1.1),fade:openSec(.6)},gba:{len:openSec(1.05),fade:openSec(.58)}};   // round 7: seconds (the opening's own clock, openE)   // the fade starts as the case opens (no disc / cartridge pull)
+ const OPEN={ps1:{len:openSec(1.1),fade:openSec(.6)},gba:{len:openSec(1.05),fade:openSec(.58)}};   // seconds (the opening's own clock, openE)   // the fade starts as the case opens (no disc / cartridge pull)
  const openLen=o=>OPEN[SYS[o.g.sys].prop].len;
  const mirrorS=s=>({B:mul(MZ,s.B),pose:s.pose,ap:[s.ap[0],s.ap[1],-s.ap[2]]});
- // Round 3e game start: the left hand comes in and takes the case by its hinge edge (the edge pinch, mirrored);
+ // game start: the left hand comes in and takes the case by its hinge edge (the edge pinch, mirrored);
  // the right hand lets go of the free edge and pinches the lid (PS1: thumb on the front, index curled round its
  // edge) and swings it open, then lets go; the picture fades to black as it opens. No disc is shown.
  // GBA: the right hand moves up the edge, the thumb flicks the flap open, the cartridge peeks up, the hand goes
@@ -1121,7 +1121,7 @@ const BreadBoxR10=(()=>{
   const vg=grip(rm,'view',b,{gy:.46}),V=st(vg);
   if(pk){
    const lt=3.2*b.T/14,piv=pp.ps1_lid.pivot.map((v,i)=>v*Sc[i]),lidAt=a=>about(piv,rotY(a));
-   const lidA=e=>e<.5?0:e<.58?.1*smooth((e-.5)/.08):e<.86?.1+1.05*smooth((e-.58)/.28):1.15+LIDSWING*(1-Math.pow(1-clamp((e-.86)/.35),3))-.06*settle(e-1.21);   // round 7: +.06 (the hand's longer move to the lid)
+   const lidA=e=>e<.5?0:e<.58?.1*smooth((e-.5)/.08):e<.86?.1+1.05*smooth((e-.58)/.28):1.15+LIDSWING*(1-Math.pow(1-clamp((e-.86)/.35),3))-.06*settle(e-1.21);   // +.06 (the hand's longer move to the lid)
    r.lidA=lidA(e);
    // the pinch is solved with a keep-out behind the tray: no finger wraps behind it (the lid takes the hand with it)
    const lp=grip(rm,'lid',b,{extra:[RH.box([-b.T/2-90,-30,-b.W/2],[b.T/2-lt,b.H+30,b.W/2+10])]}),LP=st(lp);
@@ -1148,7 +1148,7 @@ const BreadBoxR10=(()=>{
   }
   return r;
  }
- // round 8: a hinged part (lid, flap) turns in the box's real proportions: the props are scaled (Sc) to the box
+ // a hinged part (lid, flap) turns in the box's real proportions: the props are scaled (Sc) to the box
  // after it, so the rotation is conjugated by the scale (rotating in the props' own space sheared a lid that is not
  // 14 mm thick, and the drawn lid no longer matched the contact model)
  const hingeAt=(Sc,piv,R)=>mul([1/Sc[0],0,0,0,0,1/Sc[1],0,0,0,0,1/Sc[2],0,0,0,0,1],mul(about(piv.map((v,i)=>v*Sc[i]),R),[Sc[0],0,0,0,0,Sc[1],0,0,0,0,Sc[2],0,0,0,0,1]));
@@ -1159,9 +1159,9 @@ const BreadBoxR10=(()=>{
   let MbS=mul(PB.M,[Sc[0],0,0,0,0,Sc[1],0,0,0,0,Sc[2],0,0,0,0,1]),R=null,Lh=null,op=null;
   if(w.open){op=openPose(rm,w,PB,ref,openE(openT(w)));MbS=op.MbS;R=op.R;Lh=op.L;}else{R=holdHand(rm,w,PB,cam);Lh=null;}
   gl.disable(gl.CULL_FACE);bindMesh(P,PR.m);
-  const bc=xf(MbS,[0,62,0]),toCam=nrm(cam.eyeW.map((v,i)=>v-bc[i])),lt=neutral(probe(rm,bc,toCam,.75)),lh=handLight(rm,bc,toCam);   // round 4: the light where the box is
+  const bc=xf(MbS,[0,62,0]),toCam=nrm(cam.eyeW.map((v,i)=>v-bc[i])),lt=neutral(probe(rm,bc,toCam,.75)),lh=handLight(rm,bc,toCam);   // the light where the box is
   const dr=(n,M)=>draw(P,CASE_T,pp[n].first,pp[n].count,{M:mul(MbS,M),kind:3,tint:tintMul([1.12,1.12,1.12],lt)});
-  if(sys==='ps1'){dr('ps1_tray',I4);dr('ps1_lid',hingeAt(Sc,pp.ps1_lid.pivot,rotY(op?op.lidA:0)));}   // round 3: never a disc (no disc images)
+  if(sys==='ps1'){dr('ps1_tray',I4);dr('ps1_lid',hingeAt(Sc,pp.ps1_lid.pivot,rotY(op?op.lidA:0)));}   // never a disc (no disc images)
   else{dr('gba_box',I4);dr('gba_cart',op?op.cart:I4);dr('gba_flap',hingeAt(Sc,pp.gba_flap.pivot,rotZ(op?op.flapA:0)));}
   handsDraw(P,rm,R&&R.slide>=330?null:R,Lh&&Lh.slide>=318?null:Lh,{tint:lh});
   gl.enable(gl.CULL_FACE);
@@ -1191,7 +1191,7 @@ const BreadBoxR10=(()=>{
   if(w.play>0){const fa=w.play<.55?ease(w.play/.55):1-smooth((w.play-.7)/.3);c.fillStyle=`rgba(255,250,240,${.9*fa})`;c.fillRect(0,0,400,240);}
  }
  // the held QR card and the hand, drawn over the room (own depth buffer)
- // the hand reaches for the card in its stand, closes on its right edge (the edge pinch), then carries it (round 3e)
+ // the hand reaches for the card in its stand, closes on its right edge (the edge pinch), then carries it
  // the held card as a box (grip space: x thickness, front +x; y up from its bottom edge; z width, free edge +z)
  function cardFrame(rm,w,cam){const W=cardCorners(rm,w,cam),sub=(a,c)=>a.map((v,i)=>v-c[i]);
   const ez=nrm(sub(W[1],W[0])),ey=nrm(sub(W[1],W[2])),ex=cross(ey,ez),o=W[2].map((v,i)=>(v+W[3][i])/2);
@@ -1199,7 +1199,7 @@ const BreadBoxR10=(()=>{
  function cardSpec(w,cam){
   const rm=w.rm,u=w.share.p,{Mc,b}=cardFrame(rm,w,cam);
   const g=grip(rm,'card',{T:2,H:Math.round(b.H),W:Math.round(b.W)},{gy:.2}),G_=st(g);
-  const reach=smooth(u/(CARD_GRAB*.67)),close=smooth((u-.1)/.24);   // round 7: same order as the box: slide in, then curl   // round 7: a slower close
+  const reach=smooth(u/(CARD_GRAB*.67)),close=smooth((u-.1)/.24);   // same order as the box: slide in, then curl   // a slower close
   const s=closeOn(g,close,25);if(close>=1)s.pose=RH.breathe(s.pose,w.t,.5,IDLE_P);
   return handOf(Mc,s,{slide:(1-reach)*340,chk:[boxIn(b,Mc)]});
  }
@@ -1220,7 +1220,7 @@ const BreadBoxR10=(()=>{
  }
  function pickerSpecs(w,cam){
   const rm=w.rm,k=w.pick.k,t=w.t,Fw=cam.Fw,U=cam.U,Rv=cam.R;
-  // raised hands, computed (owner): the model's palm normal (anchor hand3) points straight at the camera and
+  // Raised hands, computed: the model's palm normal (anchor hand3) points straight at the camera and
   // its fingers point up the screen at full length; the left hand on screen-left, the right on screen-right,
   // fingertips splayed outward, a slight outward roll (palm . to-camera stays >= 0.98).
   const H3=rm.A.hand3,g1=nrm(H3.slice(0,3)),fd=H3.slice(3,6),g2=nrm(fd.map((v,i)=>v-g1[i]*dot(fd,g1))),g3=cross(g1,g2);
@@ -1239,8 +1239,8 @@ const BreadBoxR10=(()=>{
    // the wrist sways a little (each hand at its own pace), the fingers follow a moment later (they are in the pose)
    const sw=mul(T4(...o),mul(rotAx(t1,.035*Math.sin(IW*t+ph*2)),mul(rotAx(t2,.025*Math.sin(2*IW*t+ph)),T4(-o[0],-o[1],-o[2]))));
    return{M:mul(sw,frameMat(F)),pose:p,slide:(1-smooth(kk/.8)-.04*Math.sin(Math.PI*clamp((kk-.6)/.4))**2)*420};};
-  const ks=w.pick.s||0;                                           // round 7: time-based, a soft overshoot at the end
-  return[mk(1,0,clamp(ks/.9)),mk(-1,1.7,clamp((ks-.1)/.9))];   // the left hand a beat later in (and first out)   // round 6: the left hand a beat later in (and first out), each overshoots and settles
+  const ks=w.pick.s||0;                                           // time-based, a soft overshoot at the end
+  return[mk(1,0,clamp(ks/.9)),mk(-1,1.7,clamp((ks-.1)/.9))];   // The left hand enters a beat later and leaves first; each hand overshoots and settles.
  }
  // the library's 2D bits on the top screen: the letter while scrolling fast, the row's name
  function libOverlay(c,w,cam){
@@ -1391,14 +1391,14 @@ const BreadBoxR10=(()=>{
 
  // ------------------------------------------------------------------ scripted runs (gallery films)
  const SCRIPTS={
-  // the whole menu; every way back is a glide (round 2): TV, cushions, coffee table, scope, then the shelves
+  // the whole menu; every way back is a glide: TV, cushions, coffee table, scope, then the shelves
   tour:{focus:'continue',dur:38.6,keys:[[.9,'A'],[3.1,'B'],[5.0,'DOWN'],[5.3,'A'],[7.1,'RIGHT'],[7.9,'B'],[9.7,'RIGHT'],[10.0,'A'],[13.3,'B'],
    [15.6,'UP'],[15.9,'RIGHT'],[16.2,'A'],[17.9,'DOWN'],[18.6,'DOWN'],[19.3,'DOWN'],[20.2,'B'],[22.0,'LEFT'],[22.3,'A'],
    [24.6,'A'],[26.4,'RIGHT'],[26.9,'RIGHT'],[28.4,'HOLDR'],[30.4,'REL'],[33.6,'B'],[34.4,'B'],[35.9,'B']]},
   // fast scrolling through the 315 GBA games: enter the row, hold right, stop, take one out, hold left, back
   scroll:{focus:'library',place:'library',dur:19,keys:[[.5,'LEFT'],[1.1,'A'],[2.8,'HOLDR'],[8.4,'REL'],[10.6,'L'],[11.0,'REL'],[12.4,'HOLDL'],[15.6,'REL'],[17.2,'B']]},
   // the game start, both cases
-  start:{focus:'library',place:'library',dur:21,keys:[[.3,'A'],[1.95,'A'],[5.2,'A'],[8.9,'B'],[11.6,'B'],[12.6,'LEFT'],[13.3,'A'],[15.0,'A'],[18.0,'A']]},   // round 8: A takes the box
+  start:{focus:'library',place:'library',dur:21,keys:[[.3,'A'],[1.95,'A'],[5.2,'A'],[8.9,'B'],[11.6,'B'],[12.6,'LEFT'],[13.3,'A'],[15.0,'A'],[18.0,'A']]},   // A takes the box
   // Settings: the scope's five channels, then the ROOM channel changes the style
   scope:{focus:'settings',place:'settings',dur:10,keys:[[1.2,'DOWN'],[2.6,'DOWN'],[4.0,'DOWN'],[5.4,'DOWN'],[7.0,'UP'],[8.3,'UP']]},
   style:{focus:'settings',place:'settings',dur:7,keys:[[.3,'DOWN'],[.6,'DOWN'],[.9,'DOWN'],[1.2,'DOWN'],[2.4,'A'],[4.4,'A']]},
@@ -1408,15 +1408,15 @@ const BreadBoxR10=(()=>{
   wall:{focus:'library',place:'library',dur:3,keys:[]},
   walltop:{focus:'library',place:'library',dur:3.5,keys:[[.3,'UP'],[.6,'UP'],[.9,'UP'],[1.2,'UP'],[1.5,'UP'],[1.8,'UP']]},
   pickerhold:{focus:'settings',place:'settings',dur:6,keys:[[.3,'DOWN'],[.5,'DOWN'],[.7,'DOWN'],[.9,'DOWN'],[1.1,'DOWN'],[1.6,'A']]},
-  // round 3: take a box out (the hand reaches in, pulls, turns it, re-grips), turn it in the hand, put it back
-  pick:{focus:'library',place:'library',dur:13,keys:[[.3,'A'],[1.95,'A'],[5.2,'R'],[6.4,'R'],[7.6,'L'],[8.8,'L'],[10.0,'B']]},   // round 8: A takes the box (no auto take-out)
-  // round 8: the same on the GBA shelf
+  // take a box out (the hand reaches in, pulls, turns it, re-grips), turn it in the hand, put it back
+  pick:{focus:'library',place:'library',dur:13,keys:[[.3,'A'],[1.95,'A'],[5.2,'R'],[6.4,'R'],[7.6,'L'],[8.8,'L'],[10.0,'B']]},   // A takes the box (no auto take-out)
+  // the same on the GBA shelf
   pickgba:{focus:'library',place:'library',dur:13.4,keys:[[.2,'LEFT'],[.7,'A'],[2.35,'A'],[5.6,'R'],[6.8,'R'],[8.0,'L'],[9.2,'L'],[10.4,'B']]},
-  // round 3: the QR card: reach, take, lift, zoom, put back
+  // the QR card: reach, take, lift, zoom, put back
   card:{focus:'share',place:'share',dur:9,keys:[[.5,'A'],[3.9,'A'],[5.4,'A'],[6.6,'B']]},
-  // round 3: Settings CH6 HAND: try four skin tones and five gloves
+  // Settings CH6 HAND: try four skin tones and five gloves
   picker:{focus:'settings',place:'settings',dur:15,keys:[[.5,'DOWN'],[.9,'DOWN'],[1.3,'DOWN'],[1.7,'DOWN'],[2.1,'DOWN'],[2.9,'A'],[4.4,'RIGHT'],[5.4,'RIGHT'],[6.4,'RIGHT'],[7.3,'DOWN'],[7.8,'RIGHT'],[8.9,'RIGHT'],[10,'RIGHT'],[11.1,'RIGHT'],[12.3,'UP'],[12.6,'RIGHT'],[13.8,'B']]},
-  // round 3: the 24-slot case: move on the wall, walk up to a section (real spines cross-fade in), back, another one
+  // the 24-slot case: move on the wall, walk up to a section (real spines cross-fade in), back, another one
   case:{focus:'library',place:'library',dur:13,keys:[[.8,'LEFT'],[1.4,'UP'],[2.0,'RIGHT'],[2.6,'A'],[4.0,'RIGHT'],[4.6,'RIGHT'],[5.6,'B'],[7.2,'DOWN'],[7.7,'LEFT'],[8.2,'A'],[9.6,'LEFT'],[11.2,'B']]},
   smoke:{focus:'continue',dur:34,keys:[[.5,'A'],[2.3,'A'],[4.2,'B'],[6,'DOWN'],[6.3,'A'],[8,'RIGHT'],[8.5,'LEFT'],[9,'A'],[9.3,'B'],[11,'RIGHT'],[11.3,'A'],[13.3,'Y'],[13.6,'UP'],[14,'A'],[14.5,'B'],[16,'B'],[17.4,'B'],
    [19.5,'LEFT'],[19.8,'SELECT'],[21.6,'DOWN'],[21.9,'DOWN'],[22.2,'B'],[24,'UP'],[24.3,'A'],[25.6,'A'],[27,'R'],[27.5,'R'],[28,'A'],[29,'A'],[30,'B'],[31,'B'],[32.4,'B']]}};
@@ -1494,7 +1494,7 @@ const BreadBoxR10=(()=>{
  // lid / flap / cartridge, or the QR card) and the fade, all in a clip-local space (SPEC.md "BBH1").
  // tools/breadbox-r10-bbh.py packs the result with the hand mesh into export/hands.bbh.
  // every = sim steps per sample (4 = 30 Hz, the device clips; 2 = 60 Hz); motion: per-frame displacement check
- // (round 7, owner: "the animations are so rough"): each hand's vertices and the held object's corners in clip
+ // Motion bounds: each hand's vertices and the held object's corners in clip
  // space, the largest move between two samples per clip
  let MOTION_TRACE=null,FRAMESTAT=false;
  function bakeAll(every=4,motion=false){
@@ -1514,7 +1514,7 @@ const BreadBoxR10=(()=>{
   const wslot=(a,b)=>{if(!a||!b)return -1;const sl=(isMitt()?R_.mitt:R_.bare).slot;let m=0,w=-1;for(let i=0;i<a.length;i+=3){const d=Math.hypot(a[i]-b[i],a[i+1]-b[i+1],a[i+2]-b[i+2]);if(d>m){m=d;w=sl[i/3];}}return w;};
   const pcen=a=>{if(!a)return[];const sl=(isMitt()?R_.mitt:R_.bare).slot;const c=[0,0,0];let n=0;for(let i=0;i<a.length;i+=3)if(sl[i/3]===1){c[0]+=a[i];c[1]+=a[i+1];c[2]+=a[i+2];n++;}return c.map(v=>+(v/n).toFixed(1));};
   const dmax=(a,b)=>{if(!a||!b)return 0;let m=0;for(let i=0;i<a.length;i+=3)m=Math.max(m,Math.hypot(a[i]-b[i],a[i+1]-b[i+1],a[i+2]-b[i+2]));return m;};
-  // round 9: how the held case sits in the top screen (the clip's camera = the device's): its centre x, how far
+  // how the held case sits in the top screen (the clip's camera = the device's): its centre x, how far
   // inside the screen it stays, how much of the face toward the camera the hands cover (24 x 24 samples)
   const frameStat=(cam,MbS,ref,hands)=>{const b={T:ref[0],H:ref[1],W:ref[2]},P=p=>cam.proj(...p),C=[];
    for(const x of[-b.T/2,b.T/2])for(const y of[0,b.H])for(const z of[-b.W/2,b.W/2])C.push(P(xf(MbS,[x,y,z])));
@@ -1539,7 +1539,7 @@ const BreadBoxR10=(()=>{
     const PB=pulledBox(rm,w,cam),sys=SYS[PB.g.sys].prop,ref=sys==='ps1'?{T:14,H:125,W:142}:{T:27,H:137,W:120},Sc=[PB.b.T/ref.T,PB.b.H/ref.H,PB.b.W/ref.W];
     let MbS=mul(PB.M,[Sc[0],0,0,0,0,Sc[1],0,0,0,0,Sc[2],0,0,0,0,1]),op=null;
     if(w.open){op=openPose(rm,w,PB,ref,openE(openT(w)));MbS=op.MbS;Rh=op.R;Lh=op.L;}else{Rh=holdHand(rm,w,PB,cam);Lh=null;}
-    // round 11: how far the flying case reaches into the neighbours / the boards while it is still near the cubby (mm; 0 = clear)
+    // how far the flying case reaches into the neighbours / the boards while it is still near the cubby (mm; 0 = clear)
     if(motion&&!w.open&&w.L.p<.999){const SA=shelfAround(rm,LIBROWS[w.L.row],PB.g,w.L,TIP),o=SA.S0.slice(12,15),b=PB.b;let dm=0;
      for(const fx of[-1,0,1])for(const fy of[0,.5,1])for(const fz of[-1,0,1]){const p=xf(PB.M,[fx*b.T/2,fy*b.H,fz*b.W/2]),c=[p[0]-o[0],p[1]-o[1],p[2]-o[2]];
       for(const[lo,hi]of SA.local){let dp=1e9;for(let i=0;i<3;i++)dp=Math.min(dp,c[i]-lo[i],hi[i]-c[i]);if(dp>0)dm=Math.max(dm,dp);}}
@@ -1572,11 +1572,11 @@ const BreadBoxR10=(()=>{
      for(const h of['R','L']){const d=dmax(a[h],b[h]);if(d>st.hand){st.hand=d;st.handAt=+f[i].t.toFixed(3);st.handWho=h;}}
      for(const k in b.obj){const d=dmax(a.obj[k],b.obj[k]);if(d>st.obj){st.obj=d;st.objAt=+f[i].t.toFixed(3);st.objWho=k;}}
      if(MOTION_TRACE===name)(st.trace=st.trace||[]).push([+f[i].t.toFixed(3),+f[i].u.toFixed(4),+dmax(a.R,b.R).toFixed(1),+dmax(a.L,b.L).toFixed(1),+(b.obj.case?dmax(a.obj.case,b.obj.case):0).toFixed(1),+dpalm(a.R,b.R).toFixed(1),wslot(a.R,b.R),f[i].ph,f[i].cc]);}
-    // round 8: the case's sideways range (slot x of its centre), and for a loop the seam: last frame vs first
+    // the case's sideways range (slot x of its centre), and for a loop the seam: last frame vs first
     // (position) and the last step vs the first step (velocity), over every hand vertex and object corner
     const cx=f.filter(q=>q.mv.obj.case).map(q=>{const c=q.mv.obj.case;let x=0;for(let i=0;i<c.length;i+=3)x+=c[i];return x/(c.length/3);});
     st.lat=cx.length?+(Math.max(...cx)-Math.min(...cx)).toFixed(2):0;
-    st.cc=Math.max(0,...f.filter(q=>q.cc!=null).map(q=>q.cc));   // round 11: the case's deepest reach into the shelf's neighbours (mm)
+    st.cc=Math.max(0,...f.filter(q=>q.cc!=null).map(q=>q.cc));   // the case's deepest reach into the shelf's neighbours (mm)
     if(o&&o.loop&&f.length>2){const A=f[0].mv,B=f[1].mv,Y=f[f.length-2].mv,Z=f[f.length-1].mv;let sp=0,sv=0;
      const acc=(a,b,y,z)=>{if(!a||!z)return;for(let i=0;i<a.length;i++){sp=Math.max(sp,Math.abs(z[i]-a[i]));sv=Math.max(sv,Math.abs((z[i]-y[i])-(b[i]-a[i])));}};
      acc(A.R,B.R,Y.R,Z.R);acc(A.L,B.L,Y.L,Z.L);for(const k in A.obj)acc(A.obj[k],B.obj[k],Y.obj[k],Z.obj[k]);st.seam=+sp.toFixed(3);st.seamV=+sv.toFixed(3);}
@@ -1586,7 +1586,7 @@ const BreadBoxR10=(()=>{
   for(const[gi,suf]of[[0,''],[5,'_m']]){
    OPT.glove=gi;
    // library clips per box class: take out, idle, the four turns, put back, game start
-   // round 8: one clip set per box class: ps1 (NA / JP jewel, 10.5 mm), ps1p (PAL, 17), ps1d (2+ discs, 25), gba (23)
+   // one clip set per box class: ps1 (NA / JP jewel, 10.5 mm), ps1p (PAL, 17), ps1d (2+ discs, 25), gba (23)
    for(const cls of['ps1','ps1p','ps1d','gba']){
     const sid=cls==='gba'?'gba':'ps1',idx=LIBROWS.findIndex(r=>r.sid===sid),rowC=LIBROWS[idx],gC=rowC.games[rowC.sel],b0=gC.b;
     gC.b={...BOXOF({sys:sid,title:''}),T:{ps1:10.5,ps1p:17,ps1d:25,gba:23}[cls]};
@@ -1594,9 +1594,9 @@ const BreadBoxR10=(()=>{
     // the slot space: the selected box standing in the shelf (identity rotation), fixed at the take-out
     const space=w=>{if(!(w.L.pTo===1&&w.L.p>0))return null;const row=LIBROWS[w.L.row],g=row.games[row.sel];return T4(...[-boxX(row,g,secOff(row,w.L.lcam)),-row.base,-(4+g.b.W/2)]);};
     const len=OPEN[sid].len+BLACK_T;
-    // round 8: A takes the box at T0; the hold clip is one IDLE_P period from the pick's end (seamless: its last
+    // A takes the box at T0; the hold clip is one IDLE_P period from the pick's end (seamless: its last
     // frame is its first); the turns, the put-back and the game start begin on that phase (they start from it)
-    // round 11: the hold starts at 4.7 s as before (so the idle's phase, and with it every hold / turn / open clip, is
+    // the hold starts at 4.7 s as before (so the idle's phase, and with it every hold / turn / open clip, is
     // byte for byte the old one); the shorter take-out starts that much later
     const TH=4.7,T0=TH-PULL_T,TS=TH+IDLE_P,TB=TH+3*IDLE_P,TO=TB+PUT_T+.35+PULL_T+.45;
     const TOP=TH+Math.ceil((TO-TH)/IDLE_P)*IDLE_P;
@@ -1610,7 +1610,7 @@ const BreadBoxR10=(()=>{
    }
    // the QR card (stand space: the card's pivot, identity rotation)
    {const R=run(w=>{w.mode='at';w.place='share';w.focus='share';w.t0=-5;},[[.3,'A'],[.45+CARD_IN+IDLE_P,'B']],.45+CARD_IN+IDLE_P+CARD_OUT+.1,w=>{const p=rm.parts.a_card.pivot;return T4(-p[0],-p[1],-p[2]);});
-    const o={space:'card'};slice(R,'card_take'+suf,.3,.3+CARD_IN,o);slice(R,'card_hold'+suf,.4+CARD_IN,.4+CARD_IN+IDLE_P,Object.assign({loop:1},o));slice(R,'card_return'+suf,.45+CARD_IN+IDLE_P,.45+CARD_IN+IDLE_P+CARD_OUT-.05,o);}   // round 8: the hold is one IDLE_P
+    const o={space:'card'};slice(R,'card_take'+suf,.3,.3+CARD_IN,o);slice(R,'card_hold'+suf,.4+CARD_IN,.4+CARD_IN+IDLE_P,Object.assign({loop:1},o));slice(R,'card_return'+suf,.45+CARD_IN+IDLE_P,.45+CARD_IN+IDLE_P+CARD_OUT-.05,o);}   // the hold is one IDLE_P
    // the customize screen (camera space: the scope camera, x right, y up, z forward)
    {const R=run(w=>{w.mode='at';w.place='settings';w.focus='settings';w.t0=-5;w.tuneSel=w.tune=HAND_CH;},[[.3,'A'],[6.0,'B']],7.4,
      (w,cam)=>inv([cam.R[0],cam.R[1],cam.R[2],0,cam.U[0],cam.U[1],cam.U[2],0,cam.Fw[0],cam.Fw[1],cam.Fw[2],0,cam.pos[0],cam.pos[1],cam.pos[2],1]));

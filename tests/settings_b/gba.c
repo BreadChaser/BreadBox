@@ -54,7 +54,8 @@ int main(void){
   int r=find(GBA_SET_COLOR);bb_settings_row row;assert(read_row(r,&row)&&row.source==BB_SOURCE_SYSTEM);
   change_row(GBA_SET_COLOR,1);assert(read_row(r,&row)&&row.source==BB_SOURCE_CHANGED);
   /* An explicit game value equal to its default keeps Changed provenance. */
-  change_row(GBA_SET_COLOR,1);assert(read_row(r,&row)&&row.source==BB_SOURCE_CHANGED);
+  for(int n=0;n<3;n++)change_row(GBA_SET_COLOR,1);
+  assert(!gba_settings.color_correction && read_row(r,&row)&&row.source==BB_SOURCE_CHANGED);
   change_row(GBA_SET_SOLAR,1);clear_row(GBA_SET_COLOR);assert(read_row(r,&row)&&row.source==BB_SOURCE_SYSTEM);
   int sunlight=gba_settings.solar;reset_model(BB_RESET_CONTROLS);assert(gba_settings.solar==sunlight&&hotkeys[0]==9&&side==1);
   reset_model(BB_RESET_SCOPE);assert(gba_settings.solar==5);close_model();
@@ -94,9 +95,12 @@ int main(void){
   for(unsigned i=0;i<rows();i++){bb_settings_row r;assert(read_row(i,&r));assert(r.short_help && strlen(r.short_help)<=36 && strchr(r.short_help,'.'));}
   for(int f=0;f<=GBA_SET_HOTKEY_REWIND;f++) {
    int i=find(f);if(i<0)continue;bb_settings_row r;assert(read_row(i,&r));assert(r.short_help && strlen(r.short_help)<=36 && strchr(r.short_help,'.'));
-   /* explicit rename 2026-11-05: the shortcut rows are "FF keys" / "Rewind keys" (the touch slots keep
+   /* Explicit rename: the shortcut rows are "FF keys" / "Rewind keys" (the touch slots keep
       "Fast forward" / "Rewind"); the frozen inventory keeps the old names */
    const char *frozen=r.label;
+   if(f==GBA_SET_SMOOTH){assert(!strcmp(r.label,"Filter"));frozen="Smoothing";}
+   if(f==GBA_SET_COLOR){assert(!strcmp(r.label,"Color"));frozen="Color correction";}
+   if(f==GBA_SET_BLEND){assert(!strcmp(r.label,"LCD ghosting"));frozen="Frame blend";}
    if(f==GBA_SET_HOTKEY_FF){assert(!strcmp(r.label,"FF keys"));frozen="Fast forward";}
    if(f==GBA_SET_HOTKEY_REWIND){assert(!strcmp(r.label,"Rewind keys"));frozen="Rewind";}
    printf("GBALEDGER\t%d/%d\tmodel\t%s\n",model,scope,frozen);

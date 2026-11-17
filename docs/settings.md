@@ -11,13 +11,13 @@ One list per page, no tab bar; each system has its own page. `app/settings/setti
 
 ```
 Settings          Customize >  Systems >  Collection >  Updates >  About >
-  Customize       Room style (Left/Right relights the room; A opens the styles) | Hands > (dev switch roomhands)
+  Customize       Theme (Room (Day), Room (Night), PSX3D, Simple) | Hands > (dev switch roomhands)
                   | FF keys | Rewind keys (New) | Touch buttons (New: their side)  <- the shared shortcuts. one home
   Systems         one row per registered system with settings (PlayStation, Game Boy Advance; NES when built)
     <system>      its rows under red headings (Picture, Controls, Saves, Cartridge, Cheats), then More: Advanced >, Help
       Advanced    the rows the adapter marks advanced (PS1: Speed, Compatibility, Troubleshooting), Help
   Collection      Games folder | Import again from PSX3D
-  Updates         the update page (Automatic / Ask first / Off, check now)
+  Updates         the update page (Ask first / Automatic / Off, Check now, What's new)
   About           Credits | How to install | Welcome (when the welcome tour is built in)
 ```
 
@@ -31,8 +31,9 @@ Settings          Customize >  Systems >  Collection >  Updates >  About >
   system, or this game). X restores the focused value (Inherit in a game). Reset controls stays on Button mappings.
 - The card's title is the page ("Settings", "Customize", "PlayStation", "Advanced"); the room's oscilloscope
   shows where you are ("PlayStation · Picture": on a system's list, the focused row's section).
-- The selected row is marked by the shared highlighter stroke (`ui_mark.h`), on every notebook card and the
-  room's lists. No mark for a System value; Changed (pencil), Recommended and All systems keep theirs.
+- The shared selection component (`ui_mark.h`) marks every notebook card: Room uses a highlighter stroke;
+  PSX3D and Simple use their selection color with a narrow edge. No mark for a System value;
+  Changed (pencil), Recommended and All systems keep theirs.
 
 ## Where a value comes from
 
@@ -47,8 +48,10 @@ An explicit game choice stays **Changed** even when its value equals the system 
 
 Bottom-screen button side and speed shortcuts are **All systems** preferences. Reset PlayStation defaults and Reset controls preserve them. Shared shortcut edits preserve older per-game shortcut exceptions; the focused card shows **Game exception: …** when that game will still use its own shortcut. Reset this game removes the exception.
 
-Room style is a single choice for the whole app (Day or Night), with no per-game
-value.
+Theme is an all-systems choice: Room (Day) (the default), Room (Night), PSX3D, or Simple.
+PSX3D and Simple share one list layout with the same places and actions; they differ only in
+colors, artwork and fonts. config.ini keeps the choice in `theme` (`day`, `night`, `psx3d`,
+`simple`); unknown saved values fall back to Room (Day), and the default is omitted.
 
 ## PlayStation rows
 
@@ -79,6 +82,7 @@ value.
   Unlike other control rows it uses the technical layer order (see Where a value comes from), because
   the right value depends on the game. Touch L3/R3 and the Old touch stick
   continue to follow analog mode.
+  If the controls don't respond after loading an older save state, switch Controller to Analog and back to Digital once.
 - **Bottom-screen buttons** (New only): Right side or Left side.
 - **Memory cards.** Per game, per disc, shared or off. A change takes effect on the next game start.
 - **Rewind** (New only, game only). It needs free memory
@@ -95,6 +99,35 @@ value.
   and impact line (options.c `notes[]`). Their defaults are the general correct
   value per console. Presets set them per game only after a test on that console
   shows a gain (see Defaults and presets).
+
+## Game Boy Advance rows
+
+GBA picture choices use the system default and an optional per-game override.
+X Inherit removes a game's explicit choice; Y resets this scope. Existing saved
+`smoothing`, `color_correction` and `frame_blend` values keep their meaning.
+
+- **Screen size.** Original is pixel-exact at 240×160, centered. Fit (default)
+  keeps the 3:2 shape at 360×240. Stretch fills 400×240.
+- **Filter.** Sharp (default) keeps pixel edges; Smooth uses linear scaling.
+  Original screen size avoids the uneven pixel widths of fractional scaling.
+- **Color.** Original (vivid), the unchanged default, keeps cartridge colors.
+  Corrected uses the existing GBA LCD correction. Soft mixes Original and
+  Corrected equally. Bright lifts midtones while preserving black and white.
+  Old `color_correction=0` means Original; `1` means Corrected. Unknown color
+  values fall back to Original. Colors use a table generated when the choice
+  changes, applied during texture upload without another CPU picture pass.
+- **LCD ghosting.** Off (default) or On. On mixes the current and previous
+  pictures equally on the GPU, restoring effects that flicker to imitate
+  transparency. Moving edges can look softer. Each 3D eye has its own history;
+  the first picture after a change is shown without a blend.
+- **FPS counter.** Off, FPS, or Detailed, on the bottom screen.
+- **Button mappings.** The shared controls card; while playing it is in Pause.
+- **Rewind.** On by default on New 3DS, when memory is available.
+- **Sunlight.** Only for solar-sensor cartridges, 0 (Covered) through 10 (Bright),
+  default 5 (Daylight).
+- **Cheats.** Per game; while playing they are in Pause.
+
+The 3D slider continues to control layer depth with every picture choice.
 
 ## Defaults and presets
 
@@ -248,7 +281,7 @@ Display | Screen | screen | Original, Stretch, Widescreen | Original | Original 
 Display | Smoothing | smooth | On, Off | On | On | both | all | taste
 Display | FPS counter | show_fps | Off, FPS, Detailed | Off | Off | both | all | taste
 Display | 3D | stereo_style | Real 3D (experimental), Screen depth | - | Screen depth | new | all | taste
-Display | Theme | theme | - | Day | Day | both | lib | taste
+Display | Theme | theme | - | Room (Day) | Room (Day) | both | lib | taste
 Controls | Button mappings | > | - | - | - | both | all | taste
 Controls | Controller | controller | Digital, Analog | Digital | Digital | both | all | tech
 Controls | Analog | analog_combo | Off, L1+R1+Select, L1+R1+Start, L1+R1+L3, L1+R1+R3, L3+R3 | L1+R1+Select | L1+R1+Select | both | all | taste
@@ -331,9 +364,11 @@ fast_forward | on | on
 auto_floor | 15 | 15
 ```
 
-Room styles:
+Themes:
 
 ```settings-themes
-Day
-Night
+Room (Day)
+Room (Night)
+PSX3D
+Simple
 ```

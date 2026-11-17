@@ -280,7 +280,7 @@ static void trim(const char *group)
 	free(all);
 }
 
-// All games' ring entries together stay under HIST_BUDGET (PSX3D never asks
+// All games' ring entries together stay under HIST_BUDGET (BreadBox never asks
 // the SD card for its free space). First, games not played for
 // HIST_IDLE_DAYS keep only their newest HIST_IDLE_KEEP; then the oldest
 // entries of any game go. keep: the entry just added is never dropped.

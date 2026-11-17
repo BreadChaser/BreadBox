@@ -1,5 +1,5 @@
-/* The one writer of Continue points (bb-uitest-fix-r1c, re-review R1b-1, R1b-2, R1b-3; the reviewer's probes
- * pause-oom, pause-overlap-crash, late-failed-retry and aside-stat made tests), on the real save service, final
+/* The one writer of Continue points under allocation failure, overlapping writes, late failure
+ * and failed Start over, on the real save service, final
  * files, later thread, safe files and history, under ASan/UBSan:
  * 1: allocation failure at a pause with a queued and with an in-flight older point: nothing is written before
  *    the card's first frame, two writes never overlap, the newest point is the one on the SD card;
@@ -128,7 +128,7 @@ int main(int argc,char **argv)
  assert(point()==60 && !bb_save_final_failed());
 
  /* 1e: a point written now (a libretro game's end) while an older pause's is being written: it waits for the
-  * one writer (the reviewer's probe: two writers shared the validator and crashed), then lands as the newest */
+  * one writer (two writers sharing the validator could crash), then lands as the newest */
  }
  if(want("overlap")){fresh_dir("overlap");
  begin();hold_next=1;position=42;assert(bb_save_pause_take());bb_save_pause_put();bb_save_pause_over();wait_held();
@@ -169,7 +169,7 @@ int main(int argc,char **argv)
  assert(bb_save_final_retry() && point()==60 && backup()==99 && !bb_save_final_failed());
 
  }
- /* 2c (fix r1d, re-review R1c-3): a pause's point waits (behind other work, or behind an older pause's write),
+ /* 2c: a pause's point waits (behind other work, or behind an older pause's write),
   * play goes on, then the end's or HOME/sleep's new point cannot be made (no memory): nothing is cancelled, the
   * waiting point still lands, and the failure is reported (the end and the checkpoint alike) */
  static const char *const lost_end[]={"newest-kept-end-gate","newest-kept-end-older","newest-kept-checkpoint-gate","newest-kept-checkpoint-older"};

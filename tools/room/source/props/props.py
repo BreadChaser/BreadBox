@@ -1,7 +1,7 @@
 """Game-start props: a PS1 jewel case that opens and a GBA box whose flap opens and cartridge slides out.
 
-Built in R8's box-local frame so they replace R8's pulled box exactly:
-  x = thickness (front cover at +x), y = 0..H up, z = width (spine at -z). Units as R8 (mm).
+Built in the animation's box-local frame so they replace its pulled box exactly:
+  x = thickness (front cover at +x), y = 0..H up, z = width (spine at -z). Units: mm.
 All parts use one runtime texture 'case' (256x256) that the app/mock fills from the game's cover art:
   front (0,0)-(128,128)  back (128,0)-(256,128)  spine (0,128)-(16,256)  disc label (128,128)-(256,256)
   white (16,128)-(32,144)  cartridge label (32,128)-(96,192)  cardboard (32,192)-(64,224)

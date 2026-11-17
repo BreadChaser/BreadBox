@@ -11,12 +11,21 @@ check right away.
 
 | System | Files |
 |---|---|
-| PlayStation | `.cue/.bin`, `.chd`, `.pbp`, `.iso`, `.img`, `.mdf`, and `.m3u` for multi-disc games |
+| PlayStation | `.cue/.bin`, `.chd`, `.pbp`, `.img`, `.mdf`, and `.m3u` playlists |
 | Game Boy Advance | `.gba`, and `.zip` with exactly one game inside (extract `.7z` first; rename `.agb` files to `.gba`) |
+
+`.iso` images are untested. The `.img` and `.mdf` checks cover raw, single-track
+images; other layouts are untested. Switching discs in `.pbp` and `.m3u` files is
+untested.
 
 Keep `.cue` files next to the tracks they name. A zipped Game Boy Advance game is
 unpacked when you play it, so leave about 32 MB free on the SD card. Games over
 32 MB don't start.
+
+PlayStation CHDs save SD space and can be used as-is. On New 3DS, background
+disc decoding yields to rendering to reduce long video and audio pauses.
+Some games and scenes can still pause; BIN/CUE avoids decompression work when
+both formats are available.
 
 **BIOS.** Not needed. If you have a real BIOS, copy it to `sdmc:/3ds/BreadBox/bios/`
 and BreadBox uses it: for PlayStation `scph5500.bin`, `scph5501.bin`,
@@ -43,6 +52,33 @@ games, name it after disc 1), for Game Boy Advance next to the game or in
 
 Back up this folder before you install a test build.
 
+## Bringing saves from another emulator
+
+Use in-game saves from the same game version, not save states. Close BreadBox
+and back up `sdmc:/3ds/BreadBox/` before replacing files. Saves beside the ROM
+are not imported. If Continue appears afterward, choose **X → Start over → A**
+to start from the imported save.
+
+**Game Boy Advance.** Before the game's first launch, copy its save to
+`sdmc:/3ds/BreadBox/saves/gba/`, using the ROM's file name with `.sav` instead of
+`.gba`. At **“This save looks different”**, select the leftmost check-mark icon
+with Left, then press **A** to use it. The original goes into Backups before
+BreadBox pads the working copy. A save already 128 KiB starts without a question.
+For a game already played, read
+`saves/gba/<ROM name without extension>.id`: its text gives the `gbs-…` name
+to use for your `.sav`. Move that name's old `.sav`, `.sav.bak` and
+`.sav.tmp` files into your backup first; a good recovery copy can otherwise
+restore the old save instead.
+
+**PlayStation.** With the default per-game memory card, copy a raw 131,072-byte
+card into `sdmc:/3ds/BreadBox/saves/` as `<game file name without extension>.srm`.
+Raw `.mcr`, `.mcd` and `.mc` cards can be renamed; headered `.gme`/`.vmp` files
+and single-save `.mcs` files need conversion to a whole raw card first. For a
+game already played, replace its existing `.srm` after backing it up. If the
+name is unclear, `log.txt` has a `saves:` line naming the game’s save identity;
+add `.srm` to that name. A valid raw card loads without a question. Load the
+save through the game's own menu.
+
 ## Moving from PSX3D
 
 On its first start, BreadBox copies from `sdmc:/3ds/PSX3D/` your memory cards,
@@ -61,7 +97,12 @@ new. Details: [Moving from PSX3D](moving-from-psx3d.md).
 BreadBox checks for a new version from the room when it starts, about once a
 day while it sits idle, and when the 3DS wakes up if the last check was over an
 hour ago. It never checks during a
-game. With **Automatic** (the default), a short countdown runs before the update
-installs, and any button puts it off. **Settings → Updates** switches to
-**Ask first** or **Off**, and **Check now** looks right away. The tested
+game. It asks before it installs an update (**Ask first**, the default).
+**Settings → Updates** switches to **Automatic**, where a short countdown runs
+and any button puts it off, or to **Off**; **Check now** looks right away and asks before
+downloading. Downloads keep going while you browse Settings. After you accept, return to the room to install, or close BreadBox:
+it installs the downloaded update the next time you open it. An interrupted
+update retries on the next start. If the battery is below 10%, plug in the charger; if there
+is another problem, the room and Updates tell you what to do. Keep power on while it
+installs. Updates need the HOME Menu app installed on SD. The tested
 settings for PlayStation games also update by themselves from the room.

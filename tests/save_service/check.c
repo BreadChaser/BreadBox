@@ -183,7 +183,7 @@ int main(int argc,char **argv)
  bb_later_file rf={later,NULL,0,0,NULL};bb_later_read(&rf);assert(bb_later_wait(&rf) && rf.size>32 && rf.buf);free(rf.buf);
  bb_later_file gone={"no-such-file",NULL,0,0,NULL};bb_later_read(&gone);bb_later_cancel(&gone);bb_save_settle();
  assert(bb_later_state(&gone)==BB_LATER_FAILED && !gone.buf);
- /* round 10: HOME / sleep wait for what a game's end queued (bb_save_barrier, the APT hook's body) */
+ /* HOME / sleep wait for what a game's end queued (bb_save_barrier, the APT hook's body) */
  bb_later(slow_job,NULL);assert(access("barrier.txt",F_OK));bb_save_barrier();assert(!access("barrier.txt",F_OK));
  /* The updater's bounded settle: a job still running keeps its worker (and file ownership),
   * a later call with time to spare finishes it; no job at all is trivially settled. */
@@ -192,7 +192,7 @@ int main(int argc,char **argv)
  assert(!bb_save_background_idle());
  assert(bb_save_settle_timeout(10000000000ULL) && !access("barrier.txt",F_OK));
  assert(bb_save_settle_timeout(0));
- /* round 10: a final battery write that fails is kept (sticky): no new session over it, a retry writes it */
+ /* A final battery write that fails is kept (sticky): no new session over it, a retry writes it */
  no_battery=false;config.system=&test_system;config.battery_path="battery.sav";config.state_base="game";
  begin();memset(ram,0x21,128);position=21;assert(bb_save_state_end(10,true));
  memset(ram,0x22,128);
@@ -208,7 +208,7 @@ int main(int argc,char **argv)
  assert(bb_save_end(false));bb_save_settle();assert(bb_save_final_failed());
  bb_save_final_discard();assert(!bb_save_final_failed());block_tmp(false);disk(0x22);
  begin();assert(bb_save_end(false));bb_save_settle();
- /* round 11, N1 (the reviewer's start race): a game's end queued, its final write fails only
+ /* Start race: a game's end queued, its final write fails only
   * while the next game's start settles; the next game's begin is refused and its teardown's
   * unconditional end must not write ITS ram over the kept game's battery */
  begin();memset(ram,0x11,128);assert(bb_save_flush());disk(0x11);

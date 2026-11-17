@@ -10,6 +10,7 @@
 #include "app_main.h"
 #include "gba.h"
 #include "gba_settings.h"
+#include "gba_picture.h"
 #include "bb_system.h"
 #include "retro_rewind.h"
 #include "gba_speed.h"
@@ -36,6 +37,7 @@ static bool save(void *buf, size_t n)
 }
 static bb_state_result load(const void *buf, size_t n)
 {
+ gba_picture_reset();
 	/* The clock goes on: keep the game's RTC as it is now (as state loads do). */
 	u32 rtc[3];
 	bool has_rtc = gba_session_rtc_get(rtc, sizeof(rtc));
@@ -80,6 +82,7 @@ void gba_speed_end(void)
 
 void gba_speed_pause(u32 held)
 {
+ gba_picture_reset();
 	ff_on = ff_arm;   // the menu ends fast-forward, like PS1 (unless its Fast forward row asked for it)
 	rw_hold = previous_toggle = ff_arm = false;
 	touch_ff=touch_rw=touch_toggle=false;

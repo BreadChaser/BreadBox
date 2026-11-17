@@ -3,6 +3,7 @@
  * A handoff flag publishes the worker's complete result with release/acquire. */
 #include <string.h>
 #include "app_policy.h"
+#include "cold_code.h"
 #include "safefile.h"
 #include "app_log.h"
 #include "app_config.h"
@@ -12,6 +13,8 @@
 #include "ui_list.h"
 #include "ui_pause.h"
 #include "ui.h"
+#include "ui_fixture.h"
+#include "whatsnew.h"
 #include "covers.h"
 #include "uisound.h"
 #include "playlog.h"
@@ -34,8 +37,9 @@
 #define PREF APP_SD_ROOT "/updates.txt"
 #define RECEIPT UPDATE_ROOT "/updated.txt"
 #define STATUS UPDATE_ROOT "/status.txt"
-#if defined(BB_UPDATE_TEST_REMOTE) && !defined(BB_UPDATE_DEV_URL)
-#error BB_UPDATE_TEST_REMOTE requires a development URL
+#define ACCEPTED UPDATE_ROOT "/accepted.json"
+#if (defined(BB_UPDATE_TEST_REMOTE) || defined(BB_UPDATE_TEST_FREE_BYTES)) && !defined(BB_UPDATE_DEV_URL)
+#error Update fixtures require a development URL
 #endif
 #ifdef BB_UPDATE_DEV_URL
 static const char update_dev_url_marker[]="BB_UPDATE_DEV_URL=" BB_UPDATE_DEV_URL;
@@ -89,19 +93,24 @@ static u64 update_last_check,update_idle_since,update_countdown_since,update_ret
 static unsigned update_transport_deferred;
 static bool update_postponed,update_crypto_disabled;
 static char update_failure_reason[96],update_restart_root[1024];
-static u64 update_power_checked;static bool update_power_cached;
-static unsigned update_check_failures;
+static u64 update_power_checked;static bool update_power_cached,update_space_cached;
+static unsigned update_check_failures,update_space_status;
+static _Atomic bool update_identity_unavailable;
+static bool update_pending_saved;
+static _Atomic unsigned update_space_mb;
+static bool update_pending_store(void);
+static void update_pending_resume(void);
 static aptHookCookie update_apt_cookie;
 static CURLM *update_multi;
 static char update_asset_url[2048],update_asset_source[512];
 static _Atomic unsigned update_status;
-/* What the Updates card says (J-05): plain words that fit its one foot line, no codes. The technical
+/* What the Updates card says: plain words that fit its one foot line, no codes. The technical
  * reason of a failed install stays in status.txt and the log. */
 static const char *const update_status_text[]={"Not checked yet","Checking for updates...","Update found","No connection. Check Wi-Fi",
- "Update info was damaged","Download was damaged","Install failed. Try again","BreadBox is up to date",
- "Try the update tomorrow","Couldn't write the SD card","Plug in or charge to 50%","Updater self-test failed",
- "Unfinished update removed","Couldn't clear old update","Check the date and time","Stopped. Will try again",
- "No update info right now"};   /* 16: the server answered, without the update file (404, 503 ...): not Wi-Fi */
+ "Bad update info. Try later","Bad download. Will retry","Install failed. Reopen app","BreadBox is up to date",
+ "Try the update tomorrow","Check the SD card. Retry","Battery low. Plug in","Restart or install by hand",
+ "Unfinished update removed","Restart or install by hand","Check the date and time","Reopen to retry update",
+ "Try again later","Free %u MB on SD card","Needs the installed app"};   /* 16: the server answered, without the update file (404, 503 ...): not Wi-Fi */
 /* Results that are good news are written in ink, not red. */
 static bool update_status_good(unsigned status){return status==0 || status==1 || status==2 || status==7 || status==12;}
 #define BACKOFF UPDATE_ROOT "/failed.txt"
@@ -111,19 +120,26 @@ static u64 update_failed_time;
 static void update_network_close(void)
 {if(update_multi){curl_multi_cleanup(update_multi);update_multi=NULL;}update_asset_url[0]=0;}
 static bb_update_manifest update_manifest;
-static int update_preference; /* Automatic, Ask first, Off */
-static bool update_initialized,update_checked,update_check_now,update_explicit_check,update_approved,update_install_attempted;
+static int update_preference=1; /* 0 Automatic, 1 Ask first (the default), 2 Off */
+static bool update_initialized,update_checked,update_install_attempted;
+static _Atomic bool update_check_now,update_explicit_check,update_approved;
 static unsigned update_job_busy,update_net_busy,update_net_abort,update_prefs_loaded;
 bool bb_update_net_busy(void){return (__atomic_load_n(&update_net_busy,__ATOMIC_ACQUIRE)&1)!=0;}
 bool bb_update_net_stop(void){unsigned old=__atomic_fetch_or(&update_net_busy,2,__ATOMIC_ACQ_REL);__atomic_store_n(&update_net_abort,1,__ATOMIC_RELEASE);if(!(old&1))update_network_close();return !(old&1);}
 static unsigned update_installed_version;
 static char update_notice[64];
 static u64 update_notice_until;
-static bool update_space(uint64_t bytes)
+static bool PSX3D_COLD update_require_space(uint64_t bytes)
 {
  FS_ArchiveResource r;
- return R_SUCCEEDED(FSUSER_GetSdmcArchiveResource(&r)) &&
-  (uint64_t)r.clusterSize*r.freeClusters>bytes;
+ if(R_FAILED(FSUSER_GetSdmcArchiveResource(&r))){update_status=9;return false;}
+ uint64_t free=(uint64_t)r.clusterSize*r.freeClusters;
+#ifdef BB_UPDATE_TEST_FREE_BYTES
+ if(free>BB_UPDATE_TEST_FREE_BYTES)free=BB_UPDATE_TEST_FREE_BYTES;
+#endif
+ if(free>bytes)return true;
+ update_space_mb=(unsigned)(bytes/1000000)+1;update_status=17;
+ log_printf("update: need %u MB free on SD\n",(unsigned)update_space_mb);return false;
 }
 static bool update_cancelled(void)
 {return (__atomic_load_n(&update_net_busy,__ATOMIC_ACQUIRE)&2) || __atomic_load_n(&update_net_abort,__ATOMIC_ACQUIRE) || bb_index_cancelled() || aptShouldClose() || !gspHasGpuRight();}
@@ -147,8 +163,8 @@ static size_t update_receive(char *p,size_t a,size_t b,void *ud)
  if(s->file && s->ranged && s->response==200)return 0; /* stop ignored Range immediately */
  if(s->response>=300)return n;
  if(n>s->limit-s->used)return 0;
- if(s->file && (!s->space_checked || s->used+1-s->space_checked>=1048576)){if(!update_space(2097152))return 0;s->space_checked=s->used+1;}
- if(s->file){if(fwrite(p,1,n,s->file)!=n)return 0;}else memcpy(s->data+s->used,p,n);
+ if(s->file && (!s->space_checked || s->used+1-s->space_checked>=1048576)){if(!update_require_space(2097152))return 0;s->space_checked=s->used+1;}
+ if(s->file){if(fwrite(p,1,n,s->file)!=n){update_status=9;return 0;}}else memcpy(s->data+s->used,p,n);
  s->used+=n;if(s->file)__atomic_store_n(&update_dl_bytes,s->base+s->used,__ATOMIC_RELAXED);return n;
 }
 /* Inspect the literal authority, without accepting userinfo, ports, suffixes or
@@ -225,26 +241,36 @@ static bool update_memory_fetch(const char *url,void *data,size_t cap,size_t *si
 }
 static bool update_title_version(void)
 {
- u64 self=0;AM_TitleInfo installed;
- if(envIsHomebrew()){log_printf("update: installed CIA required\n");return false;}
+ u64 self=0;AM_TitleInfo installed;FS_ProgramInfo launch;u32 process;
+ update_identity_unavailable=true;
+ if(envIsHomebrew()){update_status=18;log_printf("update: installed CIA required\n");return false;}
  Result rc=APT_GetProgramID(&self);
- if(R_FAILED(rc) || self!=BB_UPDATE_TITLE){log_printf("update: program identity unavailable rc=%08lx\n",(unsigned long)rc);return false;}
- if(R_FAILED(rc=amInit())){log_printf("update: AM unavailable rc=%08lx\n",(unsigned long)rc);return false;}
+ if(R_SUCCEEDED(rc) && self==BB_UPDATE_TITLE)rc=svcGetProcessId(&process,CUR_PROCESS_HANDLE);
+ if(R_SUCCEEDED(rc) && self==BB_UPDATE_TITLE)rc=FSUSER_GetProgramLaunchInfo(&launch,process);
+ if(R_FAILED(rc) || self!=BB_UPDATE_TITLE || launch.programId!=self || launch.mediaType!=MEDIATYPE_SD){
+  update_status=18;log_printf("update: installed SD program required rc=%08lx\n",(unsigned long)rc);return false;
+ }
+ update_identity_unavailable=false;
+ if(R_FAILED(rc=amInit())){update_status=6;log_printf("update: AM unavailable rc=%08lx\n",(unsigned long)rc);return false;}
  rc=AM_GetTitleInfo(MEDIATYPE_SD,1,&self,&installed);amExit();
- if(R_FAILED(rc)){log_printf("update: installed version unavailable rc=%08lx\n",(unsigned long)rc);return false;}
+ if(R_FAILED(rc)){update_identity_unavailable=true;update_status=18;log_printf("update: installed version unavailable rc=%08lx\n",(unsigned long)rc);return false;}
  update_installed_version=installed.version;return true;
 }
-/* Fail closed when power telemetry or pending-import recovery is unavailable. */
+/* Percentage is preferred; unavailable telemetry must not strand an update. */
 static bool update_power_ready(void)
 {
- bool adapter=false;u8 percent=0;
- if(R_FAILED(ptmuInit()))return false;
- Result rc=PTMU_GetAdapterState(&adapter);ptmuExit();
- if(R_SUCCEEDED(rc) && adapter){log_printf("update: power charger=1 ready=1\n");return true;}
- if(R_FAILED(mcuHwcInit()))return false;
- rc=MCUHWC_GetBatteryLevel(&percent);mcuHwcExit();
- bool ready=R_SUCCEEDED(rc) && percent>=50;
- log_printf("update: power charger=0 battery=%u rc=%08lx ready=%d\n",percent,(unsigned long)rc,ready);return ready;
+ bool adapter=false;u8 level=0,percent=0;
+ Result init=ptmuInit(),power=init,battery=init;
+ if(R_SUCCEEDED(init)){power=PTMU_GetAdapterState(&adapter);battery=PTMU_GetBatteryLevel(&level);ptmuExit();}
+ if(R_FAILED(power) || adapter){log_printf("update: power charger=%d rc=%08lx ready=1\n",adapter,(unsigned long)power);return true;}
+ Result rc=mcuHwcInit();
+ if(R_SUCCEEDED(rc)){rc=MCUHWC_GetBatteryLevel(&percent);mcuHwcExit();}
+ bool percentage=R_SUCCEEDED(rc) && percent<=100;
+ bool ready=percentage?percent>=10:R_FAILED(battery) || level!=0;
+ if(percentage)log_printf("update: power charger=0 battery=%u rc=%08lx ready=%d\n",percent,(unsigned long)rc,ready);
+ else log_printf("update: power charger=0 level=%u rc=%08lx level-rc=%08lx ready=%d\n",level,(unsigned long)rc,(unsigned long)battery,ready);
+ if(!ready)update_status=10;
+ return ready;
 }
 static bool update_recover_pending(void)
 {
@@ -280,16 +306,18 @@ static void update_initialize_job(void *unused)
  mkdir(UPDATE_ROOT,0777);
  safe_recover(STATUS);FILE *status_file=fopen(STATUS,"r");unsigned prior_status;
  if(status_file){if(fscanf(status_file,"%u",&prior_status)==1 && prior_status<sizeof(update_status_text)/sizeof(*update_status_text))update_status=prior_status;fgets(update_failure_reason,sizeof(update_failure_reason),status_file);update_failure_reason[strcspn(update_failure_reason,"\r\n")]=0;fclose(status_file);}
- if(!update_recover_pending()){update_crypto_disabled=true;update_status=13;}
+ bool identity=update_title_version();
+ if(identity && !update_recover_pending()){update_crypto_disabled=true;update_status=13;}
  if(update_crypto_disabled && update_status!=13)update_status=11;
+
  safe_recover(PREF);FILE *f=fopen(PREF,"r");int p;
  if(f){if(fscanf(f,"%d",&p)==1 && p>=0 && p<=2)__atomic_store_n(&update_preference,p,__ATOMIC_RELEASE);fclose(f);}
  safe_recover(BACKOFF);f=fopen(BACKOFF,"r");if(f){unsigned long long t;if(fscanf(f,"%64s %u %llu",update_failed_sha,&update_failed_count,&t)==3)update_failed_time=t;fclose(f);}
  safe_recover(RECEIPT);f=fopen(RECEIPT,"r");
  if(f){unsigned ver;char display[32];
   if(fscanf(f,"%u %31s",&ver,display)==2 && update_title_version() && ver==update_installed_version)
-   snprintf(update_notice,sizeof(update_notice),"Updated to %s",display);
-  fclose(f);remove(RECEIPT);if(update_notice[0]){remove(STAGE);remove(STAGE ".sha");remove(STATUS);update_failure_reason[0]=0;}
+   {snprintf(update_notice,sizeof(update_notice),"Updated to %s",display);update_status=7;}
+  fclose(f);remove(RECEIPT);if(update_notice[0]){remove(STAGE);remove(STAGE ".sha");safe_remove(ACCEPTED);remove(STATUS);update_failure_reason[0]=0;}
  }
  /* The previous install's journal locates any stop exactly (the log is closed before AM).
   * Acknowledge the boot once, so a journal that ends at a chainload or HOME request is
@@ -305,6 +333,7 @@ static void update_initialize_job(void *unused)
    bb_update_record(BB_UP_NEXT_BOOT,last);
   }
  }
+ if(!update_crypto_disabled && !update_identity_unavailable)update_pending_resume();
  __atomic_store_n(&update_prefs_loaded,1,__ATOMIC_RELEASE);
  __atomic_store_n(&update_job_busy,0,__ATOMIC_RELEASE);
 }
@@ -320,6 +349,7 @@ static void update_discover_job(void *unused)
 {
  (void)unused;update_status=3;__atomic_store_n(&update_dl_bytes,0,__ATOMIC_RELAXED);
  if(update_cancelled() || !update_title_version())goto done;
+ update_status=3;
  char url[600];size_t n;
 #ifdef BB_UPDATE_DEV_URL
  log_printf("update: emulator fixture %s\n",update_dev_url_marker);
@@ -337,9 +367,10 @@ static void update_discover_job(void *unused)
  update_status=3;
  /* A partial file is keyed by its manifest SHA, not by a changing 'latest' URL. */
  char prior[65]="";FILE *f=fopen(STAGE ".sha","r");if(f){fscanf(f,"%64s",prior);fclose(f);}
- if(strcmp(prior,update_manifest.sha256)){remove(STAGE);f=fopen(STAGE ".sha","w");if(!f)goto done;
-  bool wrote=fprintf(f,"%s",update_manifest.sha256)==64;if(fclose(f) || !wrote)goto done;}
- if(!update_space((uint64_t)update_manifest.size*3+4u*1024u*1024u)){log_printf("update: not enough free space for %lu bytes\n",(unsigned long)update_manifest.size);goto done;}
+ if(strcmp(prior,update_manifest.sha256)){remove(STAGE);f=fopen(STAGE ".sha","w");if(!f){update_status=9;goto done;}
+  bool wrote=fprintf(f,"%s",update_manifest.sha256)==64;if(fclose(f) || !wrote){update_status=9;goto done;}}
+ struct stat staged;uint64_t have=!stat(STAGE,&staged) && staged.st_size>=0 && (uint64_t)staged.st_size<=update_manifest.size?(uint64_t)staged.st_size:0;
+ if(!update_require_space((uint64_t)update_manifest.size*3+4u*1024u*1024u-have)){log_printf("update: not enough free space for %lu bytes\n",(unsigned long)update_manifest.size);goto done;}
  log_printf("update: manifest version=%u size=%lu installed=%u\n",update_manifest.version,(unsigned long)update_manifest.size,update_installed_version);
  update_status=2;update_machine.state=BB_UPDATE_DOWNLOAD;
  done:if(update_cancelled())__atomic_store_n(&update_transport_deferred,1,__ATOMIC_RELEASE);
@@ -354,10 +385,12 @@ static bool update_download(void *unused)
  /* One bounded range per queue turn; let scans and visible reads run between chunks. */
  size_t n=update_manifest.size-offset;if(n>262144)n=262144;
  char range[64];snprintf(range,sizeof(range),"%lu-%lu",(unsigned long)offset,(unsigned long)(offset+n-1));
- FILE *f=fopen(STAGE,offset?"ab":"wb");if(!f)return false;
+ update_status=3;
+ FILE *f=fopen(STAGE,offset?"ab":"wb");if(!f){update_status=9;return false;}
  __atomic_store_n(&update_dl_bytes,offset,__ATOMIC_RELAXED);
  sink s={.file=f,.limit=n,.base=offset};long code=0;
- bool ok=update_fetch(update_manifest.url,&s,range,&code);int close=fclose(f);
+ bool ok=update_fetch(update_manifest.url,&s,range,&code);int close=fclose(f);if(close)update_status=9;
+ if(code>=400 && update_status==3)update_status=16;
  /* If Range was ignored, discard; never append an entire response to a prefix. */
  if(code!=206){
   if(code==416){struct stat complete;return !stat(STAGE,&complete) && (size_t)complete.st_size==update_manifest.size;}
@@ -365,10 +398,11 @@ static bool update_download(void *unused)
   remove(STAGE);
   /* Static hosts can ignore Range. Start a fresh bounded full GET; its manifest
    * size/hash still gate AM. Servers with Range retain chunked resume. */
-  f=fopen(STAGE,"wb");if(!f)return false;
+  f=fopen(STAGE,"wb");if(!f){update_status=9;return false;}
   __atomic_store_n(&update_dl_bytes,0,__ATOMIC_RELAXED);
   s=(sink){.file=f,.limit=update_manifest.size};code=0;
-  ok=update_fetch(update_manifest.url,&s,NULL,&code);close=fclose(f);
+  ok=update_fetch(update_manifest.url,&s,NULL,&code);close=fclose(f);if(close)update_status=9;
+  if(code>=400 && update_status==3)update_status=16;
   return ok && code==200 && !close && s.used==update_manifest.size;
  }
  if(!ok || close || s.used!=n)return false;
@@ -386,6 +420,8 @@ static bool update_verify(void *unused)
  FILE *f=safe_begin(BACKOFF);if(f){bool wrote=fprintf(f,"%s %u %llu\n",update_failed_sha,update_failed_count,(unsigned long long)update_failed_time)>0;safe_finish(f,BACKOFF,wrote);}
  log_printf("update: hash failed count=%u\n",update_failed_count);
  }return ok;}
+#include "update_pending.inc"
+
 static bool update_flush(void *unused)
 {
  (void)unused;if(bb_session_active() || aptShouldClose() || !gspHasGpuRight())return false;
@@ -407,7 +443,7 @@ static bool update_install(void *unused)
  if(bb_session_active() || aptShouldClose() || !gspHasGpuRight() || !update_power_ready())return false;
  bool verified=update_verify(NULL);bb_update_record(BB_UP_SECOND_SHA,verified);
  if(!verified || !update_title_version() ||
- !bb_update_newer(BB_UPDATE_TITLE,update_manifest.version,update_installed_version) || !update_space((uint64_t)update_manifest.size*2+2097152) || R_FAILED(amInit()))return false;
+ !bb_update_newer(BB_UPDATE_TITLE,update_manifest.version,update_installed_version) || !update_require_space((uint64_t)update_manifest.size*2+2097152) || R_FAILED(amInit()))return false;
  unsigned char *buf=malloc(16384);AM_TitleInfo info;
  if(!buf){strcpy(update_failure_reason,"Not enough memory");goto done;}
  strcpy(update_failure_reason,"CIA identity or SD read failed");
@@ -463,12 +499,15 @@ static void update_stage_job(void *unused)
  /* Only the staging phases: a job queued from a stale phase read must never flush or install. */
  bb_update_state phase=update_machine.state;
  if(phase!=BB_UPDATE_DOWNLOAD && phase!=BB_UPDATE_VERIFY){log_printf("update: staging refused in phase %d\n",(int)phase);__atomic_store_n(&update_job_busy,0,__ATOMIC_RELEASE);return;}
+ if(update_approved && !update_pending_store()){update_status=9;update_machine.state=BB_UPDATE_FAILED;goto done;}
  if(phase==BB_UPDATE_DOWNLOAD){
-  if(!update_download(NULL)){if(update_cancelled()){__atomic_store_n(&update_transport_deferred,2,__ATOMIC_RELEASE);update_machine.state=BB_UPDATE_DOWNLOAD;}else{update_status=3;update_machine.state=BB_UPDATE_FAILED;}}
+  if(!update_download(NULL)){if(update_cancelled()){__atomic_store_n(&update_transport_deferred,2,__ATOMIC_RELEASE);update_machine.state=BB_UPDATE_DOWNLOAD;}else{update_machine.state=BB_UPDATE_FAILED;}}
   else {struct stat st;if(!stat(STAGE,&st) && (size_t)st.st_size==update_manifest.size)update_machine.state=BB_UPDATE_VERIFY;}
  }else {bb_update_step(&update_machine,&update_ops,!update_cancelled());
+  if(update_machine.state==BB_UPDATE_READY){update_status=2;log_printf("update: verified and staged version=%u accepted=%d\n",update_manifest.version,update_approved);}
   if(update_machine.state==BB_UPDATE_FAILED && update_cancelled()){update_machine.state=BB_UPDATE_VERIFY;__atomic_store_n(&update_transport_deferred,2,__ATOMIC_RELEASE);}}
- __atomic_store_n(&update_job_busy,0,__ATOMIC_RELEASE);
+ if(update_machine.state==BB_UPDATE_FAILED && update_status==5){if(update_hash_backoff())update_status=8;else update_machine.state=BB_UPDATE_DOWNLOAD;}
+ done:__atomic_store_n(&update_job_busy,0,__ATOMIC_RELEASE);
 }
 static bool update_enqueue(void (*fn)(void *))
 {
@@ -505,7 +544,9 @@ static void update_install_job(void *unused)
 {
  (void)unused;bool exclusive=false;char previous_reason[sizeof(update_failure_reason)];strcpy(previous_reason,update_failure_reason);
  /* Import retirement needs the index worker until all handles are closed. */
- bool ok=update_prepare();
+ update_status=6;
+ bool ok=update_pending_store();if(!ok)update_status=9;
+ if(ok)ok=update_prepare();
  if(ok)update_network_close();
  if(ok && !__atomic_load_n(&update_install_abort,__ATOMIC_ACQUIRE))ok=update_flush(NULL);
  else ok=false;
@@ -526,7 +567,15 @@ static void update_install_job(void *unused)
  if(__atomic_load_n(&update_install_abort,__ATOMIC_ACQUIRE))ok=false;
  if(ok)ok=update_install(NULL);
  if(!ok && exclusive)bb_writers_release_exclusive();
- if(!ok){update_status=__atomic_load_n(&update_install_abort,__ATOMIC_ACQUIRE)?15:6;if(update_status==15)strcpy(update_failure_reason,"Update interrupted; retry next start");bb_update_record(BB_UP_FAILURE,update_status);update_save_status();update_machine.state=BB_UPDATE_FAILED;}
+ if(!ok){
+  if(__atomic_load_n(&update_install_abort,__ATOMIC_ACQUIRE))update_status=15;
+  if(update_status==15)strcpy(update_failure_reason,"Update interrupted; retry next start");
+  bb_update_record(BB_UP_FAILURE,update_status);update_save_status();
+  /* Power/space checks run before AM starts; keep those gates live in the room. */
+  bool blocked=update_status==10 || update_status==17;
+  if(blocked){update_install_attempted=false;update_power_checked=0;}
+  update_machine.state=blocked?BB_UPDATE_READY:BB_UPDATE_FAILED;
+ }
  else update_machine.state=BB_UPDATE_RELAUNCH;
  __atomic_store_n(&update_install_busy,0,__ATOMIC_RELEASE);
 }
@@ -583,8 +632,8 @@ static void update_apt(APT_HookType type,void *unused)
  }
 }
 const char *bb_update_preference(void){return (const char *const[]){"Automatic","Ask first","Off"}[__atomic_load_n(&update_preference,__ATOMIC_ACQUIRE)];}
-/* An explicit Check now: the room's notice and the Updates card say what happens (owner 2026-11-05: it
- * showed nothing). Checking, then the confirm dialog as soon as an update is found (before any download),
+/* An explicit Check now: the room's notice and the Updates card say what happens.
+ * Checking, then the confirm dialog as soon as an update is found (before any download),
  * then "Downloading update NN%", or "BreadBox is up to date" / the failure. */
 static bool update_explicit_pending;
 static bool update_developer_busy(void)
@@ -603,7 +652,7 @@ static bool update_prefs_ready(void){return __atomic_load_n(&update_prefs_loaded
 static const char *update_unavailable(void)
 {
  if(update_developer_busy())return "Off while remote is on";
- if(envIsHomebrew())return "Needs the installed app";
+ if(envIsHomebrew() || update_identity_unavailable)return "Needs the installed app";
  if(!update_prefs_ready())return "Starting...";
  return NULL;
 }
@@ -617,7 +666,7 @@ static void update_view_refresh(void)
  update_view.state=update_machine.state;update_view.size=update_manifest.size;
  snprintf(update_view.display,sizeof(update_view.display),"%s",update_manifest.display);
 }
-/* Check now stays the player's check until a discovery really finishes (J-04): it waits for the
+/* Check now stays the player's check until a discovery really finishes: it waits for the
  * library scan, and a discovery the scan cancels is retried as the same explicit check, so its
  * result is always asked about, never turned into an automatic download. */
 static bool update_explicit_retry;
@@ -630,6 +679,7 @@ static bool update_check_start(void)
  if(!update_enqueue(update_discover_job))return false;
  update_status=1;update_last_check=update_now();update_checked=true;update_explicit_pending=explicit;update_check_now=update_explicit_retry=false;return true;
 }
+static bool update_waits_for_save(void);
 static void update_say(const char *text,unsigned ms){snprintf(update_notice,sizeof(update_notice),"%s",text);update_notice_until=osGetTime()+ms;}
 static const char *update_settings_status(void);
 /* After an explicit check's discovery (worker idle, acquired): ask now, or say the result. False: Later. */
@@ -640,7 +690,7 @@ static bool update_explicit_result(void)
  if(update_view.state==BB_UPDATE_DOWNLOAD){
   char text[160];snprintf(text,sizeof(text),"BreadBox %s is ready to download and install. Your saved games will be kept.",update_view.display);
   if(!ui_confirm_choice("Update available",text,"A  Update","B  Later",false)){update_machine.state=BB_UPDATE_IDLE;update_view.state=BB_UPDATE_IDLE;update_explicit_check=false;return false;}
-  update_approved=true;return true;
+  update_approved=true;update_postponed=false;update_countdown_since=0;update_install_attempted=false;update_pending_saved=false;log_printf("update: explicit acceptance version=%u\n",update_manifest.version);return true;
  }
  update_say(update_status==7?"BreadBox is up to date":update_settings_status(),4000);return true;
 }
@@ -660,7 +710,7 @@ static int update_poll(bool room)
 {
  if(bb_session_active() || update_developer_busy() || __atomic_load_n(&update_job_busy,__ATOMIC_ACQUIRE))return UPDATE_POLL_WAIT;
  update_view_refresh();
- if(!update_initialized || update_crypto_disabled)return UPDATE_POLL_WAIT;
+ if(!update_initialized || update_crypto_disabled || update_identity_unavailable)return UPDATE_POLL_WAIT;
  u64 now=update_now(),elapsed=update_elapsed(now,&update_last_check);
  unsigned deferred=__atomic_exchange_n(&update_transport_deferred,0,__ATOMIC_ACQ_REL);
  if(deferred){update_retry_after=now+5000;if(deferred==1){update_checked=false;if(update_explicit_pending)update_explicit_retry=true;}}
@@ -670,16 +720,27 @@ static int update_poll(bool room)
   if(wake){update_idle_since=now;update_countdown_since=0;}
   u64 minimum=update_check_failures>=3?86400000:update_check_failures==2?21600000:3600000;
   if((wake && elapsed>=minimum) || (update_last_check && elapsed>=86400000))update_checked=false;
-  if(input_keys_held()){update_idle_since=now;if(update_countdown_since){update_postponed=true;update_countdown_since=0;}}
+  if(input_keys_held()){update_idle_since=now;if(update_countdown_since && !update_approved){update_postponed=true;update_countdown_since=0;log_printf("update: automatic update postponed\n");}}
   if(!update_idle_since)update_idle_since=now;
  }
- if((!update_checked && __atomic_load_n(&update_preference,__ATOMIC_ACQUIRE)!=2) || update_check_now || update_explicit_retry){update_check_start();return UPDATE_POLL_WAIT;}
+ if((!update_approved && !update_checked && __atomic_load_n(&update_preference,__ATOMIC_ACQUIRE)!=2) || update_check_now || update_explicit_retry){update_check_start();return UPDATE_POLL_WAIT;}
+ u64 retry_time=osGetTime();
+ if(update_approved && update_status==8 && (retry_time<update_failed_time || retry_time-update_failed_time>=86400000)){
+  (void)update_enqueue(update_pending_retry_job);return UPDATE_POLL_WAIT;
+ }
  if(!update_explicit_result())return UPDATE_POLL_WAIT;
  if(update_view.state==BB_UPDATE_DOWNLOAD || update_view.state==BB_UPDATE_VERIFY){
   if(update_download_wanted() && update_enqueue(update_stage_job))update_view.staging=true;
   return UPDATE_POLL_WAIT;
  }
  return room && update_view.state==BB_UPDATE_READY?UPDATE_POLL_READY:UPDATE_POLL_WAIT;
+}
+void PSX3D_COLD bb_update_menu_tick(void)
+{
+ if(!update_initialized || update_crypto_disabled || update_explicit_pending || !aptMainLoop() || !gspHasGpuRight() ||
+    bb_update_installing() || bb_update_committed() ||
+    __atomic_load_n(&update_job_busy,__ATOMIC_ACQUIRE))return;
+ if(update_machine.state==BB_UPDATE_DOWNLOAD || update_machine.state==BB_UPDATE_VERIFY)(void)update_poll(false);
 }
 static void update_begin(void)
 {if(!update_initialized && update_enqueue(update_initialize_job)){update_initialized=true;aptHook(&update_apt_cookie,update_apt,NULL);}}
@@ -698,15 +759,20 @@ bool bb_update_tick(void)
  if(update_poll(true)==UPDATE_POLL_READY){
   u64 now=update_now();
   if(update_install_attempted || update_postponed || bb_save_final_failed())return false;
-  if(!update_power_checked || update_elapsed(now,&update_power_checked)>=5000){update_power_cached=update_power_ready();update_power_checked=now;}
+  if(!update_power_checked || update_elapsed(now,&update_power_checked)>=5000){
+   update_power_cached=update_power_ready();
+   update_space_cached=update_require_space((uint64_t)update_manifest.size*2+2097152);update_space_status=update_status;update_power_checked=now;
+  }
   if(!update_power_cached){update_status=10;return false;}
+  if(!update_space_cached){update_status=update_space_status;return false;}
+  if(update_status==10 || update_status==17)update_status=2;
   if(update_preference==2 && !update_explicit_check)return false;
   if(!update_approved && (update_preference==1 || update_explicit_check) && !ui_confirm_choice("Update available","BreadBox can update now. Your saved games will be kept.","A  Update","B  Later",false)){update_machine.state=BB_UPDATE_IDLE;return false;}
   if(!update_approved && update_preference==0 && !update_explicit_check){
    if(update_elapsed(now,&update_idle_since)<5000)return false;
-   if(!update_countdown_since)update_countdown_since=now;
+   if(!update_countdown_since){update_countdown_since=now;log_printf("update: automatic countdown started\n");}
    u64 countdown=update_elapsed(now,&update_countdown_since);
-   if(countdown<3000){snprintf(update_notice,sizeof(update_notice),"Updating BreadBox in %u... Any button: later",3-(unsigned)(countdown/1000));update_notice_until=osGetTime()+100;return false;}
+   if(countdown<3000){snprintf(update_notice,sizeof(update_notice),"Updating in %us. Any key: later",3-(unsigned)(countdown/1000));update_notice_until=osGetTime()+100;return false;}
   }
   update_approved=true;
   /* covers_stop cancels LOW import work. Let a reserved writer finish before
@@ -739,12 +805,26 @@ static bool update_progress_text(char *text,size_t cap)
  else return false;
  return true;
 }
+PSX3D_COLD bool bb_update_startup_ready(void)
+{
+ if(update_developer_busy())return true;
+ return __atomic_load_n(&update_prefs_loaded,__ATOMIC_ACQUIRE) &&
+  (!update_notice[0] || (update_notice_until && osGetTime()>=update_notice_until));
+}
 void bb_update_draw_notice(void)
 {
+ const char *fixture=ui_fixture_notice();if(fixture){ui_notice(fixture,60);return;}
+
+ if(bb_update_installing() || bb_update_committed())return;
  char text[48];
+ if(update_approved && (update_waits_for_save() ||
+    (update_view.state!=BB_UPDATE_DOWNLOAD && update_view.state!=BB_UPDATE_VERIFY && update_status>=3 && !update_status_good(update_status)))){
+  ui_notice(update_settings_status(),60);return;
+ }
  if(update_notice_until && osGetTime()<update_notice_until){ui_notice(update_notice,60);return;}
  if(update_explicit_pending){ui_notice("Checking for updates",60);return;}
- if(update_progress_text(text,sizeof(text)))ui_notice(text,60);
+ if(update_progress_text(text,sizeof(text))){ui_notice(text,60);return;}
+
 }
 /* A retained final save can outlive the player's Later choice. Keep consent/staging,
  * disclose the blocker, and let the next eligible room tick retry after retry/discard. */
@@ -758,12 +838,14 @@ static const char *update_settings_status(void)
  const char *why=update_unavailable();if(why)return why;
  if(update_explicit_pending)return "Checking for updates..."; /* only a check really queued (a disabled one says why) */
  if(update_explicit_check && update_progress_text(update_card_line,sizeof(update_card_line)))return update_card_line;
- if(update_waits_for_save()){update_line_bad=true;return "Waiting: save not written";}
- if(update_view.state==BB_UPDATE_READY && update_explicit_check && update_approved)return "Leave Settings to install";
+ if(update_waits_for_save()){update_line_bad=true;return "Retry the save first";}
+ if(update_status==5 && update_install_attempted){update_line_bad=true;return "Reopen to retry update";}
+ if(update_view.state==BB_UPDATE_READY && update_approved && (update_status==2 || update_status==7 || update_status==18))return "Ready. Reopen to install";
+ if(update_status==17){update_line_bad=true;snprintf(update_card_line,sizeof(update_card_line),update_status_text[17],update_space_mb?update_space_mb:207);return update_card_line;}
  unsigned status=update_status;
  /* Keep the last install phase visible across subsequent background checks.
   * Current power, integrity, TLS and disabled states take priority. */
- if(update_failure_reason[0] && (status<=3 || status==6 || status==7 || status==16)){update_line_bad=true;return "Last install didn't finish";}
+ if(update_failure_reason[0] && (status<=3 || status==6 || status==7 || status==16)){update_line_bad=true;return "Reopen to retry update";}
  update_line_bad=!update_status_good(status);
  return update_status_text[status];
 }
@@ -782,13 +864,14 @@ const char *bb_update_glance(void)
 }
 static flist_t update_list;static int update_selected;
 static void update_row(int i,void *unused,ui_card_row_t *r)
-{(void)unused;*r=(ui_card_row_t){.label=i?"Check now":"Install",.value=i?">":update_prefs_ready()?bb_update_preference():"-",.arrows=!i && update_prefs_ready()};}   /* not "Updates" again under the title */
-/* The card's foot line: what this visit's check is doing or found; no standing "Last check" status (owner 2026-11-05) */
+{(void)unused;*r=(ui_card_row_t){.label=i==BB_UPDATE_NOTES_ROW?bb_whatsnew_label():i?"Check now":"Install",.value=i?">":update_prefs_ready()?bb_update_preference():"-",.arrows=!i && update_prefs_ready()};}   /* not "Updates" again under the title */
+/* The card's foot line: what this visit's check is doing or found; no standing "Last check" status */
 static const char *update_card_notice(void)
-{return update_unavailable() || update_crypto_disabled || update_waits_for_save() || update_explicit_pending || update_explicit_check || update_view.staging?update_settings_status():"";}
+{const char *fixture=ui_fixture_notice();if(fixture){update_line_bad=ui_fixture_problem();return fixture;}
+ return update_unavailable() || update_crypto_disabled || update_waits_for_save() || update_explicit_pending || update_explicit_check || update_view.staging || update_status>=3?update_settings_status():"";}
 /* The card's footer: drawn and touched from the same list (a tap on Back or Check works like B or A). */
 static int update_bar(ui_button_t *bar)
-{bar[0]=(ui_button_t){KEY_B,"Back",UI_ICON_BACK,false};bar[1]=(ui_button_t){KEY_A,update_selected?"Check":"Change",UI_ICON_CHANGE,false};return 2;}
+{bar[0]=(ui_button_t){KEY_B,"Back",UI_ICON_BACK,false};bar[1]=(ui_button_t){KEY_A,update_selected==BB_UPDATE_NOTES_ROW?"Open":update_selected?"Check":"Change",update_selected==BB_UPDATE_NOTES_ROW?UI_ICON_OPEN:UI_ICON_CHANGE,false};return 2;}
 static void update_bottom(void *unused);
 
 void bb_update_settings(void)
@@ -800,18 +883,19 @@ void bb_update_settings(void)
   if(dev_tick(false) || dev_ui_pending())break;
   if(!update_initialized && !update_developer_busy() && !__atomic_load_n(&update_job_busy,__ATOMIC_ACQUIRE))update_begin();   /* the room's tick has not started the updater yet */
   ui_button_t bar[2];int nbar=update_bar(bar);
-  input_poll();u32 k=ui_card_input(&update_list,2,&update_selected,ui_bar_input(bar,nbar,input_keys_down()));k=ui_swap_keys(k,UI_SWAP_MENU);
+  input_poll();u32 k=ui_card_input(&update_list,BB_UPDATE_ROWS,&update_selected,ui_bar_input(bar,nbar,input_keys_down()));k=ui_swap_keys(k,UI_SWAP_MENU);
   if(k&KEY_B)break;
   if(!update_selected && (k&(KEY_A|KEY_LEFT|KEY_RIGHT)) && !update_prefs_ready())sfx_play(SFX_ERROR);   /* a preference that was not loaded is never written */
   else if(!update_selected && (k&(KEY_A|KEY_LEFT|KEY_RIGHT))){int next=(update_preference+((k&KEY_LEFT)?2:1))%3;
    FILE *f=safe_begin(PREF);if(f){bool wrote=fprintf(f,"%d\n",next)>0;if(safe_finish(f,PREF,wrote)){__atomic_store_n(&update_preference,next,__ATOMIC_RELEASE);if(next==2)bb_update_net_stop();sfx_play(SFX_VALUE);}}
    if(__atomic_load_n(&update_preference,__ATOMIC_ACQUIRE)!=next)sfx_play(SFX_ERROR);   /* could not be written: it stays as it was */
-  }else if(update_selected && (k&KEY_A) && (update_unavailable() || update_crypto_disabled))sfx_play(SFX_ERROR);   /* the card's line says why (the updater never starts a check: self-test or cleanup failed) */
+  }else if(update_selected==BB_UPDATE_NOTES_ROW && (k&KEY_A)){bb_whatsnew_open();ui_swap_enter();}
+  else if(update_selected && (k&KEY_A) && (update_unavailable() || update_crypto_disabled))sfx_play(SFX_ERROR);   /* the card's line says why (the updater never starts a check: self-test or cleanup failed) */
   else if(update_selected && (k&KEY_A) && !update_explicit_pending){update_check_now=update_explicit_pending=true;}
   else if(k&KEY_A)sfx_cancel();   /* a check is already running: nothing new */   /* "Checking..." at once, even while the library scans */
   /* the room's tick is not running: the same policy runs here, never past READY */
   update_poll(false);
-  ui_card_update(&update_list,update_selected,2);music_update();ui_begin();video_present_vsync(false,ui_menu_top,update_bottom,NULL);
+  ui_card_update(&update_list,update_selected,BB_UPDATE_ROWS);music_update();ui_begin();video_present_vsync(false,ui_menu_top,update_bottom,NULL);
  }
  ui_swap_enter();
 }

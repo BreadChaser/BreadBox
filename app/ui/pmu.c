@@ -1,7 +1,7 @@
 // ARM11 MPCore performance monitor: a cycle counter and two event counters,
 // through the kernel (svcControlPerformanceCounter), which owns them: writing
 // the CP15 registers directly behind its back crashed the console on leaving
-// PSX3D. Test tool: measures what the emulator does on the real CPU (cache and
+// BreadBox. Test tool: measures what the emulator does on the real CPU (cache and
 // TLB misses, mispredicted branches, stalls) at a few system calls per frame.
 #include <string.h>
 #include "app_log.h"
@@ -10,7 +10,7 @@
 #include "core_hooks.h"
 #include "dev_switches.h"
 #include "pmu.h"
-#include "emu.h"
+#include "ps1_hooks.h"
 #include "devtools.h"
 #include "../../core/plugins/gpulib/psx3d_frameskip.h"
 

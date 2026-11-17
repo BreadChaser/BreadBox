@@ -1,6 +1,6 @@
 #include "app_policy.h"
 #define _GNU_SOURCE   // strcasestr
-// Which game a save name belongs to (harsh review M2). Memory cards, states,
+// Which game a save name belongs to. Memory cards, states,
 // the Continue save, per-game settings and cheats are named after disc 1's
 // file name ("game" for Game A/game.bin), so two different games with the
 // same file name in different folders would share them and overwrite each

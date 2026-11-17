@@ -1,8 +1,8 @@
-"""The Lamplight room's geometry (art direction A, round 2): low-poly models, world-projected textures, walls and
+"""The Lamplight room's geometry: low-poly models, world-projected textures, walls and
 floor cut into 30 cm cells so baked light lands on vertices. Geometry only: no Blender objects (gi.py bakes its light,
 bbr3.py writes it). Space: metres, x right, y into the room (back wall y = 2.0), z up (Blender's world).
 
-Made after the approved round 2 mockups (art direction A) with what the app needs added: the bookcase
+Includes the geometry and anchors the app needs: the bookcase
 built from the library's `case` contract (8 rows x 3 bays), the BreadBox poster on the left wall and the save
 postcards' corkboard on the right wall (runtime pictures over them), the TV picture quad, the share card in the
 hands' card size, the camera poses and anchors.
@@ -20,7 +20,7 @@ FRONT = 1.58                          # the bookcase's front plane: BBR z = 0 he
 CASE = dict(x0=-735.0, bay=490.0, bays=3, gap=240.0, rows=8, depth=360.0, upr=30.0, board=26.0, base=60.0)
 CASE['top'] = CASE['base'] + CASE['rows'] * CASE['gap']
 
-# floor lamp: round 2's place (air on both sides of the shade at Home)
+# floor lamp: position (air on both sides of the shade at Home)
 LAMP_X, LAMP_Y = -1.14, 1.74
 SHADE_R = (0.19, 0.12, 0.13, 0.11)
 RX0, RX1, RY0, RY1, RZ = -2.4, 2.4, -3.6, 2.0, 2.6

@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "theme.h"
-/* Test-only adaptation (2026-11-06): the theme list's row helpers this oracle used were retired
+/* Test-only adaptation: the theme list's row helpers this oracle used were retired
  * with the old themes; the themes are now the room styles, one row each, no heading. */
 #define THEMES_SHOWN 1
 static int theme_rows(void) { return theme_count(); }

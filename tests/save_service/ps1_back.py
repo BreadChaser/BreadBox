@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""PS1 Back at Continue? runs nothing (bb-uitest-fix-r1c, re-review R1b-4; the reviewer's ps1-card / HLE-card probes
-made a test). run_game()'s launch section, from the memory cards' start to the end of the Continue question, and
+"""PS1 Back at Continue? runs nothing (including card and HLE early-exit paths
+under the same lifecycle checks). run_game()'s launch section, from the memory cards' start to the end of the Continue question, and
 leave_unplayed() are compiled verbatim from systems/ps1/emu.c and run with the real memory card code (cards.c,
 final files, safe files, history) and a model guest: one that writes its memory card before its first vblank,
 one that stalls in its first frame (an alarm ends the test if it ever runs). After the launch section comes a
@@ -70,7 +70,7 @@ static int guest;   /* 0: writes its memory card before its first vblank; 1: sta
 static int frames,hooks,notes,sessions,unloads,deinits,video_ends,card_ends,config_ends;
 static void make_path(char *out,size_t n,const char *dir,const char *ext){(void)dir;snprintf(out,n,"%s%s",game_name,ext);}
 static bool dev_remote_game(void){return false;}
-/* the real card question (systems/ps1/card_question.c, J-02 Restore) for the combined cases; its dialog answers
+/* the real card question (systems/ps1/card_question.c, Restore) for the combined cases; its dialog answers
  * from a script (1: A, 0: B); otherwise the stub's answer */
 bool real_cards_question(void);   /* card_question.c, included at the end (its headers redefine this file's paths) */
 static bool real_card;static int script[8],asked;
@@ -175,7 +175,7 @@ int main(int argc,char **argv)
    fprintf(stderr,"%s: frozen %d left %d in backups %d undos %d\n",over[i].name,continue_frozen,left,in_backups,undos);fails++;
   }
  }
- /* merge/v1-fixes: a damaged card with a good copy in Backups (J-02), then Continue? (UI branch). Quit at the card
+ /* A damaged card with a good copy in Backups, then Continue?. Quit at the card
   * question, start again, Restore, then Back (or Close without the GPU right) at Continue?: nothing played, the card
   * the restored copy, the damaged file kept as .bad, Continue and config.ini byte-identical; Restore then a Start
   * over that hits an SD error keeps the old spot and the restored card */

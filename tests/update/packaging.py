@@ -8,6 +8,9 @@ with tempfile.TemporaryDirectory() as d:
  assert run('--private').returncode!=0
  assert run().returncode!=0
  assert run('--private','--development-package').returncode==0
+ p.write_bytes(b'BB_UI_FIXTURES=1')
+ assert run().returncode!=0
+ assert run('--private','--development-package').returncode==0
  p.write_bytes(b'production ELF fixture')
  assert run('--private').returncode==0
  assert run().returncode==0

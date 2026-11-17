@@ -493,7 +493,7 @@ void room_lit_rgb(const room_file *f, uint32_t c, float k, const float light[3],
 
 // ---------------------------------------------------------------- the bookcase lamp
 
-// A strip light under the board's front edge, the cubby's width (owner's pick 2026-11-12, "2 for sure"):
+// A strip light under the board's front edge, the cubby's width:
 // an even neutral wash from above, a little brighter at the top, falling off past the strip's ends
 #define LAMP_I 1.14f                     // its strength at the spines, 1.0 = neutral light
 #define LAMP_REACH 300.0f                // mm: half its strength this far from it
@@ -606,10 +606,10 @@ room_pose room_wall_pose(const room_file *f, int owned, float hy)
 	room_pose p = pose_or_home(f, "library");
 	const float *c = room_anchor(f, "case");
 	if (!c) return p;
-	// owner (2026-10-30): closer to the shelves: the case fills the screen (F px over 400 px), ~2.5 rows in
+	// Close to the shelves: the case fills the screen (F px over 400 px), ~2.5 rows in
 	// view. The camera looks down a little (RISE), so the bottom row sees widest: there the screen's edge
 	// is 2 mm inside the end uprights' outer faces, else the room beside the case shows in the last column
-	// (the 1 px light line at the right edge, light round 3; the 2 mm also covers stereo's offset)
+	// (the 1 px light line at the right edge; the 2 mm also covers stereo's offset)
 	float gap = c[3], base = c[9], top = base + c[4] * gap, x = c[0] + c[1] * c[2] / 2;
 	float half = c[1] * c[2] / 2 + c[7] / 2 - 2, D = half * 300 / 200;
 	for (int i = 0; i < 4; i++) D = half * 300 / 200 * (D - 120.0f / 300 * WALL_RISE) / sqrtf(D * D + WALL_RISE * WALL_RISE);
@@ -625,7 +625,7 @@ room_pose room_wall_pose(const room_file *f, int owned, float hy)
 room_pose room_section_pose(const room_file *f, float camx, float base, float hmax, float pk, float speed)
 {
 	(void)f;
-	// close up: 10 % nearer than round 12 (owner: closer to the shelves; spines stay whole in view)
+	// Close up: the shelves are near, with whole spines in view.
 	(void)speed;
 	float d0 = fmaxf(325, 540 * (hmax + 26) / 240), D = lerpf(d0, 660, pk);
 	float y = base + hmax / 2 + 4 + 20 * pk;
@@ -645,7 +645,7 @@ void room_case_plan_make(const room_file *f, const room_section *s, int n, room_
 	if (!cubbies || !room_case_section(f, 0, &g)) return;
 	p->cubbies = cubbies;
 	if (n > cubbies) n = cubbies;
-	// one cubby each (owner: "one shelf per system" = one cubby per system), in the case's
+	// One cubby per system, in the case's
 	// order from the top left: Favorites, then the systems newest first. All of a system's
 	// boxes are in its cubby (more than it holds: they slide behind its uprights)
 	for (int i = 0; i < n; i++) {
@@ -655,7 +655,7 @@ void room_case_plan_make(const room_file *f, const room_section *s, int n, room_
 		p->fill[i] = s[i].games ? clampf(section_mm(&s[i]) / g.inner, 0, 1) : 0;
 	}
 	p->nsec = p->used = n;
-	// the cubbies nobody uses: something of the room (kept for the systems to come); light round 3: the `post` anchor's y = 0
+	// the cubbies nobody uses: something of the room (kept for the systems to come); the `post` anchor's y = 0
 	// leaves them empty
 	const float *post = room_anchor(f, "post");
 	float keep = post ? post[1] : 1;   // the share of empty cubbies that get decor (1: all, .5: every other, 0: none)
@@ -762,7 +762,7 @@ static uint32_t rng_next(uint32_t *s) { *s = *s * 1664525u + 1013904223u; return
 
 // One 128x64 tile: a section's inner width (356 mm) by its height (168 mm),
 // boxes standing spine-out; above the boxes the tile is clear (the shelf shows).
-// Round 8 sizes: cartons 23 x 125 mm, jewel cases 125 mm high and 10.5 (North America /
+// Physical sizes: cartons 23 x 125 mm, jewel cases 125 mm high and 10.5 (North America /
 // Japan), 17 (PAL) or 25 mm (two or more discs) thick. No numbers on any spine.
 static void spine_tile(uint16_t *px, int x0, int y0, int style, uint32_t seed)
 {
@@ -986,7 +986,7 @@ void room_mesh_key_set(room_mesh_key *k, unsigned gen, int cur, int n)
 // the PlayStation GPU's dither matrix (added to 8-bit colour before it drops to 5 bits a channel)
 static const signed char dither_matrix[4][4] = { { -4, 0, -3, 1 }, { 2, -2, 3, -1 }, { -3, 1, -4, 0 }, { 3, -1, 2, -2 } };
 
-// light round 3: the dither's strength from the room file's `post` anchor (x: 0 = round only, 1 = the PS1's)
+// Room lighting: the dither's strength from the room file's `post` anchor (x: 0 = round only, 1 = the PS1's)
 static float dither_k = 1;
 void room_dither_set(float k) { dither_k = k < 0 ? 0 : k > 1 ? 1 : k; }
 

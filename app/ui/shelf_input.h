@@ -16,6 +16,17 @@ static inline int shelf_browse_step(shelf_repeat *r, unsigned down, unsigned hel
  r->next = now + (fresh ? .4f : .1f);
  return dir == 1 ? -1 : 1;
 }
+// L / R through the letters (or pages): the press, then repeats while held, as the D-pad. Returns the key to act on.
+static inline unsigned shelf_shoulder_step(shelf_repeat *r, unsigned down, unsigned held, float now)
+{
+ unsigned bits = (down | held) & (KEY_L | KEY_R);
+ if (!bits || bits == (KEY_L | KEY_R)) { r->direction = 0; return 0; }
+ bool fresh = bits != r->direction || (down & bits);
+ r->direction = bits;
+ if (!fresh && now < r->next) return 0;
+ r->next = now + (fresh ? .4f : .1f);
+ return bits;
+}
 // The box in the hand turns all the way round, in a loop:
 // side 0 front, 1 spine, 2 back, 3 the open edge. R turns it a quarter on (front, spine, back,
 // edge, front...), L a quarter the other way; never a dead stop. steps: the turn just made, in quarters (+ R, - L).

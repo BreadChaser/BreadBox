@@ -44,7 +44,7 @@ def args():
             OPT['threads'] = int(a[i + 1])
         if k in ('--quick', '--ref'):
             OPT[k[2:]] = True
-        if k == '--clip-selftest':   # round 1's lamp (shade 4 cm into the bookcase): the check must fail
+        if k == '--clip-selftest':   # The lamp (shade 4 cm into the bookcase): the check must fail
             scene.LAMP_X, scene.LAMP_Y, scene.SHADE_R = -0.88, 1.72, (0.24, 0.15, 0.16, 0.14)
         if k == '--sink-selftest':   # the desk 5 cm into the floor (an allowed contact, too deep): must fail
             scene.DESK_DZ = -0.05

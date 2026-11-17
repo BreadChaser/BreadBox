@@ -23,7 +23,7 @@ cc -std=gnu11 -O1 -g -Wall -Wextra -Werror -Wno-sign-compare -Wno-misleading-ind
 mkdir "$out/budget-sd"
 "$out/budget" "$out/budget-sd" budget
 
-# Review regressions: retry picture, deleted primary, slot label, weak/blank cards, full SD.
+# Regressions: retry picture, deleted primary, slot label, weak/blank cards, full SD.
 cc -std=gnu11 -O1 -g -Wall -Wextra -Werror -Wno-sign-compare -Wno-misleading-indentation \
  -Wl,--wrap=state_check -Wl,--wrap=fwrite -Wl,--wrap=mkdir -Wl,--wrap=lstat -Wl,--wrap=stat -Wl,--wrap=fopen -Wl,--wrap=opendir -Wl,--wrap=open -DPSX_IMPORT_TEST -fsanitize=address,undefined \
  -Icore/include -Iapp/ui -Iinclude/breadbox -Iplatform/3ds tests/psx3d_import/review.c tests/psx3d_import/strict_fs.c systems/ps1/breadbox_import.c \
@@ -32,7 +32,7 @@ for scenario in {1..6}; do
  mkdir "$out/review-$scenario"
  "$out/review" "$out/review-$scenario" "$scenario"
 done
-cc -std=gnu11 -O1 -g -Wall -Wextra -Werror -Wno-misleading-indentation -Iapp/ui \
+cc -std=gnu11 -O1 -g -Wall -Wextra -Werror -Wno-misleading-indentation -Iapp/ui -Iinclude/breadbox \
  tests/psx3d_import/path.c tests/psx3d_import/strict_fs.c \
  -Wl,--wrap=lstat -Wl,--wrap=stat -Wl,--wrap=fopen -Wl,--wrap=opendir -Wl,--wrap=open -o "$out/path"
 "$out/path"
@@ -83,7 +83,7 @@ done
 python3 tests/psx3d_import/mutations.py
 
 cc -std=gnu11 -O1 -g -Wall -Wextra -Werror -fsanitize=address,undefined \
- -DBB_IMPORT_RECOVERY_TEST -DSAFE_RECOVERY_PROBE_PATH='"probe"' -Iapp/ui -Wl,--wrap=stat -Wl,--wrap=remove -Wl,--wrap=rename \
+ -DBB_IMPORT_RECOVERY_TEST -DSAFE_RECOVERY_PROBE_PATH='"probe"' -Iapp/ui -Iinclude/breadbox -Wl,--wrap=stat -Wl,--wrap=remove -Wl,--wrap=rename \
  tests/psx3d_import/recovery_ops.c app/ui/safefile.c -o "$out/recovery-ops"
 mkdir "$out/recovery-sd"
 "$out/recovery-ops" "$out/recovery-sd"

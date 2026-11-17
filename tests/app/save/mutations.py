@@ -6,36 +6,43 @@ os.chdir(root)
 src=open('app/ui/safefile.c').read()
 cards=open('systems/ps1/cards.c').read()
 muts={
- 'repair tmp by rewrite': ('		return rename(src, path) == 0;\n	}\n	if (from != SAFE_BACKUP)', '		return write_tmp(src, data, fmt->size) && rename(src, path) == 0;\n	}\n	if (from != SAFE_BACKUP)'),
+ 'repair tmp by rewrite': ('\t\treturn rename(src, path) == 0;\n\t}\n\tif (from != SAFE_BACKUP)', '\t\treturn write_tmp(src, data, fmt->size, &why) && rename(src, path) == 0;\n\t}\n\tif (from != SAFE_BACKUP)'),
  'stat ignores tmp': ('found = usable(t) && stat(other, &st) == 0;', 'found = false;'),
- 'delete damaged': ('		return rename(path, bad) == 0;\n	}\n	return false;', '		return remove(path) == 0;\n	}\n	return false;'),
- 'old bad removed': ('		safe_name_t taken = safe_name(bad, NULL);', '		remove(bad); safe_name_t taken = safe_name(bad, NULL);'),
- 'restore unverified': ('	if (!write_tmp(tmp, data, fmt->size) || !reads_back(tmp, data, fmt->size)) {', '	if (!write_tmp(tmp, data, fmt->size)) {'),
- 'failed publish drops copy': ('	if (cleanup_present(path))   // also after a cancel (a rollback put <name> back)\n		cleanup_remove(tmp);', '	cleanup_remove(tmp);'),
- 'no rescue': ('	if (keep_backup && !rescue_tmp(path, tmp, bak, fmt))', '	if (0 && !rescue_tmp(path, tmp, bak, fmt))'),
- 'tolerant size': ('fmt->head > HEAD_MAX || size != (long)fmt->size ? DAMAGED : GOOD;', 'fmt->head > HEAD_MAX || size <= 0 ? DAMAGED : GOOD;'),
- 'no head check': ('	if (r == GOOD && fmt->valid && fmt->head && !fmt->valid(whole ? whole : head))', '	if (0)'),
- 'unchecked close': ('	if (fclose_at(f,tmp))\n		ok = false;\n	long written', '	fclose_at(f,tmp);\n	long written'),
- 'rotate damaged': ('		if (cur == GOOD || (cur == WEAK && old != GOOD)) {', '		if (1) {'),
- 'weak pushes good backup': ('		if (cur == GOOD || (cur == WEAK && old != GOOD)) {', '		if (usable(cur)) {'),
- 'weak preferred': ('		if (r == WEAK && weak == SAFE_NONE)\n			weak = s;', '		if (r == WEAK) { info->from = (safe_source_t)s; info->weak = true; return buf; }'),
- 'no deep check': ('	if (r == GOOD && fmt->deep && !(whole && fmt->deep(whole, fmt->size)))', '	if (0)'),
- 'name error as absence': ('	return errno == ENOENT ? SAFE_NAME_ABSENT : SAFE_NAME_UNREADABLE;', '	return SAFE_NAME_ABSENT;'),
- 'open error as absence': ('return safe_name(path, NULL) == SAFE_NAME_ABSENT ? ABSENT : UNREADABLE;\n	unsigned char head', 'return ABSENT;\n	unsigned char head'),
- 'read error as damage': ('		r = UNREADABLE;\n	if (fclose_at(f,path) && r == GOOD)', '		r = DAMAGED;\n	if (fclose_at(f,path) && r == GOOD)'),
- 'read close ignored': ('	if (fclose_at(f,path) && r == GOOD)\n		r = UNREADABLE;', '	fclose_at(f,path);'),
- 'unreadable tmp truncated': ('		return t == ABSENT;', '		return true;'),
- 'weak over unreadable': ('	if (weak != SAFE_NONE && !unreadable) {', '	if (weak != SAFE_NONE) {'),
+ 'delete damaged': ('return rename(path, bad) == 0;', 'return remove(path) == 0;'),
+ 'old bad removed': ('\t\tsafe_name_t taken = safe_name(bad, NULL);', '\t\tremove(bad); safe_name_t taken = safe_name(bad, NULL);'),
+ 'restore unverified': ('\tif (!write_tmp(tmp, data, fmt->size, &why) || !reads_back(tmp, data, fmt->size, &why)) {', '\tif (!write_tmp(tmp, data, fmt->size, &why)) {'),
+ 'failed publish drops copy': ('\tif (cleanup_present(path))   // also after a cancel (a rollback put <name> back)\n\t\tcleanup_remove(tmp);', '\tcleanup_remove(tmp);'),
+ 'no rescue': ('\tif (keep_backup && !rescue_tmp(path, tmp, bak, fmt, &why))', '\tif (0 && !rescue_tmp(path, tmp, bak, fmt, &why))'),
+ 'tolerant size': ('fmt->head>HEAD_MAX || size!=(long)fmt->size ? DAMAGED : GOOD;', 'fmt->head>HEAD_MAX || size<=0 ? DAMAGED : GOOD;'),
+ 'no head check': ('if(r==GOOD && fmt->valid && fmt->head && !fmt->valid(whole ? whole : head))', 'if(0)'),
+ 'unchecked close': ('if (fclose_at(f,tmp)){note_failure(why,"close",tmp,errno,0,0);ok=false;}', 'fclose_at(f,tmp);'),
+ 'rotate damaged': ('\t\tif (cur == GOOD || (cur == WEAK && old != GOOD)) {', '\t\tif (1) {'),
+ 'weak pushes good backup': ('\t\tif (cur == GOOD || (cur == WEAK && old != GOOD)) {', '\t\tif (usable(cur)) {'),
+ 'weak preferred': ('\t\tif (r == WEAK && weak == SAFE_NONE)\n\t\t\tweak = s;', '\t\tif (r == WEAK) { info->from = (safe_source_t)s; info->weak = true; return buf; }'),
+ 'no deep check': ('if(r==GOOD && fmt->deep && !(whole && fmt->deep(whole,fmt->size)))', 'if(0)'),
+ 'name error as absence': ('\treturn errno == ENOENT ? SAFE_NAME_ABSENT : SAFE_NAME_UNREADABLE;', '\treturn SAFE_NAME_ABSENT;'),
+ 'open error as absence': ('note_failure(why,"open",path,error,0,0);\n\t\treturn UNREADABLE;', 'return ABSENT;'),
+ 'read error as damage': ('error=errno;r=UNREADABLE;note_failure', 'error=errno;r=DAMAGED;note_failure'),
+ 'read close ignored': ('if(!closed){note_failure(why,"close",path,errno,0,0);if(r==GOOD)r=UNREADABLE;}', 'if(!closed){note_failure(why,"close",path,errno,0,0);}'),
+ 'unreadable tmp truncated': ('\t\treturn t == ABSENT;', '\t\treturn true;'),
+ 'weak over unreadable': ('\tif (weak != SAFE_NONE && !unreadable) {', '\tif (weak != SAFE_NONE) {'),
  'unreadable said damaged': ('.outcome = unreadable ? SAFE_UNREADABLE : damaged ? SAFE_DAMAGED : SAFE_ABSENT', '.outcome = damaged || unreadable ? SAFE_DAMAGED : SAFE_ABSENT'),
- 'replace unseen name': ('	if (at == SAFE_NAME_UNREADABLE)\n		return false;\n	if (at == SAFE_NAME_PRESENT) {\n		copy_t cur', '	if (at == SAFE_NAME_PRESENT) {\n		copy_t cur'),
- 'unreadable current moved': ('		if (cur == UNREADABLE || old == UNREADABLE)', '		if (old == UNREADABLE)'),
- 'weak pushes unread backup': ('		if (cur == UNREADABLE || old == UNREADABLE)', '		if (cur == UNREADABLE)'),
- 'tail error accepted': ('(!whole || fgetc(f) == EOF) && !ferror(f)))', '(!whole || fgetc(f) == EOF)))'),
- 'readback tail accepted': ('ok = ok && fgetc(f) == EOF && !ferror(f);', 'ok = ok && fgetc(f) == EOF;'),
- 'retire unread backup': ('	if (read_through(bak) != GOOD)\n		return false;\n	remove(bak);', '	remove(bak);'),
- 'park unreadable current': ('	return read_through(path) != UNREADABLE && safe_park(path);', '	return safe_park(path);'),
- 'rescue parks unreadable': ('return cur != UNREADABLE && park_readable(path) && rename(tmp, path) == 0;', 'return safe_park(path) && rename(tmp, path) == 0;'),
- 'read-through open error as absence': ('return safe_name(path, NULL) == SAFE_NAME_ABSENT ? ABSENT : UNREADABLE;\n	unsigned char buf[4096];', 'return ABSENT;\n	unsigned char buf[4096];'),
+ 'replace unseen name': ('\tif (at == SAFE_NAME_UNREADABLE){note_failure(why,"stat",path,errno,0,0);return false;}\n\tif (at == SAFE_NAME_PRESENT) {\n\t\tcopy_t cur', '\tif (at == SAFE_NAME_PRESENT) {\n\t\tcopy_t cur'),
+ 'unreadable current moved': ('\t\tif (cur == UNREADABLE || old == UNREADABLE)', '\t\tif (old == UNREADABLE)'),
+ 'weak pushes unread backup': ('\t\tif (cur == UNREADABLE || old == UNREADABLE)', '\t\tif (cur == UNREADABLE)'),
+ 'tail error accepted': ('(whole && fgetc(f)!=EOF) || ferror(f))', '(whole && fgetc(f)!=EOF))'),
+ 'readback tail accepted': ('ok=fgetc(f)==EOF && !ferror(f);', 'ok=fgetc(f)==EOF;'),
+ 'retire unread backup': ('\tif (read_through(bak, why, true) != GOOD)\n\t\treturn false;', ''),
+ 'park unreadable current': ('if(read_through(path, why, false)==UNREADABLE)return false;', ''),
+ 'rescue parks unreadable': ('if(cur==UNREADABLE){if(why)*why=current;return false;}\n\tif(!park_readable(path,why))return false;', 'if(!safe_park(path))return false;'),
+ 'read-through open error as absence': ('if(at==SAFE_NAME_ABSENT && !seen)return ABSENT;\n\t\tnote_failure(why,"open",path,error,0,0);\n\t\tif(error==ENOENT', 'return ABSENT;\n\t\tif(error==ENOENT'),
+ 'retry arbitrary errors': ('error==ENOENT', '1'),
+ 'forget observed existence': (' && !seen', ''),
+ 'ignore shared retry budget': (' || !*why->pauses', ''),
+ 'skip retry cancel checkpoint': ('#endif\n\tif(!safe_checkpoint()){errno=ECANCELED;return false;}\n\treturn true;', '#endif\n\treturn true;'),
+ 'retry damage accepted': ('if((contradicted || (why && why->pauses && *why->pauses<2)) && r==DAMAGED)', 'if(false && contradicted && r==DAMAGED)'),
+ 'successful retry silent': ('if (!why->pauses || *why->pauses == 2)', 'if (true)'),
+ 'load retry budget dropped': ('read_copy(name, fmt, buf, &why, false)', 'read_copy(name, fmt, buf, NULL, false)'),
 }
 card_muts={
  'shadow failed repair': ('	srm_dirty = r == CARD_UNSAVED;', '	srm_dirty = false;'),
@@ -63,11 +70,11 @@ def run(name, safefile, cards_src, hist_src=None):
     open(tmp+'/safefile.c','w').write(safefile)
     open(tmp+'/cards.c','w').write(cards_src)
     open(tmp+'/history.c','w').write(hist_src or hist)
-    shutil.copy('app/ui/safefile.h', tmp+'/safefile.h')
-    flags=['cc','-std=gnu11','-D_GNU_SOURCE','-w','-g','-DSAFEFILE_TEST','-DHIST_BUDGET=12000','-include','tests/app/save/host.h','-I'+tmp,'-Itests/app/host','-Iapp/ui','-Iinclude/breadbox','-Iplatform/3ds','-Icore/deps/libretro-common/include']
+    shutil.copy('include/breadbox/safefile.h', tmp+'/safefile.h')
+    flags=['cc','-std=gnu11','-D_GNU_SOURCE','-w','-g','-DSAFEFILE_TEST','-DHIST_BUDGET=12000','-include','tests/app/save/host.h','-I'+tmp,'-Isystems/ps1','-Itests/app/host','-Iapp/ui','-Iinclude/breadbox','-Iplatform/3ds','-Icore/deps/libretro-common/include']
     caught = False
     wrap=['-Wl,--wrap=stat,--wrap=fopen']   # SD errors on one file (io_errors.c, cards.c)
-    for test, extra, link in (('check', [], []), ('io_errors', [], wrap),
+    for test, extra, link in (('check', [], []), ('io_errors', [], ['-Wl,--wrap=stat,--wrap=fopen,--wrap=nanosleep']),
                               ('cards', [tmp+'/cards.c', tmp+'/history.c','app/ui/bb_final.c'], wrap),
                               ('history', [tmp+'/history.c'], [])):
         r=subprocess.run(flags+['tests/app/save/'+test+'.c',tmp+'/safefile.c',*extra,*link,'-o',tmp+'/t'],capture_output=True,text=True)

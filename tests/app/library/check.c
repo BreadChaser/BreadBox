@@ -31,16 +31,18 @@ void log_printf(const char *fmt, ...)
 }
 
 static unsigned cover_changes;
-void covers_library_begin(void) { assert(!cover_changes); cover_changes++; }
+bool covers_library_begin(void) { assert(!cover_changes); cover_changes++; return true; }
 void covers_library_end(void) { assert(cover_changes==1); cover_changes--; }
 static u64 svcGetSystemTick(void) { return 0; }
 // the CHD content probe has its own suite (tests/bb_disc): every .chd here is a PS1 disc
-#include "../../../app/ui/bb_disc.h"
+#include "../../../include/breadbox/bb_disc.h"
 bb_disc_kind bb_disc_chd_kind(const char *path) { (void)path; return BB_DISC_PS1; }
 #ifndef SYSCLOCK_ARM11
 #define SYSCLOCK_ARM11 268111856ULL
 #endif
 #include "../../../systems/ps1/library.c"
+#include "../../../systems/ps1/ps1_disc_groups.c"
+#include "../../../systems/ps1/ps1_library_import.c"
 #include "../../common/test_tmpdir.h"
 
 static int failures, checks;
@@ -155,12 +157,12 @@ static void test_grouping(void)
 {
 	// discs of one game group into one entry; its scan-time group is freed with the rest
 	library_free();
-	games = calloc(MAX_GAMES, sizeof(*games));   // as the index publication does
-	add_disc(1, "sdmc:/lib/x/G (Disc 1).chd");
-	add_disc(1, "sdmc:/lib/x/G (Disc 2).chd");
-	CHECK(ngames == 1 && games[0].group && games[0].ndiscs == 2);
+	ps1_library_games = calloc(MAX_GAMES, sizeof(*ps1_library_games));   // as the index publication does
+	ps1_library_add_disc(1, "sdmc:/lib/x/G (Disc 1).chd");
+	ps1_library_add_disc(1, "sdmc:/lib/x/G (Disc 2).chd");
+	CHECK(ps1_library_ngames == 1 && ps1_library_games[0].group && ps1_library_games[0].ndiscs == 2);
 	library_free();
-	CHECK(ngames == 0);
+	CHECK(ps1_library_ngames == 0);
 	// region tags tell copies apart; language lists and revisions do not
 	CHECK(interesting_tag("Italy", 5) && !interesting_tag("En,Fr,De", 8) && !interesting_tag("Rev 1", 5) &&
 		interesting_tag("Revelations", 11) && interesting_tag("Demo", 4));

@@ -19,7 +19,7 @@ PSX3D_COLD bool cards_question(void)
 	while ((t = cards_trouble(label, sizeof(label))) != CARD_TROUBLE_NONE) {
 		const char *name = strrchr(label, '/') ? strrchr(label, '/') + 1 : label;
 		hist_entry_t copy;
-		if (t == CARD_TROUBLE_DAMAGED && cards_trouble_backup(&copy)) {   // J-02: Backups has it
+		if (t == CARD_TROUBLE_DAMAGED && cards_trouble_backup(&copy)) {   // Backups has it
 			char when[40];
 			ui_format_when(when, sizeof(when), copy.when);
 			snprintf(msg, sizeof(msg), "%.200s is damaged. A copy from %s is in Backups.", name, when);

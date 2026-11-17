@@ -8,6 +8,7 @@
 #include "home.h"
 #include "breadbox_import.h"
 #include "bb_index.h"
+#include "bb_update.h"
 #include "bb_save.h"
 #include "bb_writers.h"
 #include "bb_registry.h"
@@ -52,7 +53,7 @@ static PSX3D_COLD void say(const char *text)
 PSX3D_COLD void breadbox_import_init(void)
 {
  recovered=psx_import_recover(APP_SD_ROOT);
- if(!recovered)say("PSX3D saves need recovery. Check free space on the SD card.");
+ if(!recovered)say("PSX3D recovery: free SD space");
 }
 PSX3D_COLD bool breadbox_import_busy(void){return job!=NULL || __atomic_load_n(&retiring,__ATOMIC_ACQUIRE)!=0;}
 static PSX3D_COLD void release(import_job *j,bool on_worker)
@@ -163,6 +164,8 @@ static PSX3D_COLD bool retire_job(void)
 }
 PSX3D_COLD void breadbox_import_poll(void)
 {
+ /* ui_begin calls this cold background turn on every menu, including dialogs. */
+ bb_update_menu_tick();
  retry_cleanup();
  if(job && __atomic_load_n(&job->cancelled,__ATOMIC_ACQUIRE)){
   if(retire_job())finished=false;
@@ -172,19 +175,17 @@ PSX3D_COLD void breadbox_import_poll(void)
   if(job->final) {
    psx_import_result r=job->result;release(job,false);job=NULL;finished=!r.interrupted;
    brought|=r.kinds|(config_psx3d_imported?PSX_IMPORT_SETTINGS:0u);
-   if(r.failed)say(r.no_space?"PSX3D import paused: SD card full. It resumes next launch.":"Some PSX3D saves could not be copied. Try Import again in Files.");
+   if(r.failed)say(r.no_space?"PSX3D import: SD card full":"PSX3D import: retry in Files");
    else if(r.copied || config_psx3d_imported) {
     /* every file that came over, the settings file (config_import_psx3d, once) included */
-    char text[160],backups[48]="";unsigned n=r.copied+(config_psx3d_imported?1u:0u);
-    if(r.conflicts)snprintf(backups,sizeof(backups)," (%u kept in Backups)",r.conflicts);
-    snprintf(text,sizeof(text),"Brought your PSX3D %s over: %u file%s.%s",!config_psx3d_imported?"saves":r.copied?"saves and settings":"settings",
-     n,n==1?"":"s",backups);say(text);
-    /* J-08: PSX3D counted postcards from 0, BreadBox from 1 */
-    if(r.slots)snprintf(notice_next,sizeof(notice_next),"%s","PSX3D postcard slot 0 is now slot 1, and so on.");
+    char text[160];unsigned n=r.copied+(config_psx3d_imported?1u:0u);
+    snprintf(text,sizeof(text),"PSX3D: %u copied; %u backups",n,r.conflicts);say(text);
+    /* PSX3D counted postcards from 0, BreadBox from 1 */
+    if(r.slots)snprintf(notice_next,sizeof(notice_next),"%s","PSX3D postcards now start at 1");
    }
    config_psx3d_imported=false;   /* Import again never copies the settings again */
   } else if(job->retry_at) {
-   if(!job->memory_notice){say("PSX3D import is waiting for memory…");job->memory_notice=true;}
+   if(!job->memory_notice){say("PSX3D import: waiting for memory");job->memory_notice=true;}
    if(svcGetSystemTick()<job->retry_at)return;
    job->retry_at=0;
   } else if(job->phase==2) {
@@ -244,7 +245,7 @@ PSX3D_COLD void breadbox_import_notice(void)
 }
 PSX3D_COLD void breadbox_import_notice_quiet(void)
 {
- if(strncmp(notice,"Brought your PSX3D ",19))return;
+ if(strncmp(notice,"PSX3D: ",7))return;
  if(notice_next[0]){snprintf(notice,sizeof(notice),"%s",notice_next);notice_next[0]=0;notice_until=svcGetSystemTick()+SYSCLOCK_ARM11*8ULL;}
  else notice[0]=0;
 }

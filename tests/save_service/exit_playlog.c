@@ -1,4 +1,4 @@
-/* The exit's play-log retry (R11-SAVE-REVIEW P3 1), with the real choke point (bb_platform_saves,
+/* The exit's play-log retry, with the real choke point (bb_platform_saves,
  * taken from bb_platform.c by run.sh), the real later thread, play log and safe files: a play-log
  * write is on the later thread when the player leaves and fails there. The exit settles first,
  * then gives that write one more try and waits for it: two attempts, the file on the card.

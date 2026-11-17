@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-// home.c - the main menu PSX3D opens to
+// home.c - the main menu BreadBox opens to
 typedef struct {
 	char save[256];    // save name for emu_run_game ("" = NULL)
 	char title[256];   // title for emu_run_game ("" = NULL)

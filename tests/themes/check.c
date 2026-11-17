@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "theme.h"
+#include "cold_code.h"
 #include "../../core/deps/libretro-common/include/libretro.h"
 static struct {int theme;} g_cfg;
 static bool g_new3ds, playing, fail_tex, fail_text;
@@ -55,18 +56,77 @@ static void C2D_DrawCircleSolid(float x,float y,float z,float r,u32 c){(void)c;x
 static void C2D_DrawImageAt(C2D_Image im,float x,float y,float z,C2D_ImageTint *t,float sx,float sy){(void)t;assert(im.tex->data);xy(x,y,z);assert(isfinite(sx)&&isfinite(sy)&&sx>0&&sy>0);draws++;}
 static void C2D_DrawText(C2D_Text *t,int f,float x,float y,float z,float sx,float sy,u32 c){(void)t;(void)f;(void)c;xy(x,y,z);assert(isfinite(sx)&&isfinite(sy));draws++;}
 // Room themes paint the bookshelf room (shelf_scene.c, its own test); count the call.
-static unsigned room_draws;
+static unsigned room_draws,list_draws;
+void list_look_backdrop(bool bottom){(void)bottom;list_draws++;draws++;}
 void shelf_scene_backdrop(bool bottom){(void)bottom;room_draws++;draws++;}
 // the room styles' pictures (ui.h, left out with the SDK)
 enum { UI_ICON_SUN = 31, UI_ICON_MOON = 33 };
 #include "theme-body.c"
+#include "look_theme-body.c"
 #include "scene-body.c"
+#include "postcard_palette.c"
+static double linear_channel(unsigned c)
+{
+ double v=c/255.0;return v<=.04045 ? v/12.92 : pow((v+.055)/1.055,2.4);
+}
+static double luminance(u32 c)
+{
+ return .2126*linear_channel(c&255)+.7152*linear_channel(c>>8&255)+.0722*linear_channel(c>>16&255);
+}
+static u32 over(u32 fg,u32 bg)
+{
+ unsigned a=fg>>24;u32 result=0xff000000;
+ for(int shift=0;shift<24;shift+=8)result|=(((((fg>>shift)&255)*a+((bg>>shift)&255)*(255-a)+127)/255)<<shift);
+ return result;
+}
+static void contrast(u32 fg,u32 bg)
+{
+ double a=luminance(over(fg,bg)),b=luminance(bg),ratio=(fmax(a,b)+.05)/(fmin(a,b)+.05);
+ if(ratio<4.5)fprintf(stderr,"contrast %08x on %08x = %.2f\n",fg,bg,ratio);
+ assert(ratio>=4.5);
+}
+static void contrast_checks(void)
+{
+ for(int look=BB_LOOK_PSX3D;look<BB_LOOK_COUNT;look++) {
+  g_cfg.theme=theme_from_saved_id(theme_look_get(look)->saved_id);const theme_t *t=theme();
+  const u32 normal[]={t->heading,t->heading_scope,t->value,t->section,t->text_muted,t->text_bright,
+   t->hint_lib,t->hint_menu,t->message,t->danger,t->game_title,t->game_sub};
+  for(unsigned i=0;i<sizeof(normal)/sizeof(*normal);i++)contrast(normal[i],t->surface);
+  const u32 selected[]={theme_row(t,0,255),theme_row(t,1,255),t->value,t->text_bright};
+  for(unsigned i=0;i<sizeof(selected)/sizeof(*selected);i++) {
+   contrast(selected[i],over(t->select_top,t->surface));contrast(selected[i],over(t->select_bottom,t->surface));
+   contrast(selected[i],t->card_top);
+  }
+  contrast(t->heading,over(theme_alpha(t->surface,225),0xffffffff));
+  contrast(t->help_text,over(t->help_bg,t->surface));contrast(t->banner_text,over(t->banner_bg,t->surface));
+  const theme_room_t *r=theme_room(t);
+  contrast(t->game.ink,t->game.bg);contrast(t->game.text,t->game.panel);
+  contrast(r->wax,r->pin[2]);contrast(r->wax,r->stamp);
+  pc_palette p;pc_palette_get(&p);
+  contrast(p.empty,p.cork);contrast(p.light,p.cork);contrast(p.light,p.wall_low);
+  contrast(p.empty,over(p.glow,p.cork));contrast(p.light,over(p.glow,p.cork));
+  const u32 backgrounds[]={r->paper,r->paper_edge};
+  for(unsigned i=0;i<sizeof(backgrounds)/sizeof(*backgrounds);i++) {
+   contrast(r->ink,backgrounds[i]);contrast(r->ink_soft,backgrounds[i]);contrast(r->stamp,backgrounds[i]);
+   contrast(r->card_focus_icon,backgrounds[i]);
+   const u32 disabled[]={r->ink,r->ink_soft,r->stamp,r->leaf[0],r->pin[2],r->card_focus_icon};
+   for(unsigned j=0;j<sizeof(disabled)/sizeof(*disabled);j++)
+    contrast(theme_alpha(disabled[j],(int)(255*r->card_dim_opacity)),backgrounds[i]);
+   contrast(r->leaf[0],backgrounds[i]);contrast(r->pin[2],backgrounds[i]);
+  }
+ }
+}
 int main(void){
+ assert(theme_room(theme_get(0))->card_focus_icon==theme_room(theme_get(0))->wood);
+ assert(theme_room(theme_get(1))->card_focus_icon==theme_room(theme_get(1))->wood);
+ assert(theme_room(theme_get(0))->card_dim_opacity==110.0f/255);
+ assert(theme_room(theme_get(1))->card_dim_opacity==110.0f/255);
+ contrast_checks();
  // the themes are the room styles: Day (the default) and Night, every one a room with its icon
- assert(theme_count()==2);
+ assert(theme_count()==4);
  assert(!strcmp(theme_get(0)->id,"day") && !strcmp(theme_get(1)->id,"night"));
  assert(!strcmp(theme_get(theme_default())->id,THEME_DEFAULT_ID) && theme_default()==0);
- for(int i=0;i<theme_count();i++)assert(theme_room(theme_get(i)) && theme_get(i)->icon && theme_get(i)->name[0]);
+ for(int i=0;i<theme_count();i++)assert(theme_room(theme_get(i)) && theme_get(i)->name[0]);
  assert(theme_get(0)->icon!=theme_get(1)->icon);
  // saved ids: the styles load as themselves; every retired theme (and nonsense) loads as Day
  assert(theme_from_saved_id("day")==0 && theme_from_saved_id("night")==1);
@@ -78,8 +138,9 @@ int main(void){
  assert(theme_get(0)->surface==theme_get(1)->surface && theme_get(0)->room==theme_get(1)->room);
  // the backdrop: the room's in every style, the plain page in a game's pause dialogs; never a resource
  for(int i=0;i<theme_count();i++){
-  g_cfg.theme=i;draws=room_draws=0;scene_draw(false);scene_draw(true);
-  assert(!textures&&!texts&&room_draws==2&&draws==2);
+  g_cfg.theme=i;draws=room_draws=list_draws=0;scene_draw(false);scene_draw(true);
+  assert(!textures&&!texts&&draws==2);
+  assert(theme_is_room() ? room_draws==2 && !list_draws : list_draws==2 && !room_draws);
  }
  playing=true;draws=room_draws=0;scene_draw(false);scene_draw(true);assert(!textures&&!texts&&!room_draws&&draws==2);
  printf("room styles: %d (day default), retired ids load as Day, backdrop per state; PASS\n",theme_count());

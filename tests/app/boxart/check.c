@@ -8,7 +8,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include "../../../app/ui/boxart.h"
+#include "../../../include/breadbox/boxart.h"
 
 static int checks;
 #define CHECK(x) do { checks++; if (!(x)) { fprintf(stderr, "FAIL %s:%d %s\n", __FILE__, __LINE__, #x); exit(1); } } while (0)

@@ -6,7 +6,7 @@ exception below. Presentation wrappers are discovered within each source file;
 gates must remain in the input loop itself. Literal-dead/zero-mask gates do not
 count; UI_SWAP_MENU (a menu-to-menu loop: no dim, no wait) does.
 Masks: every gate passes UI_SWAP_MENU unless it is a reviewed game hand-over in
-HANDOVERS below (launch, resume, quit), the only swaps that dim (owner 2026-11-11). Share and Shelf require independent branch gates. This is a source
+HANDOVERS below (launch, resume, quit), the only swaps that dim. Share and Shelf require independent branch gates. This is a source
 presence check, not proof of exit masks, all control-flow paths, or swap quality.
 """
 from pathlib import Path
@@ -128,7 +128,7 @@ def blank(s):
 def constant_zero(expression):
     # This source check rejects syntactically zero masks. A variable/conditional
     # mask still needs behavioral review; presence does not prove the right keys.
-    expression = re.sub(r'\bUI_METRIC_0\b|\bfalse\b', '0', expression)
+    expression = re.sub(r'\bfalse\b', '0', expression)
     expression = re.sub(r'(?<=\d)[uUlL]+\b', '', expression)
     expression = expression.replace('(', '').replace(')', '').strip()
     return bool(re.fullmatch(r'(?:0[xX]0+|0+)(?:\s*[|+]\s*(?:0[xX]0+|0+))*', expression))
@@ -287,7 +287,7 @@ def negative_controls(rows):
     sample = 'static void inner(void){video_present_vsync(0,0,0,0);} static void outer(void){inner();} void test(void){do{input_poll();k=ui_swap_keys(k,KEY_B);outer();}while(alive);}'
     file = 'app/ui/bb_feature_ui.c'
     assert not fails(file, sample)
-    for replacement in ['ui_swap_keys(k,0)', 'ui_swap_keys(k,(0u))', 'ui_swap_keys(k,UI_METRIC_0)']:
+    for replacement in ['ui_swap_keys(k,0)', 'ui_swap_keys(k,(0u))', 'ui_swap_keys(k,false)']:
         assert fails(file, sample.replace('ui_swap_keys(k,KEY_B)', replacement))
         count += 1
     for replacement in ['if(0)k=ui_swap_keys(k,KEY_B);', 'if((0u)){k=ui_swap_keys(k,KEY_B);}']:

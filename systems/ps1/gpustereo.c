@@ -17,6 +17,7 @@
 #include "emu.h"
 #include "app_main.h"
 #include "gpustereo.h"
+#include "ps1_hooks.h"
 #include "../../core/plugins/gpulib/gpu.h"
 #include "../../core/libpcsxcore/psx3d_depth.h"
 

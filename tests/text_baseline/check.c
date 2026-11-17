@@ -1,5 +1,5 @@
-/* Text stands on the ruled lines with any font (owner 2026-11-12: "the lines under text for the post-it notes cards:
- * the text still doesn't line up"). On a real 3DS the card text sat ~3 px under every rule while Azahar showed it on
+/* Text stands on the ruled lines with any font.
+ * On a real 3DS the card text sat ~3 px under every rule while Azahar showed it on
  * them: the placement was a fixed 20 px baseline in citro2d's 30 px cell, which is where Azahar's replacement font
  * draws its letters. Nintendo's system font stands lower in its cell (hardware stills: 3 px low at the 0.7 floor,
  * i.e. 24-25 of 30).
@@ -174,7 +174,7 @@ static void body_surfaces(void)
 	sizes("settings/pause card notice", UI_CARD_NOTICE_SIZE, UI_TEXT_FLOOR, notice, false);
 	sizes("card eyebrow on the red rule", UI_TEXT_FLOOR, UI_TEXT_FLOOR, UI_CARD_RULE_Y, false);
 	sizes("room card eyebrow on the red rule", UI_TEXT_FLOOR, UI_TEXT_FLOOR, UI_ROOM_RULE_Y, false);
-	/* the room's place cards, the Collection list, the game card and the welcome tour's cards (shelf_scene.c text_at
+	/* the room's place cards, the Collection list, the game card and the welcome tour's cards (shelf_scene_draw.c shelf_scene_text_at
 	   on paper: UI_PAPER_TOP at px / 30) */
 	const float px[] = { UI_ROOM_ROW_PX, UI_ROOM_VALUE_PX, UI_ROOM_LINE_PX, UI_ROOM_HINT_PX, UI_ROOM_MIN_PX, UI_ROOM_TINY_PX };
 	for (float y = UI_ROOM_ROWS_Y; y <= UI_ROOM_HINT_Y; y += UI_ROOM_LIST_STEP)

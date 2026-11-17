@@ -31,7 +31,7 @@ for name in ('UI_PC_SAVED', 'UI_PC_LOADED', 'UI_PC_SAVE_FAILED', 'UI_PC_ALL_USED
         bad.append(name + ' must name the postcard')
 
 # 2. the PS1 pause is the shared card
-emu_inc = (r / 'app/ui/components/emu.inc').read_text()
+emu_inc = (r / 'systems/ps1/components/emu.inc').read_text()
 emu = (r / 'systems/ps1/emu.c').read_text()
 pause = (r / 'app/ui/bb_pause.c').read_text()
 for need in ('bb_pause_present_top(', 'bb_pause_present_card('):
@@ -110,7 +110,7 @@ if not re.search(r'!bb_pause_last_picture\(path\)\)\s*bb_last_picture_from_scree
     bad.append('the room takes the TV picture from the (dimmed) screen even after a quit from the pause card')
 if 'case K_QUIT: if(bb_save_checkpoint' in run:
     bad.append('Quit writes the Continue point twice')
-# review fix r1b finding 1: the pause's own Continue point, taken before the card and written after its first frame
+# The pause's own Continue point, taken before the card and written after its first frame
 if 'bb_save_pause_take()' not in opening or 'bb_save_pause_put()' in opening:
     bad.append('the pause card must take its Continue point at once and write it only after the first frame')
 loop = run[run.index('ui_pause_open()'):run.index('done:')]

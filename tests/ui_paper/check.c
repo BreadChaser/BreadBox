@@ -1,5 +1,5 @@
-/* Ruled paper: every text line is a ruled line, from the layout tokens (owner 2026-11-05: "why doesn't the text
- * actually go on the lines?"). Where the letters stand on those lines with a given font (Nintendo's, Azahar's, the
+/* Ruled paper: every text line is a ruled line, from the layout tokens.
+ * Where the letters stand on those lines with a given font (Nintendo's, Azahar's, the
  * title font) is tests/text_baseline; the rendered Settings card is checked in tests/settings_b/model.c. */
 #include <assert.h>
 #include <math.h>
@@ -34,7 +34,7 @@ int main(void)
 	/* the highlighter's stroke (ui_mark.h) stays clear of the line above's text and of the next row's capitals */
 	assert(UI_MARK_ABOVE < UI_PAPER_LINE && UI_MARK_HEIGHT - UI_MARK_ABOVE + 1 < UI_PAPER_LINE - UI_PAPER_CAP);
 	assert(UI_CARD_TEXT_X == UI_CARD_MARGIN_X + UI_PAPER_MARGIN_GAP);
-	/* the room's place / catalog card and a shelf's game card (shelf_scene.c, card coordinates) */
+	/* the room's place / catalog card and a shelf's game card (shelf_scene_draw.c, card coordinates) */
 	const float place_h = UI_ROOM_CARD_H, game_h = UI_ROOM_GAME_H;
 	assert(UI_ROOM_LIST_STEP == UI_PAPER_LINE && UI_ROOM_LINE_STEP == UI_PAPER_LINE);
 	/* their titles stand on the red rule in the header row, as the pause card's (ui_card_header); the body starts on

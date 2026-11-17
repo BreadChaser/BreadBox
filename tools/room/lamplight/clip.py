@@ -2,7 +2,7 @@
 other, except the resting contacts listed in CONTACTS, and those only up to SINK deep. Parts are grouped into props (the lamp = base + pole + shade,
 ...); every pair whose bounds come within 5 mm is tested for triangle intersection (BVH overlap) and for a surface gap
 under 5 mm (nearest-surface probes from vertices, face centres and edge midpoints, both ways).
-First run on the approved round 2 mockups.
+The same clearance rules apply to every room style.
 """
 from mathutils import Vector
 from mathutils.bvhtree import BVHTree

@@ -9,7 +9,7 @@
 #include "libretro.h"
 #include "app_log.h"
 #include "memory_cards.h"
-#include "emu.h"
+#include "../../../systems/ps1/emu.h"
 #include "clip.h"
 #include "history.h"
 #include <dirent.h>
@@ -192,7 +192,9 @@ static void card1(void)
 	// no file: blank card, nothing written until the game changes it
 	reset();
 	snprintf(ctx, sizeof(ctx), "new card");
+	unsigned toggles = host_pad_toggles;
 	cards_begin("game.srm");
+	CHECK(host_pad_toggles - toggles == 2);   // the pad never switches to analog by itself
 	CHECK(!cards_check() && size_of("game.srm") < 0);
 	memcpy(ram, a, CARD);
 	CHECK(cards_check() && file_is("game.srm", a));
@@ -221,7 +223,7 @@ static void card1(void)
 	CHECK(cards_trouble(label, sizeof(label)) == CARD_TROUBLE_NONE);
 	CHECK(cards_check() && file_is("game.srm", a) && size_of("game.srm.bad") == 7);
 
-	// J-02: damaged, no .bak, but Backups holds good copies: the newest good one is
+	// Damaged, no .bak, but Backups holds good copies: the newest good one is
 	// offered and put back; the damaged file is kept as .bad, the copy stays in Backups
 	reset();
 	{
@@ -254,7 +256,7 @@ static void card1(void)
 		CHECK(cards_trouble(label, sizeof(label)) == CARD_TROUBLE_DAMAGED && !cards_trouble_backup(&copy));
 	}
 
-	// review finding 1: a second (third) damaged card is put back with older .bad files
+	// A second (third) damaged card is put back with older .bad files
 	// there: none is removed, each damaged file takes the next free name; then the
 	// player takes an empty card: kept again
 	reset();
@@ -284,7 +286,7 @@ static void card1(void)
 		CHECK(cards_check() && file_is("game.srm", a) && size_of("game.srm.bad5") == 7);
 		CHECK(size_of("game.srm.bad") == 5 && size_of("game.srm.bad2") == 7 && size_of("game.srm.bad3") == 9);
 	}
-	// review finding 2 (PS1 side): a power cut at every step of Restore: the next start
+	// A power cut at every step of Restore: the next start
 	// still finds the damaged card (asked again) or the restored copy, never a blank card
 	for (int cut = 0; ; cut++) {
 		reset();
@@ -467,7 +469,7 @@ static void card2(void)
 	char path[600];
 
 	// no file yet: the core's empty card stays, its file name is taken away
-	// (memory only); PSX3D writes the card when the game changes it
+	// (memory only); BreadBox writes the card when the game changes it
 	reset();
 	snprintf(ctx, sizeof(ctx), "card 2 new");
 	cards_begin("game.srm");
@@ -532,7 +534,7 @@ static void card2(void)
 	CHECK(!strcmp(real_path, "none"));
 }
 
-// Harsh review 0.9.0 finding 1: an SD card error while a card is read (stat, open or read; EIO or
+// An SD card error while a card is read (stat, open or read; EIO or
 // EACCES) is never a new empty card. The card is reported and locked: nothing the game does is
 // written over the file, not even after "play on"; once the card answers, Try again loads it.
 static void sd_errors(void)
@@ -595,7 +597,7 @@ static void put_card(const char *path, size_t prefix, int seed)
 	free(f);
 }
 
-// Review A findings 1 and 4 (ASan): Try again after the card file changed its format (header
+// Try again after the card file changed its format (header
 // sizes both ways, raw and header) never writes past the image; a valid card is never refused
 // because its other copy (file or backup) cannot be sized; each fallback direction loads.
 static void card_formats(void)

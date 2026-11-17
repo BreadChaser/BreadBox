@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Card titles stand in the header row on the red rule (owner 2026-11-11), and the place is called Collection.
+"""Card titles stand in the header row on the red rule, and the place is called Collection.
 
 1. Runs the shipped ui_card_header (app/ui/ui.c) with a recording text drawer for the pause/settings card and the
-   room's cards (the arguments shelf_scene.c's card_title passes): every title's cell lies inside the card above
+   room's cards (the arguments shelf_scene_draw.c's card_title passes): every title's cell lies inside the card above
    the first body line, its baseline on the red rule, its width inside the header row; the eyebrow too; a long
    title is fitted and cut to one line and takes the eyebrow's room; "Collection" is never shrunk or cut.
 2. Source: both card kinds draw their titles only through ui_card_header (no second copy of the numbers), the
@@ -14,7 +14,7 @@ import os, re, subprocess, tempfile
 
 root = Path(__file__).resolve().parents[2]
 ui = (root/'app/ui/ui.c').read_text()
-scene = (root/'app/ui/shelf_scene.c').read_text()
+scene = (root/'app/ui/shelf_scene_draw.c').read_text()
 
 
 def function(name, s):
@@ -113,13 +113,13 @@ def audit():
     if 'ui_card_header(ui_text_ex, UI_CARD_TEXT_X, right, UI_CARD_RULE_Y' not in function('ui_card_draw', ui):
         failures.append('ui_card_draw does not draw its header through ui_card_header')
     if 'ui_card_header(header_text, UI_ROOM_TEXT_X, UI_ROOM_TEXT_X + width, UI_ROOM_RULE_Y' not in function('card_title', scene):
-        failures.append('shelf_scene.c card_title does not use ui_card_header')
+        failures.append('shelf_scene_draw.c card_title does not use ui_card_header')
     for name in ['shelf_bottom', 'shelf_scene_card']:
         body = function(name, scene)
         if 'card_title(' not in body:
-            failures.append(f'shelf_scene.c {name}: no card_title')
+            failures.append(f'shelf_scene_draw.c {name}: no card_title')
         if re.search(r'UI_ROOM_TITLE_(?:Y|PX|STEP)|UI_ROOM_KICKER', body):
-            failures.append(f'shelf_scene.c {name}: a title drawn outside the header row')
+            failures.append(f'shelf_scene_draw.c {name}: a title drawn outside the header row')
     # The place's one name.
     for path in sorted([*(root/'app').rglob('*.c'), *(root/'app').rglob('*.inc'), *(root/'app').rglob('*.h'), *(root/'systems').rglob('*.c'),
                         *(root/'systems').rglob('*.inc'), *(root/'include').rglob('*.h')]):

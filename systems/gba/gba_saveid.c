@@ -73,7 +73,7 @@ bool gba_saveid_copy(const char *old, const char *next)
     free(data);return ok;
 }
 /* The ownership record is a crash-safe text file: the claim, then the same name completed.
- * (A sized binary write kept the shorter claim as <game>.id.bad on every first start, J-14.) */
+ * (A sized binary write kept the shorter claim as <game>.id.bad on every first start.) */
 static bool owner_write(const char *owner, const char *text)
 {
     FILE *f=safe_begin(owner);

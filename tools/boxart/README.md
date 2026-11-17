@@ -2,7 +2,7 @@
 
 `make_table.py` builds `assets/romfs/covers/names.txt` and `serials.idx`, which the app
 uses to find the right picture for a disc whatever its file is called
-(`app/ui/boxart.h`).
+(`include/breadbox/boxart.h`).
 
 Inputs (download them again when you rebuild; they are not kept in the repository):
 

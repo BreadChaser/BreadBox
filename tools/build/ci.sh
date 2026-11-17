@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # What CI runs, inside the pinned container (see .github/workflows/build.yml):
 #
-#   tools/build/container.sh bash tools/build/ci.sh [toolchain|build|baseline|layout|host-tests|all]
+#   tools/build/container.sh bash tools/build/ci.sh [toolchain|gates|build|baseline|layout|host-tests|all]
 #
 #   toolchain   the installed devkitPro packages match tools/build/toolchain.lock
+#   gates       size gate and the source-text and UI_METRIC ratchets (tools/architecture; see docs/building.md)
 #   build       3DSX, ELF and CIA, plus the identity record (section hashes, CXI hash)
 #   layout      tools/layout/check.sh (a grown frontend must not move the emulator core) and
 #               baseline-check.sh (frame code and core match the accepted build)
@@ -56,14 +57,27 @@ layout() {
 	python3 tools/layout/test-pinned.py build/3ds/BreadBox.elf build/3ds/BreadBox.elf build/3ds/build-breadbox
 	python3 tools/layout/test-page-only.py
 }
-host_tests() { HOST_TEST_OUT="$out/host-tests" bash tools/build/host-tests.sh; }
+gates() {
+	python3 tools/architecture/size-gate.py
+	python3 tools/architecture/test-text-ratchet.py
+	python3 tools/architecture/ui-metric-ratchet.py
+}
+host_tests() { HOST_TEST_JOBS=${HOST_TEST_JOBS:-} HOST_TEST_OUT="$out/host-tests" bash tools/build/host-tests.sh; }
 
+case $step in host-tests|all) python3 tools/architecture/include-graph.py ;; esac
 case $step in
 toolchain) toolchain ;;
+gates) gates ;;
 build) build ;;
 baseline) baseline "${2:-build/3ds/BreadBox.elf}" ;;
 layout) layout "${2:-build/3ds/BreadBox.elf}" ;;
 host-tests) host_tests ;;
-all) toolchain; build; layout; host_tests ;;
-*) echo "usage: ci.sh [toolchain|build|baseline|layout|host-tests|all]" >&2; exit 2 ;;
+all)
+ rm -f "$out/ci-phases.jsonl"
+ for phase in toolchain gates build layout host-tests; do
+  echo "CI_STEP $phase"
+  case $phase in host-tests) host_tests ;; *) "$phase" ;; esac
+  printf '%s\n' "$phase" >> "$out/ci-phases.jsonl"
+ done ;;
+*) echo "usage: ci.sh [toolchain|gates|build|baseline|layout|host-tests|all]" >&2; exit 2 ;;
 esac

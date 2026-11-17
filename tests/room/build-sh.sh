@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# tools/room/build.sh fails closed (review M2): a fake Blender plays a Python crash that exits 0, a run without
+# tools/room/build.sh fails closed: a fake Blender plays a Python crash that exits 0, a run without
 # the OK marker, a marker that names another file, a broken clip gate, and a good run. Only the good run may
 # leave a room.bbr in the output, and a room file of an earlier run never passes for a new one. V3 fix round: no GI_*
 # variable of the caller reaches the bake (only GI_SAMPLES / GI_AO_SAMPLES with --quick, which ships nothing), the

@@ -41,21 +41,21 @@ static const char *settings_path_fit(settings_state *s,float gw)
 static void settings_tag(void *ud)
 {
  settings_state *s=ud;
- bool scope=!((s->context.game && !s->context.running) || (s->scene && s->scene_visibility<=UI_METRIC_0));
- if(scope && s->scene) {
+ bool scope=!((s->context.game && !s->context.running) || (s->scene && s->scene_visibility<=0));
+ if(scope && s->scene && theme_is_room()) {
   float gx=UI_SETTINGS_SCOPE_X,gy=UI_SETTINGS_SCOPE_Y,gw=UI_SETTINGS_SCOPE_W,cx,cy,w;
   if(room_scene_anchor_screen("slabel",&cx,&cy,&w)){gx=cx;gy=cy;gw=fminf(w*UI_SETTINGS_SCOPE_SPAN,UI_SETTINGS_SCOPE_MAX_W);}
   const char *path=settings_path_fit(s,gw);
   float size=UI_SETTINGS_SCOPE_SIZE,sw=ui_text_width(NULL,size,path);
   if(sw>gw)size=fmaxf(UI_FONT_CONTEXT,size*gw/sw);
-  ui_text_ex(NULL,gx,gy-size*UI_METRIC_15,size,
-   theme_alpha(UI_COLOR_SCOPE_PHOSPHOR,(int)(UI_METRIC_255*s->scene_visibility)),C2D_AlignCenter,
+  ui_text_ex(NULL,gx,gy-size*15,size,
+   theme_alpha(UI_COLOR_SCOPE_PHOSPHOR,(int)(255*s->scene_visibility)),C2D_AlignCenter,
    ui_fit(path,size,gw));
  }
- /* No hang tag: it repeated the focused row's name and a sentence saying the same (owner 2026-11-05).
+ /* No hang tag: it repeated the focused row's name and a sentence saying the same.
     START (or the Help row) opens the full explanations. Only a row the card cuts ("...": a long folder,
-    a key combo) shows its whole text here (review 2026-11-05). */
- if(s->count<=UI_METRIC_0)return;
+    a key combo) shows its whole text here. */
+ if(s->count<=0)return;
  ui_card_row_t r;card_row(level(s)->selected,s,&r);
  if(ui_card_row_cut(&r))ui_value_card(r.label,r.value,s->value_page);
 }
@@ -66,8 +66,6 @@ static void draw_top(void *ud)
 static void appearance_bottom(void *ud)
 {
  settings_state *s=ud;theme_picker_draw(s->appearance_list,s->appearance_selected,s->appearance_previous);
- static const ui_button_t bar[]={{KEY_B,"Cancel",UI_ICON_BACK,false},{KEY_A,"Select",UI_ICON_CHECK,false}};
- ui_bar_draw(bar,UI_METRIC_2);
 }
 void settings_appearance_present(settings_state *s,flist_t *list,int selected,int previous)
 {

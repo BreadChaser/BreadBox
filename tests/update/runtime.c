@@ -18,6 +18,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <pthread.h>
+#include <sys/wait.h>
 #include <stdlib.h>
 #include "bb_writers.h"
 typedef struct {pthread_t thread;void *stack;size_t size;} *Thread;
@@ -52,7 +53,7 @@ static unsigned cancel_stop,cancel_index,cancel_save,cancel_log;
 static bool importer_drained,index_pending,retire_after_cancel;static unsigned retire_polls;
 static bool abandoned;void bb_exit_abandon(void){abandoned=true;}
 bool bb_exit_abandoned(void){return abandoned;}
-void covers_stop_wait(void){importer_drained=true;}
+bool covers_stop_wait(void){importer_drained=true;return true;}
 static void bb_index_shutdown(void){assert(importer_drained);importer_drained=false;}
 bool bb_index_shutdown_done(void){if(cancel_index && !--cancel_index)abort_install();if(retire_after_cancel && !cancel_index && ++retire_polls>=3)index_pending=false;return !index_pending;}
 static unsigned restart_scans;
@@ -82,6 +83,13 @@ typedef const char *FS_Path;
 #define R_FAILED(x) ((x)<0)
 #define R_SUCCEEDED(x) ((x)>=0)
 #define MEDIATYPE_SD 1
+typedef int FS_MediaType;
+static FS_MediaType launch_media=MEDIATYPE_SD;
+static Result media_result;
+typedef struct {u64 programId;FS_MediaType mediaType;} FS_ProgramInfo;
+#define CUR_PROCESS_HANDLE 0xffff8001
+static Result svcGetProcessId(u32 *out,Handle process){assert(process==CUR_PROCESS_HANDLE);*out=42;return 0;}
+static Result FSUSER_GetProgramLaunchInfo(FS_ProgramInfo *out,u32 process){assert(process==42);*out=(FS_ProgramInfo){BB_UPDATE_TITLE,launch_media};return media_result;}
 #define ARCHIVE_SDMC 1
 #define PATH_EMPTY 0
 #define PATH_ASCII 1
@@ -101,16 +109,19 @@ Result APT_GetProgramID(u64 *out){*out=self;return fail()?-1:0;}
 Result amInit(void){am_count++;return fail()?-1:0;}
 void amExit(void){}
 Result AM_GetTitleInfo(int media,unsigned n,u64 *id,AM_TitleInfo *info){(void)media;(void)n;assert(*id==BB_UPDATE_TITLE);info->version=installed;return fail()?-1:0;}
-static bool adapter=true;static u8 battery=100;static bool telemetry_ok=true;
+static bool adapter=true;static u8 battery=5;static bool telemetry_ok=true;
+static Result adapter_result,battery_result,space_result;
+static u8 percent=100;static bool mcu_ok=true;static Result percent_result;
+Result mcuHwcInit(void){return mcu_ok?0:-1;}void mcuHwcExit(void){}
+Result MCUHWC_GetBatteryLevel(u8 *out){*out=percent;return percent_result;}
 Result ptmuInit(void){return telemetry_ok?0:-1;}void ptmuExit(void){}
-Result PTMU_GetAdapterState(bool *out){*out=adapter;return 0;}
-Result mcuHwcInit(void){return telemetry_ok?0:-1;}void mcuHwcExit(void){}
-Result MCUHWC_GetBatteryLevel(u8 *out){*out=battery;return 0;}
+Result PTMU_GetAdapterState(bool *out){*out=adapter;return adapter_result;}
+Result PTMU_GetBatteryLevel(u8 *out){*out=battery;return battery_result;}
 static bool pending_ours,pending_other,pending_fail,pending_delete_fail;static unsigned pending_deleted;
 Result AM_GetNumPendingTitles(u32 *out,int media){(void)media;*out=pending_ours+pending_other;return pending_fail?-1:0;}
 Result AM_GetPendingTitleList(u32 *out,u64 *ids,u32 count,int media){(void)media;unsigned n=0;if(pending_other)ids[n++]=BB_UPDATE_TITLE+1;if(pending_ours)ids[n++]=BB_UPDATE_TITLE;assert(n<=count);*out=n;return 0;}
 Result AM_DeletePendingTitle(int media,u64 id){(void)media;assert(id==BB_UPDATE_TITLE);pending_deleted++;if(!pending_delete_fail)pending_ours=false;return pending_delete_fail?-1:0;}
-Result FSUSER_GetSdmcArchiveResource(FS_ArchiveResource *r){*r=(FS_ArchiveResource){.clusterSize=4096,.freeClusters=free_clusters};return 0;}
+Result FSUSER_GetSdmcArchiveResource(FS_ArchiveResource *r){*r=(FS_ArchiveResource){.clusterSize=4096,.freeClusters=free_clusters};return space_result;}
 FS_Path fsMakePath(int type,const char *path){(void)type;return path;}
 Result FSUSER_OpenFileDirectly(Handle *h,int archive,FS_Path root,FS_Path path,int mode,int flags){(void)archive;(void)root;(void)mode;(void)flags;if(fail())return -1;char p[512];snprintf(p,sizeof(p),"sdmc:%s",path);source_file=fopen(p,"rb");*h=source_file?1:0;return source_file?0:-1;}
 Result AM_GetCiaFileInfo(int media,AM_TitleInfo *info,Handle h){(void)media;assert(h==1);*info=(AM_TitleInfo){cia_title,candidate};return fail()?-1:0;}
@@ -124,7 +135,7 @@ void aptSetChainloaderToSelf(void){chainloads++;}
 static unsigned chainload_title,chainload_clears;void aptSetChainloader(u64 id,u8 media){assert(id==BB_UPDATE_TITLE && media==MEDIATYPE_SD);chainload_title++;}
 void aptClearChainloader(void){chainload_clears++;}
 bool sw_nonet,sw_nocovers;
-/* A one-shot hook run at the first call inside update_poll (forced in-poll interleaving, re-check 2026-11-05). */
+/* A one-shot hook run at the first call inside update_poll (forced in-poll interleaving, cancellation race). */
 static void (*session_hook)(void);
 bool bb_session_active(void){if(session_hook){void (*h)(void)=session_hook;session_hook=NULL;h();}return game;}
 bool bb_index_cancelled(void){return false;}
@@ -159,6 +170,9 @@ static bool confirm_answer=true;static unsigned confirms;static bool confirm_saw
 static bool update_progress_text(char *text,size_t cap);
 bool ui_confirm_choice(const char *a,const char *b,const char *c,const char *d,bool e){(void)a;(void)b;(void)c;(void)d;(void)e;
  confirms++;char t[48];if(update_progress_text(t,sizeof(t)))confirm_saw_progress=true;return confirm_answer;}
+static unsigned whatsnew_opened;
+void bb_whatsnew_open(void){whatsnew_opened++;}
+const char *bb_whatsnew_label(void){return "What's new";}
 static char notice_seen[64];void ui_notice(const char *s,int frames){(void)frames;snprintf(notice_seen,sizeof(notice_seen),"%s",s);}
 /* footer taps: the shared bar input maps a tap on tab i to its key (tap_tab -1: no tap) */
 static int tap_tab=-1;
@@ -168,8 +182,9 @@ static bool accept_queue;static unsigned queued;
 static void (*queued_fn)(void *);
 bool bb_index_defer_low(void (*fn)(void *),void *arg){(void)arg;if(accept_queue){queued++;queued_fn=fn;}return accept_queue;}
 #include <stdarg.h>
-static unsigned journal_logs;
-void log_printf(const char *fmt,...){if(strstr(fmt,"previous install journal"))journal_logs++;}
+static unsigned journal_logs;static char power_line[192];
+void log_printf(const char *fmt,...){if(strstr(fmt,"previous install journal"))journal_logs++;
+ if(strstr(fmt,"update: power")){va_list ap;va_start(ap,fmt);vsnprintf(power_line,sizeof(power_line),fmt,ap);va_end(ap);}}
 static u32 keys[8];static unsigned key_index;
 bool dev_tick(bool playing){(void)playing;return false;}
 int dev_ui_pending(void){return 0;}
@@ -235,8 +250,9 @@ static void stage(void)
 {
  FILE *f=fopen(STAGE,"wb");assert(f);for(int i=0;i<9000;i++)fputc('Z',f);fclose(f);
  update_manifest=(bb_update_manifest){.version=16401,.size=9000};strcpy(update_manifest.display,"1.0.1");
+ strcpy(update_manifest.url,"http://127.0.0.1/BreadBox.cia");
  strcpy(update_manifest.sha256,"d8d28122647767c99b3d1fcbbc76c20caadec40e56f1cc4ad6eff89305258153");
- update_install_abort=0;operation=0;starts=cancels=finishes=am_count=read_count=0;update_commit=0;update_finish_allowed=1;update_finish_ready=0;
+ update_pending_saved=false;update_install_abort=0;operation=0;starts=cancels=finishes=am_count=read_count=0;update_commit=0;update_finish_allowed=1;update_finish_ready=0;
 }
 static void journal_is(const unsigned *want,unsigned n)
 {
@@ -254,7 +270,7 @@ static const unsigned journal_success[]={BB_UP_FLUSH,BB_UP_LOG_CLOSE,BB_UP_SECON
 /* Ready, approved, idle room: the next tick starts the installer thread. */
 static void arm_install(void)
 {
- stage();update_checked=true;update_check_now=false;update_preference=0;update_crypto_disabled=false;update_job_busy=0;update_retry_after=0;
+ stage();update_status=2;update_checked=true;update_check_now=false;update_preference=0;update_crypto_disabled=false;update_job_busy=0;update_retry_after=0;
  update_postponed=false;update_install_attempted=false;update_machine.state=BB_UPDATE_READY;update_initialized=true;update_approved=true;
  update_install_abort=0;update_commit=0;update_power_checked=0;
 }
@@ -262,11 +278,15 @@ static void complete_in_poll(void)
 {
  update_machine.state=BB_UPDATE_READY;__atomic_store_n(&update_job_busy,0,__ATOMIC_RELEASE);
 }
+ #include "robust.inc"
+
 int main(int argc,char **argv)
 {
 #ifdef BB_UPDATE_RELEASE_TEST
  return release_transport_test(argc,argv);
 #endif
+ /* A player who never opened the Updates page is asked before an update installs. */
+ assert(update_preference==1 && !strcmp(bb_update_preference(),"Ask first"));
  accept_queue=true;diagnostic=true;
 #ifdef BB_UPDATE_TEST_REMOTE
  assert(!bb_update_tick() && queued==1);update_job_busy=0;
@@ -279,17 +299,19 @@ int main(int argc,char **argv)
  assert(update_header(h2,1,sizeof(h2)-1,&header)==sizeof(h2)-1 && header.response==206);
  assert(update_header(h3,1,sizeof(h3)-1,&header)==sizeof(h3)-1 && header.response==503);
  assert(argc==2);mkdir("sdmc:",0700);mkdir("sdmc:/3ds",0700);mkdir(APP_SD_ROOT,0700);mkdir(UPDATE_ROOT,0700);
+ if(getenv("BB_ROBUST_BOOT"))return robust_boot();
+ if(getenv("BB_ROBUST"))return robust_test(argv);
  /* Every precommit drain is bounded/cancellable; no AM or worker release. */
  if(getenv("BB_DRAIN_REPRO")){
   if(!strcmp(getenv("BB_DRAIN_REPRO"),"gate")){
    arm_install();update_explicit_check=true;save_ok=false;unsigned before=stop_calls,asked=confirms;
    assert(!bb_update_tick() && !update_thread && !starts && stop_calls==before);
-   assert(!strcmp(update_card_notice(),"Waiting: save not written"));
+   assert(!strcmp(update_card_notice(),"Retry the save first"));
    /* Automatic READY must disclose the same blocker, even without a visit's explicit check. */
-   update_explicit_check=false;assert(!strcmp(update_card_notice(),"Waiting: save not written"));
+   update_explicit_check=false;assert(!strcmp(update_card_notice(),"Retry the save first"));
    update_explicit_check=true;save_ok=true;
    assert(update_poll(false)==UPDATE_POLL_WAIT && !update_thread && !starts);
-   assert(!strcmp(update_card_notice(),"Leave Settings to install"));
+   assert(!strcmp(update_card_notice(),"Ready. Reopen to install"));
    /* Resolving retained files by retry/discard leaves consent intact. Only the room may install. */
    assert(!bb_update_tick() && update_thread && confirms==asked);
    for(unsigned turn=0;bb_update_installing();turn++){assert(turn<10000);bb_update_install_frame();usleep(1000);}
@@ -325,10 +347,10 @@ int main(int argc,char **argv)
   assert(update_status==4 && update_machine.state==BB_UPDATE_IDLE && !starts);
  }
  update_discover_job(NULL);assert(update_status==7 && update_machine.state==BB_UPDATE_IDLE);
- /* merge review: no update file (404) or a server error (503) is not Wi-Fi; no answer at all is */
+ /* No update file (404) or a server error (503) is not Wi-Fi; no answer at all is */
  for(unsigned i=0;i<2;i++){
   update_discover_job(NULL);
-  assert(update_status==16 && !strcmp(update_settings_status(),"No update info right now") && update_machine.state==BB_UPDATE_IDLE && !starts);
+  assert(update_status==16 && !strcmp(update_settings_status(),"Try again later") && update_machine.state==BB_UPDATE_IDLE && !starts);
  }
  update_discover_job(NULL);assert(update_status==3 && !strcmp(update_settings_status(),"No connection. Check Wi-Fi") && update_machine.state==BB_UPDATE_IDLE);
  assert(update_check_failures==3);update_check_failures=0;   /* failed checks still back off the automatic ones */
@@ -385,6 +407,16 @@ int main(int argc,char **argv)
  keys[0]=KEY_DOWN;keys[1]=KEY_A;key_index=0;bb_update_settings();assert(update_check_now);
  game=true;key_index=0;bb_update_settings();assert(!key_index);game=false;
  f=fopen(RECEIPT,"w");assert(f);fprintf(f,"%u 1.0.0\n",installed);fclose(f);update_initialize_job(NULL);assert(!strcmp(update_notice,"Updated to 1.0.0"));assert(access(RECEIPT,F_OK));
+ /* Release notes wait until the installed receipt has been presented in the room. */
+ {
+  bool was_diagnostic=diagnostic,was_bench=dev_bench;diagnostic=false;dev_bench=false;
+  u64 before=fake_time;update_notice_until=0;
+  assert(!bb_update_startup_ready());
+  update_notice_until=fake_time+5000;assert(!bb_update_startup_ready());
+  fake_time+=5000;assert(bb_update_startup_ready());
+  update_prefs_loaded=0;assert(!bb_update_startup_ready());update_prefs_loaded=1;
+  fake_time=before;update_notice_until=0;diagnostic=was_diagnostic;dev_bench=was_bench;
+ }
  /* Exclusive writer reservation closes the check/start race. */
  assert(bb_writer_begin());assert(bb_writer_begin());assert(bb_writers_busy());
  assert(!bb_writers_try_exclusive());bb_writer_end();bb_writer_end();
@@ -425,6 +457,7 @@ int main(int argc,char **argv)
  assert(!bb_update_tick() && starts==prior_starts && !update_thread);
 
  /* Persistent hash backoff is per manifest SHA and expires after 24 hours. */
+ safe_remove(ACCEPTED);
  update_net_abort=update_net_busy=0;update_failed_count=0;
  for(unsigned i=0;i<2;i++){
   stage();memset(update_manifest.sha256,'0',64);update_manifest.sha256[64]=0;
@@ -436,7 +469,7 @@ int main(int argc,char **argv)
  fake_time=100;update_manifest.sha256[0]='1';assert(!update_hash_backoff());
  /* Wake and daily checks queue only in an idle room and respect Off. */
  accept_queue=true;update_install_attempted=false;update_machine.state=BB_UPDATE_IDLE;
- update_checked=true;update_check_now=false;update_last_check=fake_time;update_preference=0;
+ update_checked=true;update_check_now=false;update_last_check=fake_time;update_preference=0;update_approved=false;
  unsigned before=queued;assert(!bb_update_tick() && queued==before);
  update_apt(APTHOOK_ONWAKEUP,NULL);assert(!bb_update_tick() && queued==before);
  fake_time+=3600000;update_apt(APTHOOK_ONWAKEUP,NULL);assert(!bb_update_tick() && queued==before+1);
@@ -450,10 +483,17 @@ int main(int argc,char **argv)
  /* A writer racing the preflight defers without burning the AM attempt. */
  update_install_attempted=true;assert(bb_writer_begin());update_install_job(NULL);
  assert(!update_install_attempted && update_machine.state==BB_UPDATE_READY && !bb_update_installing());bb_writer_end();
- /* Power telemetry fails closed; charger bypasses low battery. */
- adapter=false;battery=49;assert(!update_power_ready());battery=50;assert(update_power_ready());
- battery=49;stage();assert(!update_install(NULL) && !starts);
- battery=0;adapter=true;assert(update_power_ready());telemetry_ok=false;assert(!update_power_ready());telemetry_ok=true;
+ /* Unplugged below 10% defers; charger and unavailable telemetry permit. */
+ adapter=false;
+ for(percent=0;percent<=100;percent++)assert(update_power_ready()==(percent>=10));
+ percent=9;stage();assert(!update_install(NULL) && !starts && update_status==10);
+ adapter=true;assert(update_power_ready());telemetry_ok=false;assert(update_power_ready());telemetry_ok=true;
+ adapter=false;adapter_result=-1;assert(update_power_ready());adapter_result=0;
+ mcu_ok=false;
+ for(battery=0;battery<=5;battery++)assert(update_power_ready()==(battery>0));
+ battery_result=-1;assert(update_power_ready());battery_result=0;
+ mcu_ok=true;percent_result=-1;battery=0;assert(!update_power_ready());percent_result=0;percent=10;assert(update_power_ready());
+ adapter=true;percent=100;
  pending_ours=pending_other=true;assert(update_recover_pending());assert(!pending_ours && pending_other && pending_deleted);
  pending_fail=true;assert(!update_recover_pending());pending_fail=false;
  pending_ours=true;pending_delete_fail=true;assert(!update_recover_pending() && pending_ours && pending_other);pending_delete_fail=false;assert(update_recover_pending());pending_other=false;
@@ -471,10 +511,10 @@ int main(int argc,char **argv)
  update_postponed=false;update_crypto_disabled=true;before=queued;update_check_now=true;
  assert(!bb_update_tick() && queued==before && !update_thread);update_crypto_disabled=false;
  /* Persistent install reason survives newer background discovery status. */
- strcpy(update_failure_reason,"AM write or SD read failed");update_status=2;assert(!strcmp(update_settings_status(),"Last install didn't finish") && update_line_bad);   /* plain words; the reason stays in status.txt */
- update_status=10;assert(strstr(update_settings_status(),"50%"));
+ strcpy(update_failure_reason,"AM write or SD read failed");update_status=2;assert(!strcmp(update_settings_status(),"Reopen to retry update") && update_line_bad);   /* plain words; the reason stays in status.txt */
+ update_status=10;assert(!strcmp(update_settings_status(),"Battery low. Plug in"));
  /* A warm usable snapshot permits checks while background validation runs. */
- accept_queue=true;update_job_busy=0;update_checked=false;update_check_now=false;update_preference=0;update_retry_after=0;
+ accept_queue=true;update_job_busy=0;update_checked=false;update_check_now=false;update_preference=0;update_retry_after=0;update_approved=false;
  index_busy=true;index_ready=false;before=queued;assert(!bb_update_tick() && queued==before);
  index_ready=true;assert(!bb_update_tick() && queued==before+1);update_job_busy=0;index_busy=index_ready=false;accept_queue=false;
  /* ---- Bounded waits: every timeout abandons the install before AM, or cancels it. ---- */
@@ -587,7 +627,7 @@ int main(int argc,char **argv)
   /* ... it completes VERIFY -> READY and releases busy: the next poll sees READY and queues no staging job. */
   update_machine.state=BB_UPDATE_READY;__atomic_store_n(&update_job_busy,0,__ATOMIC_RELEASE);
   assert(update_poll(false)==UPDATE_POLL_WAIT && queued==before && update_view.state==BB_UPDATE_READY);
-  /* Forced in-poll interleaving (product regression from the 2026-11-05 re-check): the worker publishes VERIFY ->
+  /* Forced in-poll interleaving (cancellation race): the worker publishes VERIFY ->
      READY and releases busy inside this very poll, before its busy load. Whatever order the poll reads them in,
      it must see READY: nothing queued, no flush, the phase stays READY. */
   update_machine.state=BB_UPDATE_VERIFY;update_view.state=BB_UPDATE_VERIFY;update_job_busy=1;update_explicit_check=true;update_approved=true;
@@ -630,7 +670,7 @@ int main(int argc,char **argv)
   /* Settings never goes past READY: READY is for the room only. */
   update_machine.state=BB_UPDATE_READY;assert(update_poll(false)==UPDATE_POLL_WAIT);assert(update_poll(true)==UPDATE_POLL_READY);
   update_machine.state=BB_UPDATE_IDLE;
-  /* (8) J-04: Check now while the library scans: "Checking" at once; the scan cancels the first
+  /* (8) Check now while the library scans: "Checking" at once; the scan cancels the first
      discovery; the retry is still the player's check, so its result is asked, never auto-downloaded. */
   update_machine.state=BB_UPDATE_IDLE;update_view.state=BB_UPDATE_IDLE;update_explicit_check=update_explicit_pending=update_approved=false;
   update_checked=true;update_check_now=false;update_retry_after=0;update_job_busy=0;update_transport_deferred=0;update_preference=0;
@@ -677,7 +717,7 @@ int main(int argc,char **argv)
    assert(update_initialized && queued==before+1 && queued_fn==update_initialize_job);
    update_job_busy=0;accept_queue=false;
    update_prefs_loaded=1;   /* ready: the normal card, no standing line */
-   assert(!update_unavailable() && !strcmp(update_card_notice(),""));
+   update_status=0;assert(!update_unavailable() && !strcmp(update_card_notice(),""));
    keys[0]=KEY_DOWN;keys[1]=KEY_A;keys[2]=KEY_B;key_index=0;sfx_errors=0;bb_update_settings();assert(update_check_now && !sfx_errors);
    update_check_now=update_explicit_pending=false;
    /* the updater disabled itself (self-test, or the old update could not be cleared): Check now says why and never
@@ -690,6 +730,16 @@ int main(int argc,char **argv)
     assert(!strcmp(update_card_notice(),update_status_text[status]) && update_line_bad);
     update_crypto_disabled=false;update_status=saved;
    }
+   /* The third row opens independently of update eligibility and starts no check. */
+   for(int state=0;state<3;state++) {
+    diagnostic=dev_bench=state==0;homebrew=state==1;update_preference=2;
+    update_prefs_loaded=1;update_initialized=true;update_check_now=update_explicit_pending=false;
+    unsigned opened=whatsnew_opened;ui_card_row_t row={0};update_row(BB_UPDATE_NOTES_ROW,NULL,&row);
+    assert(!strcmp(row.label,"What's new") && !strcmp(row.value,">") && !row.arrows);
+    keys[0]=KEY_DOWN;keys[1]=KEY_DOWN;keys[2]=KEY_A;keys[3]=KEY_B;key_index=0;sfx_errors=0;
+    bb_update_settings();assert(whatsnew_opened==opened+1 && !sfx_errors && !update_check_now && key_index==4);
+   }
+   diagnostic=dev_bench=false;homebrew=false;
    update_prefs_loaded=prefs;update_initialized=init;queued=before;
   }
   puts("PASS: updater UI policy: worker completion acquired before its phase, staging refuses other phases, consent before any progress, Later, progress %, one retry policy in Settings, developer guard, READY only in the room, footer taps");

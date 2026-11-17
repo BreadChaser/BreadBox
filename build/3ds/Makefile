@@ -45,7 +45,7 @@ BUILD		:=	$(APP_BUILD)
 SOURCES		:=	../../app/ui ../../app/settings ../../app/services ../../platform/3ds $(addprefix ../../systems/,$(SYSTEMS))
 SOURCES += ../../systems/common $(wildcard $(SYSTEMS:%=../../build/systems/%))
 DATA		:=	data
-INCLUDES	:=	include
+INCLUDES	:=	include generated
 GRAPHICS	:=	../../assets/gfx
 ROMFS		:=	../../assets/romfs
 GFXBUILD	:=	$(ROMFS)/gfx
@@ -198,7 +198,7 @@ endif
 # and playlog.o (library play history and favourites) follow; the save code
 # links last. cmdroom.o's code is PSX3D_COLD (after everything);
 # gpustereo_layers.o (New 3DS 3D) comes last.
-LATE_OFILES := picadirect.o presetupdate.o uploadskip.o display.o boxart.o qrcode.o share.o mp_ui.o playlog.o history.o safefile.o saveid.o savestates.o statefile.o scene.o icons.o cmdroom.o gpustereo_layers.o
+LATE_OFILES := picadirect.o presetupdate.o uploadskip.o display.o boxart.o qrcode.o share.o mp_ui.o playlog.o history.o safefile.o saveid.o savestates.o statefile.o scene.o icons.o cmdroom.o gpustereo_layers.o whatsnew.o whatsnew_model.o whatsnew_ui.o
 export OFILES_SOURCES 	:=	$(CPPFILES:.cpp=.o) $(filter-out $(LATE_OFILES),$(CFILES:.c=.o)) $(SFILES:.s=.o) $(LATE_OFILES)
 
 export OFILES_BIN	:=	$(addsuffix .o,$(BINFILES)) \
@@ -213,7 +213,12 @@ export HFILES	:=	$(PICAFILES:.v.pica=_shbin.h) $(SHLISTFILES:.shlist=_shbin.h) \
 
 export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 			$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
-			-I$(CURDIR)/../../app/ui -I$(CURDIR)/../../include/breadbox -I$(CURDIR)/../../platform/3ds -I$(CURDIR)/$(BUILD)
+			-I$(CURDIR)/../../include/breadbox -I$(CURDIR)/$(BUILD)
+# The shell's own headers (app/ui, platform/3ds) are on the path only for shell
+# objects; systems/ code reaches the shell through include/breadbox
+# (tools/architecture/include-graph.py checks it).
+export SHELL_INCLUDE	:=	-I$(CURDIR)/../../app/ui -I$(CURDIR)/../../platform/3ds
+export SHELL_OFILES	:=	$(foreach dir,../../app/ui ../../app/settings ../../app/services ../../platform/3ds,$(patsubst %.c,%.o,$(notdir $(wildcard $(dir)/*.c))))
 
 export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
@@ -320,6 +325,7 @@ saveid.o: CFLAGS += -Os
 presetupdate.o: CFLAGS += -Os
 # the core's state layout (statefile.c reads core headers)
 statefile.o: CFLAGS += -I$(COREDIR)/include
+$(SHELL_OFILES): CFLAGS += $(SHELL_INCLUDE)
 
 -include $(DEPSDIR)/*.d
 

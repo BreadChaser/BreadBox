@@ -1,6 +1,6 @@
-// BreadBox release version. The CIA title version derives from it (tools/build/title-version.py: 0.9.2 => 25647);
+// BreadBox release version. The CIA title version derives from it (tools/build/title-version.py: 0.9.3 => 25663);
 // private test CIAs pass an explicit VERSION=N counter instead.
-#define BB_VERSION "0.9.2"
+#define BB_VERSION "0.9.3"
 #ifndef BB_BUILD
 // Older build scripts still pass the retired -DPSX3D_BUILD=...; accept it.
 #ifdef PSX3D_BUILD

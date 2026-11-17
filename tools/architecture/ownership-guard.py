@@ -42,7 +42,7 @@ PATTERNS = {
     'ps1-state-policy': re.compile(r'\bPSX3D_STATE_DIR\b|\blast_game_state\b|\bP3TH\b'),
     'ps1-storage-policy': re.compile(r'\bPSX3D_BIOS_DIR\b|\bmemcard\w*|\bMcd\w*|\bCdrom\w*|\bbios\b', re.I),
 }
-INCLUDE = re.compile(r'^\s*#\s*include\s*"([^"]+)"', re.M)
+INCLUDE = re.compile(r'^\s*#\s*include\s*["<]([^">]+)[">]', re.M)
 # Directory segments that mark a core-private include path.
 PRIVATE_SEGMENTS = {'systems', 'core', 'gba-core', 'libpcsxcore'}
 SHARED_GLOBS = (('app', ('.c', '.h', '.inc')), ('platform/3ds', ('.c', '.h', '.inc')),

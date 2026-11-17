@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression cases for architecture review should-fixes 3/4/5."""
+"""Regression cases for host-runner architecture contracts."""
 from pathlib import Path
 import subprocess,tempfile,shutil,json,os
 r=Path(__file__).resolve().parents[2]

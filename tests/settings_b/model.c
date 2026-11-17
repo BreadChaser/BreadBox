@@ -10,7 +10,7 @@
 #include "../../app/ui/theme_picker.c"
 #include "../../app/settings/settings_ui.c"
 bool cheats_widescreen(bool on){(void)on;return false;}
-void sfx_play(int n){(void)n;}void sfx_now(int n){(void)n;}void sfx_default(int n){(void)n;}void sfx_cancel(void){}void sfx_flush(void){}
+void sfx_play(int n){ui_trace_sound(n);}void sfx_now(int n){ui_trace_sound(n);}void sfx_default(int n){ui_trace_sound(n);}void sfx_cancel(void){}void sfx_flush(void){}
 void sfx_card_closes(void){}bool sfx_close_said(void){return false;}bool sw_framelog;
 static bool opened,paging_inputs;static int resets,cleared,changed;
 static char paging_label[128],paging_value[160];
@@ -120,6 +120,21 @@ static void paper_line_checks(void)
  host_mark_n=0;f.lift[2]=0;ui_card_draw(&f,7,2,ruled_row,NULL,&card);assert(host_mark_n==1 && host_marks[0].n==0);
  /* a row without a value: the stroke ends past its label */
  host_mark_n=0;f.lift[2]=1;ui_card_draw(&f,7,2,ruled_row,NULL,&card);assert(host_mark_n==1 && host_marks[0].x1<UI_CARD_TEXT_X+UI_CARD_NUDGE+ui_text_width(NULL,UI_CARD_ROW_SIZE,"FPS counter")+UI_MARK_AFTER+.01f);
+ /* Dark cards use the palette's visible selection band and a narrow focus edge. */
+ for(int look=BB_LOOK_PSX3D;look<BB_LOOK_COUNT;look++) {
+  theme_select_look(look);host_mark_n=0;host_text_begin();
+  ui_card_draw(&f,7,2,ruled_row,NULL,&card);host_text_on=false;
+  int bands=0,edges=0;
+  for(int i=0;i<host_rect_n;i++) {
+   const host_rect_t *r=&host_rects[i];
+   if(fabsf(r->z-UI_CARD_Z_SELECT)<=UI_Z_STEP+.001f && r->h==UI_CARD_ROW) {   /* the list looks' selection (look_select) */
+    assert(fabsf(r->y-(UI_CARD_ROWS_Y+2*UI_CARD_ROW))<.01f);
+    bands+=r->w>UI_LOOK_FOCUS_EDGE;edges+=r->w==UI_LOOK_FOCUS_EDGE;
+   }
+  }
+  assert(!host_mark_n && !bands && edges==1);   /* the band is the gradient (C2D_DrawRectangle), its edge solid */
+ }
+ theme_select_look(BB_LOOK_ROOM);
  /* the source marks: nothing for a System value, a mark for each of the others */
  for(int src=BB_SOURCE_NONE;src<=BB_SOURCE_ALL;src++){
   capture_bounds=true;ink_left=ink_top=1e9f;ink_right=ink_bottom=-1e9f;
@@ -128,8 +143,8 @@ static void paper_line_checks(void)
  }
  printf("PASS: ruled card: %d texts on %d drawn lines; the selection is one highlighter stroke inside its row, none on a heading\n",on,nl);
 }
-/* GBA settings flicker (owner 2026-11-11: "the menu options like screen mode will show the other options
-   flickering"): while a row's lift animates (about 1 s), every frame must draw each row's own value. Before the fix
+/* GBA settings flicker: while a row's lift animates (about 1 s),
+   every frame must draw each row's own value. Before the fix
    the label was refitted each frame and its insert into ui_fit_ex's 32-entry cache could overwrite the slot the
    value had just been read from: the value then showed another text for a frame. */
 static const char *const flicker_labels[]={"Screen size","Smoothing","Color correction","Frame blend","FPS counter"};
@@ -181,7 +196,7 @@ static void squeeze(char *out,size_t cap,const char *in){size_t n=0;for(;*in&&n+
 /* A page on its own (no run loop): the stack holds exactly that page. */
 static void page_only(settings_state *v,settings_page page,const bb_system_t *sys)
 {v->depth=1;v->levels[0]=(settings_level){.page=page,.system=sys};build_rows(v);}
-/* Full-value inspection (review 2026-11-05, finding 4): the focused row the card cuts shows its whole text on the
+/* Full-value inspection: the focused row the card cuts shows its whole text on the
    top screen through the real Settings top (settings_tag) and ui_value_card, at the floor; a row that fits shows none. */
 static void maximum_value_checks(void)
 {
@@ -287,7 +302,7 @@ static void value_inspection_checks(void)
  host_text_begin();settings_tag(&v);host_text_on=false;assert(host_text_n==0);   /* no chatter for a whole row */
  puts("PASS: focused cut rows (long folder, key combo, multibyte) shown whole on the top screen at the floor");
 }
-/* The room bar: only the chosen place's tab carries the A glyph (review 2026-11-05, finding 2). */
+/* The room bar: only the chosen place's tab carries the A glyph. */
 static void room_cue_checks(void)
 {
  for(int lit=0;lit<4;lit++) {
@@ -327,9 +342,9 @@ static void tree_checks(void)
   static const char *const top[]={"Customize","Systems","Collection","Updates","About"};
   for(int i=0;i<5;i++)assert(!strcmp(s.rows[i].row.label,top[i]) && !strcmp(s.rows[i].row.value,">"));
   fit_checks(&s,false);assert(!reset_scope(&s));
-  /* Customize: Room style; the shared shortcuts once (Rewind keys and the button side on the New only) */
+  /* Customize: Theme; the shared shortcuts once (Rewind keys and the button side on the New only) */
   assert(push(&s,PAGE_CUSTOMIZE,NULL));fit_checks(&s,false);assert(reset_scope(&s));
-  assert(count_id(&s,APP_APPEARANCE)==1 && count_id(&s,APP_HOTKEY)==1 && count_id(&s,APP_HOTKEY+1)==newer && count_id(&s,APP_SIDE)==newer && count_id(&s,APP_HANDS)==0);
+  assert(count_id(&s,APP_THEME)==1 && count_id(&s,APP_HOTKEY)==1 && count_id(&s,APP_HOTKEY+1)==newer && count_id(&s,APP_SIDE)==newer && count_id(&s,APP_HANDS)==0);
   for(int i=0;i<s.count;i++)printf("CUSTOMIZE\t%d\t%s\n",newer,s.rows[i].row.label);
   fit_dump(&s,newer);
   room_show_hands=true;build_rows(&s);assert(count_id(&s,APP_HANDS)==1);assert(push(&s,PAGE_HANDS,NULL) && s.count==2 && settings_ui_hands_row());fit_dump(&s,newer);
@@ -407,16 +422,39 @@ static void press_counts(void)
 {
  /* top: Customize 0, Systems 1, Collection 2, Updates 3, About 4. PlayStation is the first system, GBA the second;
     on PS1's list Picture's Screen is row 1, Smoothing 2, FPS counter 3; Controls heading 5, Button mappings 6;
-    on GBA's Screen size 1, Color correction 3. Customize: Room style 0, FF keys 1. */
+    on GBA's Screen size 1, Color correction 3. Customize: Theme 0, FF keys 1. */
  static const struct {const char *what;int presses;const char *how;} table[]={
-  {"Room style Day->Night",2,"A, Right"},{"PS1 Screen",4,"Down, A, A, Right"},{"PS1 Smoothing",5,"Down, A, A, Down, Right"},
+  {"Theme Room (Day)->Room (Night)",3,"A, Down, Right"},{"PS1 Screen",4,"Down, A, A, Right"},{"PS1 Smoothing",5,"Down, A, A, Down, Right"},
   {"PS1 FPS counter",6,"Down, A, A, Down, Down, Right"},{"GBA Screen size",5,"Down, A, Down, A, Right"},
   {"GBA Color correction",7,"Down, A, Down, A, Down, Down, Right"},{"PS1 Button mappings (open)",5,"Down, A, A, R, A"},
-  {"Games folder (open)",4,"Down, Down, A, A"},{"Updates page (open)",4,"Down x3, A"},{"FF keys",3,"A, Down, Right"}};
+  {"Games folder (open)",4,"Down, Down, A, A"},{"Updates page (open)",4,"Down x3, A"},{"FF keys",4,"A, Down, Down, Right"}};
  int total=0;for(unsigned i=0;i<sizeof(table)/sizeof(*table);i++){printf("PRESSES\t%s\t%d\t%s\n",table[i].what,table[i].presses,table[i].how);total+=table[i].presses;}
  printf("PRESSES\ttotal\t%d\n",total);
 }
+static void look_switch_checks(void)
+{
+ static settings_state s;static settings_cached_row cache[SETTINGS_ROWS];
+ s.rows=cache;g_cfg.theme=theme_from_saved_id("night");
+ assert(push(&s,PAGE_TOP,NULL) && push(&s,PAGE_CUSTOMIZE,NULL));
+ assert(find_label(&s,"Look")<0 && find_label(&s,"Room style")<0);
+ level(&s)->selected=find_label(&s,"Theme");int depth=s.depth,selected=level(&s)->selected;
+ assert(!strcmp(s.rows[selected].row.value,"Room (Night)"));
+ /* Right goes through every theme once and comes back: Room (Night), PSX3D, Simple, Room (Day), Room (Night). */
+ static const char *const order[]={"psx3d","simple","day","night"};
+ for(int i=0;i<4;i++) {
+  bb_settings_row row=s.rows[selected].row;
+  assert(activate(&s,&row,1,false));build_rows(&s);
+  assert(!strcmp(theme()->id,order[i]) && !strcmp(s.rows[selected].row.value,theme()->name));
+  assert(s.depth==depth && level(&s)->page==PAGE_CUSTOMIZE && level(&s)->selected==selected && count_id(&s,APP_THEME)==1);
+ }
+ bb_settings_row row=s.rows[selected].row;assert(activate(&s,&row,-1,false));build_rows(&s);
+ assert(!strcmp(theme()->id,"day") && theme_look()==BB_LOOK_ROOM);
+ g_cfg.theme=theme_default();theme_menu_refresh();
+ puts("PASS: one Theme row cycles Room (Day), Room (Night), PSX3D and Simple and keeps the Settings page and selection");
+}
+#ifndef BB_SETTINGS_EQ
 int main(void){
+ look_switch_checks();
  assert(!FT_Init_FreeType(&ft));
  assert(!FT_New_Face(ft,getenv("PSX3D_TITLE_FONT"),0,&title_face));
  assert(!FT_New_Face(ft,getenv("PSX3D_BODY_FONT"),0,&body_face));
@@ -474,3 +512,5 @@ int main(void){
  FT_Done_Face(title_face);FT_Done_Face(body_face);FT_Done_FreeType(ft);
  puts("Settings production pages, navigation, game scope, sources, highlighter and flicker regression PASS");return 0;
 }
+
+#endif

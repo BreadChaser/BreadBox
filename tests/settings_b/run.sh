@@ -20,7 +20,7 @@ cc -std=gnu11 -w -fsanitize=address,undefined -g -ffunction-sections -fdata-sect
 (cd "$tmp" && ./check)
 cc -std=gnu11 -w -fsanitize=address,undefined -g -ffunction-sections -fdata-sections -Wl,--gc-sections -DAPP_BREADBOX \
  -I"$root/tests/app/host" -I"$root/app/ui" -I"$root/include/breadbox" -I"$root/platform/3ds" -I"$root/systems/gba" -I"$root/core/deps/libretro-common/include" \
- "$root/tests/settings_b/gba.c" "$root/systems/gba/gba_settings.c" "$root/systems/gba/gba_settings_ui.c" "$root/systems/gba/gba_touch.c" "$root/app/ui/ui_play_controls.c" -DUI_PLAY_HOST \
+ "$root/tests/settings_b/gba.c" "$root/systems/gba/gba_settings.c" "$root/systems/gba/gba_color.c" "$root/systems/gba/gba_settings_ui.c" "$root/systems/gba/gba_touch.c" "$root/app/ui/ui_play_controls.c" -DUI_PLAY_HOST \
  "$root/systems/common/control_schemas.c" "$root/app/ui/bb_controls.c" "$root/app/ui/bb_profile.c" "$root/app/ui/bb_cheats.c" "$root/app/ui/safefile.c" -lm -o "$tmp/check"
 (cd "$tmp" && ./check) > "$tmp/gba-results"
 cat "$tmp/gba-results"

@@ -1,4 +1,4 @@
-/* Independent review scenarios, using real backend/loader/history and short writes. */
+/* Import regression scenarios, using real backend/loader/history and short writes. */
 #define main original_import_tests
 #include "check.c"
 #undef main

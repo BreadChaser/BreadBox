@@ -5,7 +5,7 @@
 // - a corner with another object's depth is vetoed for every polygon;
 // - 2D primitives drawn before a pass's first 3D polygon go to the back
 //   by whole pixels, those drawn after it stay on the screen.
-#include "../../include/breadbox/gpustereo.h"
+#include "../../systems/ps1/gpustereo.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>

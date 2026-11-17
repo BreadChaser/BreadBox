@@ -20,7 +20,7 @@ cc -std=gnu11 -Wall -Wextra -Werror -Wno-misleading-indentation -Wno-unused-func
  -ffunction-sections -fdata-sections -Wl,--gc-sections -Wl,--wrap=fopen -Itests/app/host -Iapp/ui -Iinclude/breadbox -Iplatform/3ds \
  -Icore/deps/libretro-common/include tests/update/runtime.c app/services/update_model.c app/services/update_phase.c app/ui/safefile.c \
  $(pkg-config --cflags --libs libcurl) -lcrypto -lm -o "$tmp/runtime"
-(cd "$tmp" && BB_DRAIN_REPRO=gate ./runtime http://127.0.0.1/ && BB_DRAIN_REPRO=1 ./runtime http://127.0.0.1/ && python3 "$OLDPWD/tests/update/server.py" ./runtime)
+(cd "$tmp" && BB_DRAIN_REPRO=gate ./runtime http://127.0.0.1/ && BB_DRAIN_REPRO=1 ./runtime http://127.0.0.1/ && BB_ROBUST=1 python3 "$OLDPWD/tests/update/server.py" ./runtime && python3 "$OLDPWD/tests/update/server.py" ./runtime)
 done
 
 # Compile the actual release branches (no developer URL), preserving curl's HTTPS

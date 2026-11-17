@@ -40,7 +40,7 @@ and `build/3ds/`; vendored engines live in `core/`, `gba-core/` and
 headers, which the renderer and batching code include.
 
 `apps/breadbox.mk` selects packaging, object directories, the system list and the
-version header. `app/ui/app_policy.h` supplies compile-time names, SD
+version header. `include/breadbox/app_policy.h` supplies compile-time names, SD
 roots, title IDs, release URLs and the PS1 preset feed. The PS1 preset pack is
 still published on the frozen PSX3D release page. On first start, BreadBox
 imports compatible settings, memory cards, and save states from
@@ -82,6 +82,43 @@ python3 tools/layout/compare.py /path/to/baseline.elf build/3ds/BreadBox.elf
 python3 tools/layout/check-pinned.py /path/to/baseline.elf build/3ds/BreadBox.elf build/3ds/build-breadbox
 python3 tools/architecture/ownership-guard.py --strict   # shared code owns no system policy
 ```
+
+### Structure gates and the trunk gate
+
+Four small checks keep the code from drifting. `ci.sh gates` runs the first three (they also
+run inside `ci.sh all`); each has a host test in `tests/arch_gates/`. Every stored number is a plain
+file in `tools/architecture/` that may only go down: after you shrink something, run the script
+with `--update` to lock it in. `--update` refuses to raise a number or add an entry. `--list`
+prints what is counted.
+
+- **Size gate** (`size-gate.py`): first-party C files stay at or under 1,500 lines and functions
+  at or under 150. An `.inc` file counts into the file that includes it. Today's offenders are
+  frozen in `size-exceptions.json`. It fails when one grows, when a new one appears, and when a
+  listed one no longer offends (delete it with `--update`). Vendored trees are not scanned.
+- **Source-text ratchet** (`test-text-ratchet.py`): counts the Python tests that read a production
+  source file and then slice or search its text (`.index(`, `.count(`, a `[a:b]` slice). The count
+  (`text-ratchet.count`) must not rise; write a new test against the real code instead.
+- **UI_METRIC ratchet** (`ui-metric-ratchet.py`): counts uses of numbered `UI_METRIC_<n>` names
+  (`ui-metric.count`, now 0). The numbered names are gone; use a named style token instead.
+- **Trunk gate** (`tools/build/trunk-gate.sh`): runs the fixed `ci.sh all` command in the
+  pinned container on a clean commit. Schema-2 receipts in the gitignored
+  `.trunk-gate.jsonl` record the exact command, commit/tree, toolchain-lock hash,
+  source epoch, UTC start/end, host suite counts, required phases/layout result
+  and ELF/CXI/identity hashes. Missing or incomplete outputs fail the run.
+  HEAD, tree and cleanliness are checked again after execution. `--inside-container`
+  runs the same fixed CI command in an already-pinned container; it still checks
+  the installed toolchain. `TRUNK_GATE_CI` creates **test receipts only**, which
+  cannot authorize a merge even if the replacement exits successfully.
+  `--check <sha>` verifies the newest receipt across worktrees, including later
+  failures, against that commit's tree/toolchain/epoch and required results.
+  Old-format green lines remain historical evidence only for commits already on
+  `trunk`; they cannot authorize new merges. `merge-to-trunk.sh <branch>` uses
+  `--check-for-merge`, requires a clean trunk and a fast-forward, then merges.
+  The ledger prevents accidental test-command bypass and stale-green reuse;
+  it is a same-user local file, **not tamper-proof proof of execution**. Artifact
+  hashes identify the outputs recorded at completion, not their indefinite storage
+  or hardware correctness. The public repository's own CI on the pushed commit
+  is stronger evidence; protected branch policy must enforce that separately.
 
 ### Accepted-build baseline
 
@@ -190,7 +227,10 @@ reference comparison before its controls and stress builds. `BASELINE_META`
 overrides require `BB_LAYOUT_TEST=1` and are for negative controls only.
 
 Host suites need a C compiler, Python, FreeType, libpng, libcurl, zlib, OpenSSL,
-ImageMagick, an ARM Linux cross compiler, and qemu-user. Logs go to
+ImageMagick, an ARM Linux cross compiler, and qemu-user. They run up to four at a
+time by default, or half the available cores if fewer (`HOST_TEST_JOBS=1` runs serially).
+Lower the count on memory-limited hosts.
+Logs go to
 `HOST_TEST_OUT` or a temporary directory; each suite gets its own empty `TMPDIR`
 and `XDG_CACHE_HOME` there and never writes to your home folder. Text widths are
 measured with the bundled `tests/fonts/DejaVuSans.ttf`, not a system font. Skipped suites fail the gate; provide
@@ -204,6 +244,10 @@ remain consistent.
 `ps1-messages` runs the PS1 core notice router and both libretro message callbacks:
 routine BIOS and enabled-hack notices go to the diagnostic log, while actionable
 warnings and game feedback still reach the OSD.
+
+`ps1-pad` sends pad-library byte sequences to the core's pad code (with `ps1_pad.h`) and checks the
+ID a game reads (0x41 digital, 0x73 analog): a probed pad stays digital until the
+game or the player picks analog, and state loads keep the chosen mode.
 
 Old 3DS speed depends on code and data addresses. Keep `core-first.ld`, core
 archive/library order, core string isolation, the pinned frontend, and

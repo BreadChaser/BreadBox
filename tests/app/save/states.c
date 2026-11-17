@@ -113,6 +113,8 @@ bool __real_retro_serialize(void *data, size_t size)
 }
 
 static int load_calls;
+static unsigned pad_toggles;   // ps1_pad_settle(): two per loaded state
+int padToggleAnalog(unsigned int index) { (void)index; return ++pad_toggles & 1; }
 static int model_extra;   // a core with one more record the check doesn't know
 // misc.c LoadState and the component freezes: the same reads/seeks, the
 // same early refusals (header, version), the same "skip a broken SPU size"
@@ -186,9 +188,11 @@ static size_t spu_end, tail_at, ndrc_size_at, pad_at;
 static state_result_t try_load(const void *buf, size_t size)
 {
 	unsigned long long before = live_hash();
+	unsigned toggles = pad_toggles;
 	bool ok = __wrap_retro_unserialize(buf, size);
 	state_result_t r = state_last_result;
 	CHECK(ok == (r == STATE_OK));
+	CHECK(pad_toggles - toggles == (ok ? 2u : 0u));   // the pad never switches mode by itself
 	if (r == STATE_NOT_A_STATE || r == STATE_DAMAGED || r == STATE_VERSION)
 		CHECK(live_hash() == before);
 	return r;
@@ -211,7 +215,7 @@ static void streams(void)
 	void *f = s_open((const char *)buf, "rb");
 	snprintf(ctx, sizeof(ctx), "stream");
 	CHECK(s_seek(f, 16, SEEK_SET) == 16);   // the end itself is fine
-	CHECK(s_read(f, out, 1) == -1 && out[0] == 9);   // the reviewer's probe
+	CHECK(s_read(f, out, 1) == -1 && out[0] == 9);
 	s_close(f);
 	CHECK(stream_refused);
 	long bad[][2] = { { -1, SEEK_SET }, { 17, SEEK_SET }, { -9, SEEK_CUR }, { 9, SEEK_CUR },
@@ -339,9 +343,9 @@ static void bad_sizes(void)
 	free(s);
 }
 
-// Review 3 F7a: a state from another build whose records are 16 bytes
+// A state from another build whose records are 16 bytes
 // longer (same core version number) must not teach its layout: before
-// PSX3D's first own save and after it, it is refused and good states load.
+// BreadBox's first own save and after it, it is refused and good states load.
 static void poisoning(void)
 {
 	size_t saved = state_tail_measured;

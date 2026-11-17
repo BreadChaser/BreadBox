@@ -14,6 +14,7 @@
 #include "dev_switches.h"
 #include "csnd_out.h"
 #include "uisound.h"
+#include "ui_trace.h"
 #include "app_main.h"
 #include "bb_save.h"
 
@@ -25,7 +26,7 @@
 typedef struct { s16 *data; u32 frames; } clip_t;
 
 // The sound files (romfs:/sfx/<name>.pcm, mono PCM16 at SFX_RATE) and which one each event plays. The paper set
-// (CC0 recordings, CREDITS) the owner picked on 2026-11-11; swap a pick by changing its file here.
+// (CC0 recordings, CREDITS); swap a pick by changing its file here.
 static const char *const sfx_files[] = { "move_1", "move_2", "move_3", "value_1", "value_2", "value_3", "select", "back",
 	"launch", "tab", "toggle", "dialog", "confirm", "deny", "save", "toss", "load", "pause_open", "pause_close", "jump", "error" };
 #define SFX_FILES (int)(sizeof(sfx_files) / sizeof(sfx_files[0]))
@@ -199,6 +200,7 @@ static void play_file(int file)
 // Plays now: the shared moves, and every flush. Silent with Menu sounds off and once the system closes the app.
 void sfx_now(int event)
 {
+ ui_trace_sound(event);
 	if (!ok || !g_cfg.sounds || event < 0 || event >= SFX_COUNT || aptShouldClose())
 		return;
 	const sfx_event_t *e = &sfx_events[event];
@@ -212,6 +214,7 @@ void sfx_now(int event)
 static int pending = -1;
 void sfx_play(int event)
 {
+ ui_trace_request(event);
 	if (event == SFX_LAUNCH) {   // the game takes over right after: never deferred
 		pending = -1;
 		sfx_now(event);
@@ -221,8 +224,10 @@ void sfx_play(int event)
 }
 void sfx_default(int event)
 {
-	if (pending < 0)
+	if (pending < 0) {
+  ui_trace_request(event);
 		pending = event;
+ }
 }
 void sfx_cancel(void) { pending = -1; }
 static bool card_closes;

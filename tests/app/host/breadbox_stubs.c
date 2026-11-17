@@ -4,6 +4,7 @@
 extern bool g_new3ds;
 bool ps1_3d_available(void) { return g_new3ds; }
 bool bb_session_active(void) { return false; }
+void bb_whatsnew_open(void) {}
 /* Menu sounds (uisound.c): silent on the host. */
 #include <stddef.h>
 #include "uisound.h"

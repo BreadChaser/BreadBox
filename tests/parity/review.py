@@ -1,4 +1,4 @@
-"""Run production review regression paths with small host devices."""
+"""Run production regression paths with small host devices."""
 from pathlib import Path
 import subprocess,tempfile,sys
 r=Path(__file__).resolve().parents[2]

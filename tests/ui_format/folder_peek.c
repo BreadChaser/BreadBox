@@ -1,4 +1,4 @@
-/* The folder picker's 3DS folders at the SD root (review fix r1b, finding 3): a clean card hides them, a game
+/* The folder picker's 3DS folders at the SD root: a clean card hides them, a game
  * one level down (DCIM/Games/x.gba) or right inside shows the folder, and a camera folder full of photos stays
  * hidden within the bounded look. The production predicate (ui_system_folder) and look (folder_peek.c). */
 #define _GNU_SOURCE

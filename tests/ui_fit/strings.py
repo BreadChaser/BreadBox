@@ -11,7 +11,7 @@ must fail, so a passing run says the shipped text fits.
 The width model is a conservative model of the system font, calibrated on Azahar's stand-in font (it is wider
 and letter-spaced next to the real 3DS font, so what fits here fits on the console): at the 21 px text floor
 "Copy games to the SD" measured 192 px and the model gives 200. Text that wraps breaks at spaces like
-shelf_scene.c text_lines() and the dialog's wrap_text(). A string that does not fit is a failure, never a cut.
+shelf_scene_draw.c text_lines() and the dialog's wrap_text(). A string that does not fit is a failure, never a cut.
 """
 import re, shutil, subprocess, sys, tempfile
 from pathlib import Path
@@ -177,7 +177,7 @@ def negative_control():
         tree = Path(td)
         for d in ('include/breadbox', 'apps/breadbox', 'app/ui/components'):
             shutil.copytree(root / d, tree / d)
-        for f in ('app/ui/breadbox_credits.c', 'app/ui/bb_pause.c', 'app/ui/welcome.c', 'app/ui/breadbox_import.h', 'app/ui/app_policy.h'):
+        for f in ('app/ui/breadbox_credits.c', 'app/ui/bb_pause.c', 'app/ui/welcome.c', 'include/breadbox/breadbox_import.h', 'include/breadbox/app_policy.h'):
             shutil.copy(root / f, tree / f)
         fmt = tree / 'include/breadbox/ui_format.h'
         text = fmt.read_text()

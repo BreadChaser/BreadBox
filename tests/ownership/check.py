@@ -41,6 +41,9 @@ with tempfile.TemporaryDirectory() as td:
         ('new PS1 state policy fails', 'const char *d = PSX3D_STATE_DIR;\n', 'ps1-state-policy'),
         ('new private system header fails', '#include "gba_settings.h"\n', 'private-include'),
         ('new core header fails', '#include "../../core/plugins/gpulib/gpu.h"\n', 'private-include'),
+        ('private PS1 header in angle brackets fails', '#include <../../systems/ps1/emu.h>\n', 'private-include'),
+        ('private GBA header in angle brackets fails', '#include <../../systems/gba/gba_settings.h>\n', 'private-include'),
+        ('private header with no space after include fails', '#include"../../systems/ps1/emu.h"\n', 'private-include'),
     ):
         new.write_text(text)
         expect(label, run(tree), False, needle)

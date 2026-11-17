@@ -1,18 +1,18 @@
-"""Lamplight room textures (art direction A, round 2, 32 texels/m): drawn natively at PS1 sizes from shapes and
+"""Lamplight room textures (32 texels/m): drawn natively at PS1 sizes from shapes and
 small palette ramps. No noise, no text. NumPy only (runs in Blender's Python and in plain Python).
 
     textures(style) -> {name: (h, w, 4) uint8 RGBA}
 
 Tiers: architecture 32 texels/m (wall, wood, woodv, floor, wainscot, rug), soft 64 texels/m (cushion twill), props at
 fixed small sizes. Every texture has at most 16 colours (an art rule: the PICA has no palette textures) and is at most
-64x64; check() asserts both. Drawn after the approved round 2 mockups (art direction A, 2026-11-06).
+64x64; check() asserts both. The textures use the same palette as the room geometry.
 """
 import math
 import random
 
 import numpy as np
 
-D = 32                      # architecture texels per metre (owner 2026-11-06: 32)
+D = 32                      # architecture texels per metre
 BAYER4 = np.array([[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]) / 16.0
 MAX_COLOURS, MAX_SIZE = 16, 64
 
@@ -99,7 +99,7 @@ def wood(pal, plank_m=0.25, seams=True, seed=1, lines=1):
 
 def floor(pal, seed=3):
     """2 m tile. Boards 12.5 cm in two tones, a grain line on every other board, a gap one tone darker on the left
-    edge, one end joint (light round 3: calm, the floor is minified in perspective and point-sampled)."""
+    edge, one end joint (low contrast, the floor is minified in perspective and point-sampled)."""
     rnd = random.Random(seed)
     S = 2 * D
     bw = max(3, int(round(0.125 * D)))
@@ -123,7 +123,7 @@ def floor(pal, seed=3):
 
 def wallpaper(base, stripe, motif):
     """1 m tile = 4x4 cells of 25 cm: one pinstripe per cell and a 1x2 texel lozenge dash on every other cell, the
-    dash's colour a third of the way from the paper (light round 3: calm)."""
+    dash's colour a third of the way from the paper (low contrast)."""
     S = D
     p = S // 4
     b, m = hexc(base), hexc(motif)

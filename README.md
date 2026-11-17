@@ -46,7 +46,7 @@ and brings your PSX3D saves over on first start.
 All screenshots were taken on real consoles.
 
 > [!NOTE]
-> BreadBox 0.9.2 is a public beta. Most games play well, but demanding
+> BreadBox 0.9.3 is a public beta. Most games play well, but demanding
 > PlayStation games run slower on the Old 3DS, and some games have drawing
 > problems. See [Performance](#performance) and [Known issues](#known-issues).
 
@@ -74,7 +74,7 @@ All screenshots were taken on real consoles.
 - A save from another emulator is asked about before it is used, and the original is kept
 
 **And more**
-- Updates itself over Wi-Fi: Automatic, Ask first or Off
+- Updates itself over Wi-Fi: Ask first, Automatic or Off
 - Copies your memory cards, postcards, settings, cheats and BIOS files from PSX3D
 - Share BreadBox with a friend: the coffee table shows a QR code for FBI
 
@@ -106,8 +106,12 @@ for new games at every start, and downloads box art by itself.
 
 | System | Files |
 |---|---|
-| PlayStation | `.cue/.bin`, `.chd`, `.pbp`, `.iso`, `.img`, `.mdf`, `.m3u` |
+| PlayStation | `.cue/.bin`, `.chd`, `.pbp`, `.img`, `.mdf`, `.m3u` |
 | Game Boy Advance | `.gba`, or a `.zip` with one game inside |
+
+`.iso` images are untested. The `.img` and `.mdf` checks cover raw, single-track
+images; other layouts are untested. Switching discs in `.pbp` and `.m3u` files is
+untested.
 
 No BIOS files are needed. Your saves and settings live in `sdmc:/3ds/BreadBox/`.
 

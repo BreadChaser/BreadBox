@@ -66,7 +66,7 @@ bb_index_status_t bb_index_status(void){return busy?BB_INDEX_SCANNING:terminal;}
 bool bb_index_complete(void) {return !busy && terminal==BB_INDEX_COMPLETE;}
 const char *bb_index_root(void) {return g_cfg.games_dir;}
 void bb_index_start(const char *r,bool refresh) {(void)r;if(refresh)gen++;}
-#include "../../app/ui/bb_disc.h"
+#include "../../include/breadbox/bb_disc.h"
 bb_disc_kind bb_disc_chd_kind(const char *p) {(void)p;return BB_DISC_OTHER;}
 bool aptMainLoop(void) {static int turns;assert(++turns<10000);return true;}
 bool aptShouldClose(void) {return false;}
@@ -82,7 +82,7 @@ void video_present_vsync(bool g,void (*t)(void *),void (*b)(void *),void *u) {(v
 const theme_t *theme(void) {static theme_t t;return &t;}
 void C2D_DrawRectSolid(float x,float y,float z,float w,float h,u32 c) {(void)x;(void)y;(void)z;(void)w;(void)h;(void)c;}
 static unsigned cover_changes;
-void covers_library_begin(void) { assert(!cover_changes); cover_changes++; }
+bool covers_library_begin(void) { assert(!cover_changes); cover_changes++; return true; }
 bool covers_library_try_begin(void) { covers_library_begin(); return true; }
 void covers_library_end(void) { assert(cover_changes==1); cover_changes--; }
 
@@ -105,6 +105,8 @@ static void *library_calloc(size_t n,size_t bytes)
 }
 #define calloc library_calloc
 #include "../../systems/ps1/library.c"
+#include "../../systems/ps1/ps1_disc_groups.c"
+#include "../../systems/ps1/ps1_library_import.c"
 #include "../common/test_tmpdir.h"
 #undef calloc
 static char *rows_text(void)
@@ -127,8 +129,8 @@ static void check_prefetch(void (*fn)(void *))
  if(fn!=candidate_read)return;
  probe_reads+=ps1_io.count;
  for(int i=0;i<ps1_io.count;i++)if(ps1_io.entries[i].kind==2){
-  char key[PATH_LEN],*k=key;norm_path("",ps1_io.entries[i].path,key,sizeof(key));
-  assert(!nrefs || !bsearch(&k,refs,nrefs,sizeof(refs[0]),cmp_ref));
+  char key[PATH_LEN],*k=key;ps1_library_norm_path("",ps1_io.entries[i].path,key,sizeof(key));
+  assert(!ps1_library_nrefs || !bsearch(&k,ps1_library_refs,ps1_library_nrefs,sizeof(ps1_library_refs[0]),ps1_library_cmp_ref));
   if(grow_on_probe){npaths=grow_on_probe;grow_on_probe=0;busy=false;}
  }
 }
@@ -242,11 +244,11 @@ int main(void) {
  for(int i=0;i<200 && !published;i++)published=library_poll_index();
  CHECK(published && library_count()==1 && !bb_index_complete() && ps1_noted==2);
  int previous_probes=probe_reads,allocations=staging_allocations;
- game_t *builder=games;const char *first_title=library_get(0)->title;
+ game_t *builder=ps1_library_games;const char *first_title=library_get(0)->title;
  npaths=6;published=false;
  for(int i=0;i<200 && !published;i++)published=library_poll_index();
  CHECK(published && library_count()==3 && !bb_index_complete());
- CHECK(games==builder && staging_allocations==allocations); // one builder for all publications
+ CHECK(ps1_library_games==builder && staging_allocations==allocations); // one builder for all publications
  bool same_title=false;for(int i=0;i<library_count();i++)same_title|=library_get(i)->title==first_title;
  CHECK(same_title); // existing strings/discs were retained, not re-added
  CHECK(probe_reads-previous_probes==4); // only newly appended files, no reread of CUE/prefix
@@ -274,13 +276,13 @@ int main(void) {
  busy=true;npaths=1;gen++;ps1_force=true;ps1_loaded=false;published=false;
  for(int i=0;i<200 && !published;i++)published=library_poll_index();
  CHECK(published && library_count()==1 && strstr(library_get(0)->discs[0],".bin"));
- builder=games;allocations=staging_allocations;npaths=2;published=false;
+ builder=ps1_library_games;allocations=staging_allocations;npaths=2;published=false;
  for(int i=0;i<200 && !published;i++)published=library_poll_index();
  CHECK(published && library_count()==1 && strstr(library_get(0)->discs[0],".cue"));
- CHECK(games==builder && staging_allocations==allocations);
+ CHECK(ps1_library_games==builder && staging_allocations==allocations);
  // A generation change can discard newly owned rows before publication,
  // while preserving the last public prefix and its strings.
- add_disc(1,paths[2]);CHECK(ngames>visible_count);
+ ps1_library_add_disc(1,paths[2]);CHECK(ps1_library_ngames>visible_count);
  library_free();CHECK(library_count()==1 && strstr(library_get(0)->discs[0],".cue"));
  busy=false;library_poll_index();
  // The raw walk can finish with extra candidates during the last probe.
@@ -313,7 +315,7 @@ int main(void) {
  busy=true;cancel_at=input_polls+2100;
  CHECK(library_load_result(root,false)==LIBRARY_CANCELLED && index_wait_slow);
  busy=false;cancel_at=0;
- library_free();scan_free();
+ library_free();ps1_library_scan_free();
  puts("Shared-index PS1 import, owner root, CUE track hiding, clean titles, discs, series, covers, cache invalidation: PASS");
  return 0;
 }

@@ -22,6 +22,14 @@ extern void SysPrintf(const char *fmt, ...);
 #include "../deps/libretro-common/rthreads/rthreads.c"
 #include "features/features_cpu.h"
 
+#ifdef _3DS
+__attribute__((noinline, section(".psx3d_cold.text")))
+void *pcsxr_native_thread(sthread_t *thread)
+{
+	return thread ? thread->id : NULL;
+}
+#endif
+
 #define CORE_COUNT() cpu_features_get_core_amount()
 
 static void pcsxr_sthread_lib_init(void)

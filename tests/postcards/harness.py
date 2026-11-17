@@ -8,7 +8,7 @@ from pathlib import Path
 import os, subprocess, tempfile
 
 root = Path(__file__).resolve().parents[2]
-pc_h = (root/'app/ui/postcards.h').read_text()
+pc_h = (root/'include/breadbox/postcards.h').read_text()
 types = pc_h[pc_h.index('typedef struct {\n\tbool used;'):pc_h.index('} pc_view;') + len('} pc_view;')]
 cont_types = pc_h[pc_h.index('typedef struct {\n\tC3D_Tex *tex;'):pc_h.index('} pc_continue;') + len('} pc_continue;')]
 
@@ -25,6 +25,7 @@ HARNESS = r'''
 #define MODEL_BASELINE 25.0f
 #define MODEL_TITLE_BASELINE 24.3f
 float ui_face_baseline(int face) { return face == UI_FACE_TITLE ? MODEL_TITLE_BASELINE : MODEL_BASELINE; }
+#include "ui_trace_postcards.h"
 #include "ui_motion.h"
 #include "theme.h"
 typedef struct { u16 width, height; void *data; u32 size; } C3D_Tex;
@@ -113,6 +114,11 @@ static theme_room_t room = { .cork = 1 };
 static theme_t th = { .room = &room };
 const theme_t *theme(void) { return &th; }
 u32 theme_alpha(u32 c, int a) { (void)a; return c; }
+bool theme_is_room(void) { return th.look == BB_LOOK_ROOM; }   /* the Room: postcards (the list themes draw them flat) */
+#define look_style() (&(struct { u32 row_edge; }){ 0 })
+#define ui_format_when(out, cap, when) snprintf(out, cap, "%lu", (unsigned long)(when))
+#include "postcard_palette.h"
+#include "postcard_palette.c"
 #include "components/postcards.inc"
 
 /* text geometry from the measured font (ui_style.h): capitals stand UI_PAPER_CAP at the floor size */

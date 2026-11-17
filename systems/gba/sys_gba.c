@@ -16,6 +16,8 @@ extern const bb_settings_ops bb_gba_settings;
 #include "gba_saveid.h"
 #include "gba_cart.h"
 #include "gba_settings.h"
+#include "gba_color.h"
+#include "gba_picture.h"
 #include "gba_boxart.h"
 extern const bb_cheat_ops bb_gba_cheats;
 extern bool gba_cover_item(int,bb_cover_item *);
@@ -41,11 +43,13 @@ static ADAPTER bb_run_result run(const bb_launch *l,char *error,size_t cap)
  gba_launch_slot=l->resume?BB_SLOT_CONTINUE:l->slot>=0?bb_slot_file(l->slot):-1;   /* the remote names the card; the file is another number */gba_launch_stereo=l->stereo;
  extern int gba_save_damaged(const bb_save_damage *);
  gba_save_declined=false;bb_save_on_damage(gba_save_damaged);
+ gba_picture_begin();
  int result=gba_run(l->path);
+ gba_picture_end();
  bb_save_on_damage(NULL);
  bb_gba_identity_invalidate();
  if(result<0 && gba_save_declined)return BB_RUN_QUIT;   /* Back at the damaged-save question */
- if(result<0)snprintf(error,cap,"%s",gba_error());
+ if(result<0)snprintf(error,cap,"%s",gba_picture_error()?gba_picture_error():gba_error());
  return result<0?BB_RUN_FAILED:BB_RUN_QUIT;
 }
 static ADAPTER bool key(const char *name,unsigned frames) {(void)frames;return gba_debug_key(name);}
@@ -88,12 +92,14 @@ static int setting_value(unsigned row)
 static void settings_open(const char *key){(void)key;gba_settings_load();}
 static const char *setting_source(unsigned i){return gba_settings_source(i<6?fields[i]:GBA_SET_SCREEN);}
 static void setting_change(unsigned row,int dir) {if(row<6)gba_settings_set(fields[row],dir);}
+static const char *const filters[] __attribute__((section(".gba_picture.const")))={"Sharp","Smooth"};
 static const char *const sizes[]={"Original","Fit","Stretch"};
 #define TOGGLE(k,l,c) {.key=k,.label=l,.kind=BB_SET_TOGGLE,.category=c,.models=BB_MODEL_ALL,.flags=BB_SET_LIVE}
 static const bb_setting_desc settings[]={
  {.key="screen_size",.label="Screen size",.kind=BB_SET_CHOICE,.category=BB_CAT_DISPLAY,.models=BB_MODEL_ALL,.values=sizes,.nvalues=3,.def={1,1}},
- TOGGLE("smoothing","Smoothing",BB_CAT_DISPLAY),TOGGLE("color_correction","Color correction",BB_CAT_DISPLAY),
- TOGGLE("frame_blend","Frame blend",BB_CAT_DISPLAY),
+ {.key="smoothing",.label="Filter",.kind=BB_SET_CHOICE,.category=BB_CAT_DISPLAY,.models=BB_MODEL_ALL,.flags=BB_SET_LIVE,.values=filters,.nvalues=2},
+ {.key="color_correction",.label="Color",.kind=BB_SET_CHOICE,.category=BB_CAT_DISPLAY,.models=BB_MODEL_ALL,.flags=BB_SET_LIVE,.values=gba_color_names,.nvalues=GBA_COLOR_COUNT},
+ TOGGLE("frame_blend","LCD ghosting",BB_CAT_DISPLAY),
  /* Boktai's solar sensor: only shown for games that have one */
  {.key="solar",.label="Sunlight",.kind=BB_SET_SLIDER,.category=BB_CAT_CONTROLS,.models=BB_MODEL_ALL,.flags=BB_SET_LIVE|BB_SET_GAME_ONLY,.def={5,5}},
  /* like PS1: New 3DS only (memory and a spare core), on unless turned off */
@@ -146,6 +152,8 @@ extern bool gba_session_battery(void **,size_t *);
 extern uint32_t gba_session_generation(void);
 extern size_t gba_session_rtc_size(void);
 extern bool gba_session_rtc_get(void *,size_t),gba_session_rtc_set(const void *,size_t);
+static bb_state_result picture_restore(const void *p,size_t n,bool keep)
+{gba_picture_reset();return gba_session_state_load(p,n,keep);}
 static bool rtc_valid(const void *p,size_t n){uint32_t word=256;if(n==12)memcpy(&word,(const char *)p+8,4);return word<=255;}
 /* gpSP keeps every cartridge save in one 128 KiB buffer from offset 0 (EEPROM 512 B / 8 KiB,
  * SRAM 32 KiB, flash 64 KiB); mGBA and others write the chip's own size. Erased chips read 0xFF.
@@ -155,7 +163,7 @@ static bool rtc_valid(const void *p,size_t n){uint32_t word=256;if(n==12)memcpy(
 extern uint32_t gpsp_backup_type_reset,gpsp_flash_bank_cnt;
 static bool native_size(size_t n){return gba_cart_save_fits(gpsp_backup_type_reset,gpsp_flash_bank_cnt,n);}
 static const bb_save_ops save={.state_size=gba_session_state_size,.state_save=gba_session_state_save,
- .state_load=gba_session_state_load,.battery=gba_session_battery,.battery_generation=gba_session_generation,
+ .state_load=picture_restore,.battery=gba_session_battery,.battery_generation=gba_session_generation,
  .state_magic="BBGBAST1",.rtc_magic="BBGBART1",.rtc_size=gba_session_rtc_size,
  .rtc_get=gba_session_rtc_get,.rtc_set=gba_session_rtc_set,.rtc_valid=rtc_valid,
  .battery_native=native_size,.battery_fill=0xff};

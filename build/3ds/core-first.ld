@@ -1,4 +1,4 @@
-/* PSX3D link layout: emulator core first, then libraries, then the frontend.
+/* BreadBox link layout: emulator core first, then libraries, then the frontend.
  *
  * Old 3DS speed depends on code and data layout: its 16 KB 4-way caches have
  * no L2, and the cache set of an address is its offset within a 4 KiB page
@@ -261,7 +261,7 @@ SECTIONS
 		. = . + ((0xc8 - .) & 0xfff);
         /* Repacked from the new object bodies: transport, adapter and contact
            capture remain adjacent. No legacy body-size pads or empty pins.
-           Exact before/after cache sets are reviewed in accepted-changes.json. */
+           Exact before/after cache sets are recorded in accepted-changes.json. */
         input.o(.text .text.*)
         ps1_controls.o(.text.ps1_controls_poll .text.touch_update .text.ps1_panel_prepare)
         ui_play_controls.o(.text.ui_play_poll .text.play_slot_contains .text.ui_play_redraw)
@@ -278,11 +278,20 @@ SECTIONS
 		statsview.o(.text.parse)
 		. = . + ((0x2ec - .) & 0xfff);
 		statsview.o(.text.statsview_collecting)
-		. = . + ((0x35c - .) & 0xfff);
+		/* Use existing alignment space for the optional GBA presenter.
+		   Fixed ends fail on growth instead of moving frame code or constants. */
+		__bb_gba_picture_hole_end = . + ((0x35c - .) & 0xfff);
+		gba_picture.o(.text .text.* .psx3d_cold.text .psx3d_cold.text.*)
+		ASSERT(. <= __bb_gba_picture_hole_end, "GBA presenter outgrew alignment space");
+		. = __bb_gba_picture_hole_end;
 		statsview.o(.text.statsview_begin)
 		. = . + ((0x430 - .) & 0xfff);
 		statsview.o(.text.statsview_frame)
-		. = . + ((0x4b8 - .) & 0xfff);
+		__bb_gba_color_hole_end = . + ((0x4b8 - .) & 0xfff);
+		gba_color.o(.text .text.*)
+		gba_settings.o(.text .text.*)
+		ASSERT(. <= __bb_gba_color_hole_end, "GBA color settings outgrew alignment space");
+		. = __bb_gba_color_hole_end;
 		statsview.o(.text.statsview_emulated)
 		. = . + ((0x4c8 - .) & 0xfff);
 		statsview.o(.text.statsview_update)
@@ -316,7 +325,16 @@ SECTIONS
 		ui.o(.text.symbol_line)
 		. = . + ((0x180 - .) & 0xfff);
 		ui.o(.text.ui_begin)
-		. = . + ((0x190 - .) & 0xfff);
+		/* Release-note code fits in this existing alignment hole. Keep its
+		   fixed end so neither frame code nor the constants after it move. */
+		__bb_notes_hole_end = . + ((0x190 - .) & 0xfff);
+		*whatsnew.o(.text .text.* .psx3d_cold.text .psx3d_cold.text.*)
+		*whatsnew_model.o(.text .text.* .psx3d_cold.text .psx3d_cold.text.*)
+		*whatsnew_ui.o(.text .text.* .psx3d_cold.text .psx3d_cold.text.*)
+		*card_scroll.o(.text .text.* .psx3d_cold.text .psx3d_cold.text.*)
+		*notice_bar.o(.text .text.* .psx3d_cold.text .psx3d_cold.text.*)
+		ASSERT(. <= __bb_notes_hole_end, "release-note code outgrew existing alignment hole");
+		. = __bb_notes_hole_end;
 		ui.o(.text.ui_text)
 		. = . + ((0x21c - .) & 0xfff);
 		ui.o(.text.ui_fit)
@@ -401,9 +419,9 @@ SECTIONS
 	.rodata.frontend ALIGN(0x1000) :
 	{
 		__psx3d_frontend_rodata_start = .;
-		*(.rodata)
+		*(EXCLUDE_FILE (gba_color.o gba_picture.o *whatsnew.o *whatsnew_model.o *whatsnew_ui.o) .rodata)
 		*(.roda)
-		*(.rodata.*)
+		*(EXCLUDE_FILE (gba_color.o gba_picture.o *whatsnew.o *whatsnew_model.o *whatsnew_ui.o) .rodata.*)
 		*all.rodata*(*)
 		*(.gnu.linkonce.r*)
 		SORT(CONSTRUCTORS)
@@ -411,6 +429,22 @@ SECTIONS
 		__tdata_align = .;
 		LONG (ALIGNOF(.tdata));
 		. = ALIGN(4);
+	} : rodata
+
+	/* New picture constants follow the established frontend string pool. */
+	.rodata.gba_picture :
+	{
+		gba_color.o(.rodata .rodata.*)
+		gba_picture.o(.rodata .rodata.*)
+		*(.gba_picture.const)
+	} : rodata
+
+	/* Keep new merged strings outside the existing anonymous constant blocks. */
+	.rodata.whatsnew :
+	{
+		*whatsnew.o(.rodata .rodata.*)
+		*whatsnew_model.o(.rodata .rodata.*)
+		*whatsnew_ui.o(.rodata .rodata.*)
 	} : rodata
 
 	.ARM.extab : { *(.ARM.extab* .gnu.linkonce.armextab.*) } : rodata

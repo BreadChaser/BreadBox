@@ -114,7 +114,7 @@ const hands_clip *hands_clip_for(const hands_file *f, const char *action, int bo
 }
 
 float hands_clip_seconds(const hands_file *f, const hands_clip *c) { return c ? (float)c->frames / f->fps : 0; }
-// A loop's last key is its first again (round 8: hold, card hold, picker idle): one period is
+// A loop's last key is its first again (hold, card hold, picker idle): one period is
 // frames - 1 keys, and the curve's neighbours wrap across the seam
 float hands_loop_seconds(const hands_file *f, const hands_clip *c)
 {

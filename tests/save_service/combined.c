@@ -1,5 +1,5 @@
-/* merge/v1-fixes: the damaged-save question (fix/journeys-r1, J-01) and the Continue question with its held
- * Continue point (fix/ui-first-impression) in one game start, on the real save service, final files, later
+/* The damaged-save question and the Continue question with its held
+ * Continue point in one game start, on the real save service, final files, later
  * thread, safe files and history. Each launch is what gba_run does: bb_save_begin (the damage question), then
  * the Continue question (bb_pause_prompt: hold until answered; Back keeps the hold; A lets go and loads 10;
  * X moves the old point aside), sleep/HOME (bb_pause_suspend: a checkpoint) and the teardown (queue, the

@@ -105,7 +105,7 @@ void debug_parse_switch(const char *word)
 	if (!strcmp(word, "pica_prims_clip")) pica_prims |= 2;
 	if (!strcmp(word, "pica_prims_round")) pica_prims |= 4;
 }
-void covers_stop_wait(void) {}
+bool covers_stop_wait(void) {return true;}
 void covers_resume(void) {}
 bool covers_refresh(int game) { return game >= 0; }
 void covers_stats_reset(void) {}

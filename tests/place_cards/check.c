@@ -70,9 +70,9 @@ int main(int argc, char **argv)
 	assert(place_collection(&l, &FIT, many, 6, 1, true, &empty) == PLACE_LINES && line(&l, 4, "Total", "6") && line(&l, 5, "Favorites", "1"));
 
 	/* Settings: at most 3 lines, nothing unknown */
-	assert(place_settings(&l, "1.0.0", "Up to date", "Night") == 3);
-	assert(line(&l, 0, "Version", "1.0.0") && line(&l, 1, "Up to date", "") && line(&l, 2, "Room style", "Night"));
-	assert(place_settings(&l, "1.0.0", NULL, "Day") == 2 && line(&l, 1, "Room style", "Day"));
+	assert(place_settings(&l, "1.0.0", "Up to date", "Room (Night)") == 3);
+	assert(line(&l, 0, "Version", "1.0.0") && line(&l, 1, "Up to date", "") && line(&l, 2, "Theme", "Room (Night)"));
+	assert(place_settings(&l, "1.0.0", NULL, "Room (Day)") == 2 && line(&l, 1, "Theme", "Room (Day)"));
 	assert(place_settings(&l, NULL, NULL, NULL) == 0);
 	/* the shipped strings for check.py: every version, update state and style (argv: "settings" version update style) */
 	for (int i = 1; i + 3 < argc + 1 && i + 3 <= argc; i += 4) {

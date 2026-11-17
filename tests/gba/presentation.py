@@ -29,7 +29,7 @@ static bool gba_index_gpu_render(const void *p,size_t pitch,const uint16_t *righ
 static bool texture_ready=true,dev_remote=true,right_ready=true,stereo_frame,ui_wants_3d;
 static bool probe_frame;static unsigned tracked;
 static void gba_track_alternation(const void *p,size_t pitch){(void)p;(void)pitch;tracked++;}
-static struct {bool color_correction,frame_blend;}gba_settings;
+static struct {bool core_color_correction,core_frame_blend;}gba_settings;
 static unsigned begin,waited,flushed,prepared,drawn,invalidations;static bool dirty;
 static u64 svcGetSystemTick(void){return 1;}
 static void video_gpu_frame_begin(void){begin++;}

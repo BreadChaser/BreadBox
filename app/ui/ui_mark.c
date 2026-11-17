@@ -5,6 +5,20 @@
 #include "ui_mark.h"
 #include "ui_mark_masks.h"
 #include "cold_code.h"
+#include <citro2d.h>
+#include "theme.h"
+
+static PSX3D_COLD bool list_mark(float x0,float x1,float line,float progress,float strength,float z)
+{
+	if(theme_is_room())return false;
+	if(strength<=0 || progress<=0)return true;
+	float width=fmaxf(x1-x0+UI_MARK_BEFORE+UI_MARK_AFTER,UI_MARK_MIN_W)*fminf(progress,1);
+	float x=x0-UI_MARK_BEFORE,y=line-UI_CARD_ROW+1,height=UI_CARD_ROW-1;
+	int alpha=(int)(255*fminf(strength,1));
+	C2D_DrawRectSolid(x,y,z,width,height,theme_alpha(theme()->select_bottom,alpha));
+	C2D_DrawRectSolid(x,y,z,fminf(width,UI_LOOK_FOCUS_EDGE),height,theme_alpha(theme()->heading,alpha));
+	return true;
+}
 #ifdef HOST_CITRO2D_H
 /* Host tests: record what would be drawn (tests read host_marks). */
 u32 ui_mark_ticks;
@@ -13,6 +27,7 @@ float host_mark_strength[8];
 int host_mark_n;
 PSX3D_COLD void ui_mark_row(float x0, float x1, float line, int row, float progress, float strength, float z)
 {
+	if(list_mark(x0,x1,line,progress,strength,z))return;
 	(void)z;
 	if (host_mark_n >= 8 || strength <= 0) return;
 	ui_mark_layout(x0, x1, line, row, progress, &host_marks[host_mark_n]);
@@ -58,6 +73,7 @@ static Tex3DS_SubTexture slice(int variant, float u0, float u1)
 u32 ui_mark_ticks;   // the last stroke's CPU time (dev switch framelog prints it)
 PSX3D_COLD void ui_mark_row(float x0, float x1, float line, int row, float progress, float strength, float z)
 {
+	if(list_mark(x0,x1,line,progress,strength,z))return;
 	u64 t0 = svcGetSystemTick();
 	if (strength <= 0 || !load()) return;
 	ui_mark_geo g;

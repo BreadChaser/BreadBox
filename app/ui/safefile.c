@@ -15,6 +15,14 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <errno.h>
+#ifdef __3DS__
+#include "cold_code.h"
+#else
+#include <time.h>
+#ifndef PSX3D_COLD
+#define PSX3D_COLD
+#endif
+#endif
 /* A writer on another OS thread must never enter the importer's private
  * stack. libctru exposes a stable TLS address even for the main thread. */
 #ifdef __3DS__
@@ -86,11 +94,60 @@ extern void log_printf(const char *,...);
 #else
 #define SCHEDULED_IO(call,p) (safe_observe_io(#call,(p),true),(call))
 #endif
-static int scheduled_stat(const char *p,struct stat *st){if(!safe_checkpoint()){errno=ECANCELED;return -1;}return SCHEDULED_IO(stat(p,st),p);}
-static int scheduled_remove(const char *p){if(!safe_checkpoint()){errno=ECANCELED;return -1;}return SCHEDULED_IO(remove(p),p);}
-static int scheduled_rename(const char *a,const char *b){if(!safe_checkpoint()){errno=ECANCELED;return -1;}return SCHEDULED_IO(rename(a,b),a);}
-static int scheduled_close(FILE *f,const char *path){(void)safe_checkpoint();return SCHEDULED_IO(fclose(f),path);}
-static FILE *scheduled_open(const char *p,const char *mode){if(!safe_checkpoint()){errno=ECANCELED;return NULL;}return SCHEDULED_IO(fopen(p,mode),p);}
+typedef struct { const char *op, *role; int error; size_t want, got; unsigned *pauses; } refusal_t;
+static PSX3D_COLD void note_failure(refusal_t *why,const char *op,const char *path,int error,size_t want,size_t got)
+{
+	if(!why)return;
+	const char *ext=strrchr(path,'.');
+	why->op=op;why->error=error;why->want=want;why->got=got;
+	why->role=ext && !strcmp(ext,".bak") ? "backup" :
+		ext && (!strcmp(ext,".tmp") || !strcmp(ext,".rep")) ? "temporary" : "primary";
+}
+static PSX3D_COLD bool refused(const refusal_t *why)
+{
+	int error=errno;
+#ifdef __3DS__
+	log_printf("safefile: refused step=%s role=%s errno=%d expected=%lu read=%lu\n",
+#else
+	fprintf(stderr,"safefile: refused step=%s role=%s errno=%d expected=%lu read=%lu\n",
+#endif
+		why->op,why->role,why->error,(unsigned long)why->want,(unsigned long)why->got);
+	errno=error;return false;
+}
+static PSX3D_COLD bool retried(const refusal_t *why)
+{
+	if (!why->pauses || *why->pauses == 2)
+		return true;
+	int error = errno;
+#ifdef __3DS__
+	log_printf("safefile: retry-succeeded step=%s role=%s errno=%d pauses=%u\n",
+#else
+	fprintf(stderr,"safefile: retry-succeeded step=%s role=%s errno=%d pauses=%u\n",
+#endif
+		why->op, why->role, why->error, 2 - *why->pauses);
+	errno = error;
+	return true;
+}
+/* Only contradictory ENOENT probes retry. Each operation shares two 10 ms pauses;
+ * checkpoints on both sides of each pause keep cancellation bounded. */
+static PSX3D_COLD bool retry_pause(refusal_t *why)
+{
+	if(!safe_checkpoint()){errno=ECANCELED;return false;}
+	if(!why || !why->pauses || !*why->pauses)return false;
+	--*why->pauses;
+#ifdef __3DS__
+	svcSleepThread(10000000LL);
+#else
+	struct timespec pause={.tv_nsec=10000000};nanosleep(&pause,NULL);
+#endif
+	if(!safe_checkpoint()){errno=ECANCELED;return false;}
+	return true;
+}
+static PSX3D_COLD int scheduled_stat(const char *p,struct stat *st){if(!safe_checkpoint()){errno=ECANCELED;return -1;}return SCHEDULED_IO(stat(p,st),p);}
+static PSX3D_COLD int scheduled_remove(const char *p){if(!safe_checkpoint()){errno=ECANCELED;return -1;}return SCHEDULED_IO(remove(p),p);}
+static PSX3D_COLD int scheduled_rename(const char *a,const char *b){if(!safe_checkpoint()){errno=ECANCELED;return -1;}return SCHEDULED_IO(rename(a,b),a);}
+static PSX3D_COLD int scheduled_close(FILE *f,const char *path){(void)safe_checkpoint();return SCHEDULED_IO(fclose(f),path);}
+static PSX3D_COLD FILE *scheduled_open(const char *p,const char *mode){if(!safe_checkpoint()){errno=ECANCELED;return NULL;}return SCHEDULED_IO(fopen(p,mode),p);}
 #undef rename
 #undef fclose
 #define stat(...) scheduled_stat(__VA_ARGS__)
@@ -122,68 +179,124 @@ safe_name_t safe_name(const char *path, long *size)
 typedef enum { ABSENT, GOOD, WEAK, DAMAGED, UNREADABLE } copy_t;
 static bool usable(copy_t c) { return c == GOOD || c == WEAK; }
 
-static copy_t read_copy(const char *path, const safe_format_t *fmt, void *data)
+static PSX3D_COLD copy_t read_copy(const char *path, const safe_format_t *fmt, void *data, refusal_t *why, bool seen)
 {
-	FILE *f = fopen(path, "rb");
-	if (!f)
-		return safe_name(path, NULL) == SAFE_NAME_ABSENT ? ABSENT : UNREADABLE;
+	unsigned retries=0;
+	bool contradicted=false;
+retry:
+	;
+	FILE *f=fopen(path,"rb");
+	if(!f) {
+		int error=errno;
+		safe_name_t at=safe_name(path,NULL);
+		if(at==SAFE_NAME_ABSENT && !seen)return ABSENT;
+		if(error==ENOENT && (seen || at==SAFE_NAME_PRESENT)) {
+			seen=true;
+			contradicted=true;
+			if(retries++<2 && retry_pause(why))goto retry;
+			note_failure(why,"open",path,errno==ECANCELED ? ECANCELED : error,0,0);
+			return UNREADABLE;
+		}
+		note_failure(why,"open",path,error,0,0);
+		return UNREADABLE;
+	}
+	seen=true;
 	unsigned char head[HEAD_MAX];
-	void *whole = data;
-	if (!whole && fmt->deep)   // the deep check needs everything
-		whole = malloc(fmt->size);
-	size_t want = whole ? fmt->size : (fmt->head < fmt->size ? fmt->head : fmt->size);
-	long size = -1;
-	copy_t r = safe_name(path, &size) != SAFE_NAME_PRESENT ? UNREADABLE :
-		fmt->head > HEAD_MAX || size != (long)fmt->size ? DAMAGED : GOOD;
-	// stat gave the exact size: a short read, a byte past it or an error at its
-	// end (EOF alone does not tell) is the card's error
-	if (r == GOOD && !(fread(whole ? whole : head, 1, want, f) == want && (!whole || fgetc(f) == EOF) && !ferror(f)))
-		r = UNREADABLE;
-	if (fclose_at(f,path) && r == GOOD)
-		r = UNREADABLE;
-	if (r == GOOD && fmt->valid && fmt->head && !fmt->valid(whole ? whole : head))
-		r = DAMAGED;
-	// no memory for the deep check: can't call it good
-	if (r == GOOD && fmt->deep && !(whole && fmt->deep(whole, fmt->size)))
-		r = WEAK;
-	if (whole != data)
-		free(whole);
+	void *whole=data;
+	if(!whole && fmt->deep)whole=malloc(fmt->size);
+	size_t want=whole ? fmt->size : (fmt->head<fmt->size ? fmt->head : fmt->size);
+	long size=-1;
+	copy_t r=safe_name(path,&size)!=SAFE_NAME_PRESENT ? UNREADABLE :
+		fmt->head>HEAD_MAX || size!=(long)fmt->size ? DAMAGED : GOOD;
+	int error=r==UNREADABLE ? errno : 0;
+	if(r==UNREADABLE)note_failure(why,"stat",path,error,0,0);
+	if(r==GOOD) {
+		errno=0;
+		size_t got=fread(whole ? whole : head,1,want,f);
+		if(got!=want || (whole && fgetc(f)!=EOF) || ferror(f)) {
+			error=errno;r=UNREADABLE;note_failure(why,got==want && whole ? "read-tail" : "read",path,error,want,got);
+		}
+	}
+	bool closed=fclose_at(f,path)==0;
+	if(!closed){note_failure(why,"close",path,errno,0,0);if(r==GOOD)r=UNREADABLE;}
+	if(r==GOOD && fmt->valid && fmt->head && !fmt->valid(whole ? whole : head))r=DAMAGED;
+	if(r==GOOD && fmt->deep && !(whole && fmt->deep(whole,fmt->size)))r=WEAK;
+	if(whole!=data)free(whole);
+	/* Reopen and revalidate from the start; never reuse partial bytes. A close
+	 * failure is not retried, even if the earlier probe said not-found. */
+	if(r==UNREADABLE && error==ENOENT && closed && retries++<2) {
+		contradicted=true;
+		if(retry_pause(why))goto retry;
+		if(errno==ECANCELED)note_failure(why,"retry-cancel",path,ECANCELED,0,0);
+	}
+	if((contradicted || (why && why->pauses && *why->pauses<2)) && r==DAMAGED) {
+		note_failure(why,"retry-damaged",path,ENOENT,fmt->size,size<0 ? 0 : (size_t)size);
+		r=UNREADABLE;
+	}
 	return r;
 }
 
 // The whole file reads back without an SD error (its content is not judged):
 // GOOD, ABSENT or UNREADABLE. Asked before a file whose bytes nobody else keeps
 // is deleted or moved aside (retire, repair, rescue); never in the frame code.
-static copy_t read_through(const char *path)
+static PSX3D_COLD copy_t read_through(const char *path, refusal_t *why, bool seen)
 {
-	FILE *f = fopen(path, "rb");
-	if (!f)
-		return safe_name(path, NULL) == SAFE_NAME_ABSENT ? ABSENT : UNREADABLE;
+	unsigned retries=0;
+retry:
+	;
+	FILE *f=fopen(path,"rb");
+	if(!f) {
+		int error=errno;
+		safe_name_t at=safe_name(path,NULL);
+		if(at==SAFE_NAME_ABSENT && !seen)return ABSENT;
+		note_failure(why,"open",path,error,0,0);
+		if(error==ENOENT && (seen || at==SAFE_NAME_PRESENT)) {
+			seen=true;
+			if(retries++<2 && retry_pause(why))goto retry;
+			if(errno==ECANCELED)note_failure(why,"retry-cancel",path,ECANCELED,0,0);
+			return UNREADABLE;
+		}
+		return UNREADABLE;
+	}
+	seen=true;
 	unsigned char buf[4096];
-	long size = -1, got = 0;
-	bool ok = safe_name(path, &size) == SAFE_NAME_PRESENT;
-	for (size_t n; ok && (n = fread(buf, 1, sizeof(buf), f)) > 0;)
-		got += (long)n;
-	ok = ok && !ferror(f) && got == size;
-	if (fclose_at(f, path))
-		ok = false;
+	long size=-1,got=0;
+	bool ok=safe_name(path,&size)==SAFE_NAME_PRESENT;
+	int error=ok ? 0 : errno;
+	if(!ok)note_failure(why,"stat",path,error,0,0);
+	if(ok) {
+		errno=0;
+		for(size_t n;(n=fread(buf,1,sizeof(buf),f))>0;)got+=(long)n;
+		ok=!ferror(f) && got==size;
+		if(!ok){error=errno;note_failure(why,"read",path,error,(size_t)size,(size_t)got);}
+	}
+	bool closed=fclose_at(f,path)==0;
+	if(!closed){note_failure(why,"close",path,errno,0,0);ok=false;}
+	if(!ok && error==ENOENT && closed && retries++<2) {
+		if(retry_pause(why))goto retry;
+		if(errno==ECANCELED)note_failure(why,"retry-cancel",path,ECANCELED,0,0);
+	}
 	return ok ? GOOD : UNREADABLE;
 }
 
-static bool write_tmp(const char *tmp, const void *data, size_t size)
+static PSX3D_COLD bool write_tmp(const char *tmp, const void *data, size_t size, refusal_t *why)
 {
 	FILE *f = fopen(tmp, "wb");
-	if (!f)
-		return false;
+	if (!f){note_failure(why,"open",tmp,errno,0,0);return false;}
 	bool ok = true;
 	for (size_t at = 0; ok && at < size; at += CHUNK) {
 		size_t n = size - at < CHUNK ? size - at : CHUNK;
-		ok = fwrite((const char *)data + at, 1, n, f) == n;
+		errno=0;
+		size_t got=fwrite((const char *)data + at, 1, n, f);
+		ok=got==n;
+		if(!ok)note_failure(why,"write",tmp,errno,n,got);
 	}
-	if (fclose_at(f,tmp))
-		ok = false;
+	if (fclose_at(f,tmp)){note_failure(why,"close",tmp,errno,0,0);ok=false;}
 	long written = -1;
-	return ok && safe_name(tmp, &written) == SAFE_NAME_PRESENT && written == (long)size;
+	if(!ok)return false;
+	if(safe_name(tmp,&written)!=SAFE_NAME_PRESENT){note_failure(why,"stat",tmp,errno,0,0);return false;}
+	if(written!=(long)size){note_failure(why,"size",tmp,0,size,(size_t)written);return false;}
+	return true;
 }
 
 // A damaged file makes room: renamed to the first free <file>.bad, .bad2 ...
@@ -208,65 +321,64 @@ bool safe_park(const char *path)
 		STEP();   // the name is free: a cut here leaves the file in place
 		return rename(path, bad) == 0;
 	}
+	errno = EEXIST;
 	return false;
 }
 
 // <name> is set aside for a good copy only when it reads back whole: a copy the
 // SD card cannot read may be the newest one and stays at its name.
-static bool park_readable(const char *path)
+static PSX3D_COLD bool park_readable(const char *path, refusal_t *why)
 {
-	return read_through(path) != UNREADABLE && safe_park(path);
+	if(read_through(path, why, false)==UNREADABLE)return false;
+	if(safe_park(path))return true;
+	note_failure(why,"park",path,errno,0,0);return false;
 }
 
 // the backup is about to be replaced: the history may take it first; what it
 // leaves is deleted only once it has read back whole (an old copy that the SD
 // card cannot read may be the last one of those bytes). false: it stays, and
 // nothing goes on.
-static bool retire(const char *bak, const safe_format_t *fmt)
+static PSX3D_COLD bool retire(const char *bak, const safe_format_t *fmt, refusal_t *why)
 {
 	safe_name_t at = safe_name(bak, NULL);
-	if (at == SAFE_NAME_UNREADABLE)
-		return false;
+	if (at == SAFE_NAME_UNREADABLE){note_failure(why,"stat",bak,errno,0,0);return false;}
 	if (at == SAFE_NAME_PRESENT && fmt && fmt->retire) {
 		fmt->retire(bak, fmt->ctx);
 		at = safe_name(bak, NULL);
-		if (at == SAFE_NAME_UNREADABLE)
-			return false;
+		if (at == SAFE_NAME_UNREADABLE){note_failure(why,"stat",bak,errno,0,0);return false;}
 	}
 	if (at == SAFE_NAME_ABSENT)
 		return true;
-	if (read_through(bak) != GOOD)
+	if (read_through(bak, why, true) != GOOD)
 		return false;
-	remove(bak);
+	if(remove(bak)){note_failure(why,"remove",bak,errno,0,0);return false;}
 	return true;
 }
 
 // steps 2-5: <name>.tmp is complete. fmt NULL: a text file (no backup kept).
 // A <name> or .bak the SD card cannot answer for stops it: nothing is moved.
-static bool put_in_place(const char *path, const char *tmp, const char *bak, const safe_format_t *fmt)
+static PSX3D_COLD bool put_in_place(const char *path, const char *tmp, const char *bak, const safe_format_t *fmt, refusal_t *why)
 {
 	bool moved = false;
 	safe_name_t at = safe_name(path, NULL);
-	if (at == SAFE_NAME_UNREADABLE)
-		return false;
+	if (at == SAFE_NAME_UNREADABLE){note_failure(why,"stat",path,errno,0,0);return false;}
 	if (at == SAFE_NAME_PRESENT) {
-		copy_t cur = fmt ? read_copy(path, fmt, NULL) : GOOD;
-		copy_t old = cur == WEAK ? read_copy(bak, fmt, NULL) : ABSENT;
+		copy_t cur = fmt ? read_copy(path, fmt, NULL, why, true) : GOOD;
+		copy_t old = cur == WEAK ? read_copy(bak, fmt, NULL, why, false) : ABSENT;
 		if (cur == UNREADABLE || old == UNREADABLE)
 			return false;
 		// a weak <name> never pushes a good backup out
 		if (cur == GOOD || (cur == WEAK && old != GOOD)) {
-			if (!retire(bak, fmt))
+			if (!retire(bak, fmt, why))
 				return false;
 			STEP();
-			if (rename(path, bak))
-				return false;
+			if (rename(path, bak)){note_failure(why,"rename",path,errno,0,0);return false;}
 			moved = true;
-		} else if (!safe_park(path))   // must not replace a good backup
-			return false;
+		} else if (!safe_park(path)){note_failure(why,"park",path,errno,0,0);return false;}
 		STEP();
 	}
 	if (rename(tmp, path)) {
+		note_failure(why,"rename",tmp,errno,0,0);
 		if (moved)
 			rollback_rename(bak, path);
 		return false;
@@ -285,17 +397,21 @@ static bool put_in_place(const char *path, const char *tmp, const char *bak, con
 // A .tmp the SD card cannot read may be that copy: it stops the write
 // (writing the new .tmp would truncate it).
 // A <name> the SD card cannot read is never set aside for it either.
-static bool rescue_tmp(const char *path, const char *tmp, const char *bak, const safe_format_t *fmt)
+static PSX3D_COLD bool rescue_tmp(const char *path, const char *tmp, const char *bak, const safe_format_t *fmt, refusal_t *why)
 {
-	copy_t cur = read_copy(path, fmt, NULL);
-	if (usable(cur) || usable(read_copy(bak, fmt, NULL)))
+	refusal_t current={.pauses=why ? why->pauses : NULL};
+	copy_t cur = read_copy(path, fmt, NULL, &current, false);
+	if(why && current.op)*why=current;
+	if (usable(cur) || usable(read_copy(bak, fmt, NULL, why, false)))
 		return true;
-	copy_t t = read_copy(tmp, fmt, NULL);
+	copy_t t = read_copy(tmp, fmt, NULL, why, false);
 	if (t == ABSENT || t == UNREADABLE)
 		return t == ABSENT;
-	if (t == DAMAGED)
-		return safe_park(tmp);
-	return cur != UNREADABLE && park_readable(path) && rename(tmp, path) == 0;
+	if (t == DAMAGED){if(safe_park(tmp))return true;note_failure(why,"park",tmp,errno,0,0);return false;}
+	if(cur==UNREADABLE){if(why)*why=current;return false;}
+	if(!park_readable(path,why))return false;
+	if(rename(tmp,path)){note_failure(why,"rename",tmp,errno,0,0);return false;}
+	return true;
 }
 
 // After a failed put_in_place: the complete .tmp goes only while <name> is
@@ -307,85 +423,94 @@ static void drop_tmp(const char *path, const char *tmp)
 		cleanup_remove(tmp);
 }
 
-bool safe_write(const char *path, const safe_format_t *fmt, const void *data, bool keep_backup)
+PSX3D_COLD bool safe_write(const char *path, const safe_format_t *fmt, const void *data, bool keep_backup)
 {
+	unsigned pauses=2;
+	refusal_t why={.op="write",.role="temporary",.pauses=&pauses};
 	char tmp[528], bak[528];
 	name_with(tmp, sizeof(tmp), path, ".tmp");
 	name_with(bak, sizeof(bak), path, ".bak");
-	if (keep_backup && !rescue_tmp(path, tmp, bak, fmt))
-		return false;
-	if (!write_tmp(tmp, data, fmt->size)) {
+	if (keep_backup && !rescue_tmp(path, tmp, bak, fmt, &why))
+		return refused(&why);
+	if (!write_tmp(tmp, data, fmt->size, &why)) {
+		refused(&why);
 		cleanup_remove(tmp);
 		return false;
 	}
 	STEP();
-	if (!put_in_place(path, tmp, bak, keep_backup ? fmt : NULL)) {
+	if (!put_in_place(path, tmp, bak, keep_backup ? fmt : NULL, &why)) {
 #ifdef SAFEFILE_TEST
 		if (safe_test_crash_after != -2)
 #endif
 			drop_tmp(path, tmp);
-		return false;
+		return refused(&why);
 	}
-	return true;
+	return retried(&why);
 }
 
 // the .tmp holds exactly data (read back from the SD card)
-static bool reads_back(const char *tmp, const void *data, size_t size)
+static PSX3D_COLD bool reads_back(const char *tmp, const void *data, size_t size, refusal_t *why)
 {
 	unsigned char buf[4096];
 	FILE *f = fopen(tmp, "rb");
 	bool ok = f != NULL;
+	if(!ok)note_failure(why,"open",tmp,errno,0,0);
 	for (size_t at = 0; ok && at < size; at += sizeof(buf)) {
 		size_t n = size - at < sizeof(buf) ? size - at : sizeof(buf);
-		ok = fread(buf, 1, n, f) == n && !memcmp(buf, (const char *)data + at, n);
+		errno=0;size_t got=fread(buf,1,n,f);
+		ok=got==n && !memcmp(buf,(const char *)data+at,n);
+		if(!ok)note_failure(why,got==n ? "compare" : "read",tmp,errno,n,got);
 	}
 	if (f) {
-		ok = ok && fgetc(f) == EOF && !ferror(f);
-		if (fclose_at(f, tmp))
-			ok = false;
+		if(ok){errno=0;ok=fgetc(f)==EOF && !ferror(f);
+			if(!ok)note_failure(why,"read-tail",tmp,errno,size,size);}
+		if (fclose_at(f, tmp)){note_failure(why,"close",tmp,errno,0,0);ok=false;}
 	}
 	return ok;
 }
 
-bool safe_restore(const char *path, const safe_format_t *fmt, const void *data,
+PSX3D_COLD bool safe_restore(const char *path, const safe_format_t *fmt, const void *data,
 	bool (*aside)(const char *path, void *ctx), void *ctx)
 {
+	unsigned pauses=2;
+	refusal_t why={.op="write",.role="temporary",.pauses=&pauses};
 	char tmp[528], bak[528];
 	name_with(tmp, sizeof(tmp), path, ".tmp");
 	name_with(bak, sizeof(bak), path, ".bak");
 	// no good copy is left beside <name> (else the load had taken it): set
 	// the leftovers aside before the copy is written where they are
-	if (!safe_park(tmp))
-		return false;
+	if (!safe_park(tmp)){note_failure(&why,"park",tmp,errno,0,0);return refused(&why);}
 	STEP();
-	if (read_copy(bak, fmt, NULL) != GOOD && !safe_park(bak))
-		return false;
+	if (read_copy(bak, fmt, NULL, &why, false) != GOOD && !safe_park(bak)){note_failure(&why,"park",bak,errno,0,0);return refused(&why);}
 	STEP();
-	if (!write_tmp(tmp, data, fmt->size) || !reads_back(tmp, data, fmt->size)) {
+	if (!write_tmp(tmp, data, fmt->size, &why) || !reads_back(tmp, data, fmt->size, &why)) {
+		refused(&why);
 		cleanup_remove(tmp);   // only the copy; <name> is untouched
 		return false;
 	}
 	STEP();
 	safe_name_t at = safe_name(path, NULL);
 	if (at == SAFE_NAME_UNREADABLE) {
+		note_failure(&why,"stat",path,errno,0,0);
 		drop_tmp(path, tmp);
-		return false;
+		return refused(&why);
 	}
 	if (aside && at == SAFE_NAME_PRESENT) {   // the caller keeps <name> somewhere else
 		if (!aside(path, ctx)) {
+			note_failure(&why,"aside",path,errno,0,0);
 			drop_tmp(path, tmp);
-			return false;
+			return refused(&why);
 		}
 		STEP();
 	}
-	if (!put_in_place(path, tmp, bak, fmt)) {
+	if (!put_in_place(path, tmp, bak, fmt, &why)) {
 #ifdef SAFEFILE_TEST
 		if (safe_test_crash_after != -2)
 #endif
 			drop_tmp(path, tmp);
-		return false;
+		return refused(&why);
 	}
-	return true;
+	return retried(&why);
 }
 
 bool safe_set_aside(const char *path)
@@ -409,25 +534,26 @@ FILE *safe_begin(const char *path)
 	return fopen(tmp, "w");
 }
 
-bool safe_finish(FILE *f, const char *path, bool ok)
+PSX3D_COLD bool safe_finish(FILE *f, const char *path, bool ok)
 {
+	unsigned pauses=2;
+	refusal_t why={.op="write",.role="temporary",.pauses=&pauses};
 	char tmp[528], bak[528];
 	name_with(tmp, sizeof(tmp), path, ".tmp");
 	name_with(bak, sizeof(bak), path, ".bak");
-	if (ferror(f))
-		ok = false;
-	if (fclose_at(f,path))
-		ok = false;
+	if (ferror(f)){note_failure(&why,"write",tmp,errno,0,0);ok=false;}
+	if (fclose_at(f,path)){note_failure(&why,"close",tmp,errno,0,0);ok=false;}
 	STEP();
 	if (!ok) {
+		refused(&why);
 		cleanup_remove(tmp);
 		return false;
 	}
-	if (!put_in_place(path, tmp, bak, NULL)) {
+	if (!put_in_place(path, tmp, bak, NULL, &why)) {
 		drop_tmp(path, tmp);
-		return false;
+		return refused(&why);
 	}
-	return true;
+	return retried(&why);
 }
 
 void safe_recover(const char *path)
@@ -491,6 +617,8 @@ bool safe_recovery_probe(void)
 
 void *safe_load(const char *path, const safe_format_t *fmt, unsigned skip, safe_info_t *info)
 {
+	unsigned pauses=2;
+	refusal_t why={.pauses=&pauses};
 	static const char *const ext[] = { [SAFE_CURRENT] = "", [SAFE_BACKUP] = ".bak", [SAFE_TEMP] = ".tmp" };
 	safe_info_t dummy;
 	if (!info)
@@ -506,7 +634,7 @@ void *safe_load(const char *path, const safe_format_t *fmt, unsigned skip, safe_
 		if (skip & (1u << s))
 			continue;
 		name_with(name, sizeof(name), path, ext[s]);
-		copy_t r = read_copy(name, fmt, buf);   // only a good copy is returned
+		copy_t r = read_copy(name, fmt, buf, &why, false);   // only a good copy is returned
 		if (r == GOOD) {
 			*info = (safe_info_t){ .outcome = SAFE_LOADED, .from = (safe_source_t)s,
 				.rejected = damaged || unreadable || weak != SAFE_NONE };
@@ -523,7 +651,7 @@ void *safe_load(const char *path, const safe_format_t *fmt, unsigned skip, safe_
 	if (weak != SAFE_NONE && !unreadable) {
 		char name[528];
 		name_with(name, sizeof(name), path, ext[weak]);
-		copy_t r = read_copy(name, fmt, buf);
+		copy_t r = read_copy(name, fmt, buf, &why, false);
 		if (r == WEAK) {
 			*info = (safe_info_t){ .outcome = SAFE_LOADED, .from = (safe_source_t)weak, .rejected = damaged, .weak = true };
 			return buf;
@@ -539,10 +667,12 @@ void *safe_load(const char *path, const safe_format_t *fmt, unsigned skip, safe_
 
 bool safe_repair(const char *path, const safe_format_t *fmt, const void *data, safe_source_t from)
 {
+	unsigned pauses=2;
+	refusal_t why={.pauses=&pauses};
 	char src[528];
 	if (from == SAFE_TEMP) {
 		name_with(src, sizeof(src), path, ".tmp");
-		if (!park_readable(path))
+		if (!park_readable(path,&why))
 			return false;
 		STEP();
 		return rename(src, path) == 0;
@@ -551,7 +681,7 @@ bool safe_repair(const char *path, const safe_format_t *fmt, const void *data, s
 		return false;
 	// the .bak stays as it is; the copy is staged under its own name
 	name_with(src, sizeof(src), path, ".rep");
-	if (!write_tmp(src, data, fmt->size) || !park_readable(path)) {
+	if (!write_tmp(src, data, fmt->size, &why) || !park_readable(path,&why)) {
 		remove(src);
 		return false;
 	}
@@ -565,6 +695,8 @@ bool safe_repair(const char *path, const safe_format_t *fmt, const void *data, s
 
 bool safe_stat(const char *path, const safe_format_t *fmt, time_t *mtime)
 {
+	unsigned pauses=2;
+	refusal_t why={.pauses=&pauses};
 	char other[528];
 	struct stat st;
 	bool unsure = false;
@@ -579,7 +711,7 @@ bool safe_stat(const char *path, const safe_format_t *fmt, time_t *mtime)
 	}
 	if (!found) {
 		name_with(other, sizeof(other), path, ".tmp");
-		copy_t t = read_copy(other, fmt, NULL);
+		copy_t t = read_copy(other, fmt, NULL, &why, false);
 		found = usable(t) && stat(other, &st) == 0;
 		unsure |= !found && t != ABSENT && t != DAMAGED;
 	}

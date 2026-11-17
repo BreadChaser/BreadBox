@@ -1,4 +1,4 @@
-/* Harsh review 0.9.0 finding 1: an SD card error while the battery (or clock) file is asked about
+/* An SD card error while the battery (or clock) file is asked about
  * is not "no save yet". The real save service (bb_save, bb_final, save_writer, safefile, history),
  * with EIO or EACCES on the metadata, open or read of battery.sav, its .bak or its sole .tmp, alone
  * and mixed with a full card, a failing close or a failing rename later. The game never starts on
@@ -65,7 +65,7 @@ static void enter(void){char dir[32];snprintf(dir,sizeof(dir),"case%d",cases++);
 static void leave(void){assert(!chdir(".."));}
 static const char *kind(unsigned on){return on==ON_STAT?"stat":on==ON_OPEN?"open":on==(ON_STAT|ON_OPEN)?"stat+open":"read";}
 
-/* The reviewer's probe: a real 128-byte battery of 42, no backup, EIO on its open and stat at the
+/* A real 128-byte battery of 42, no backup, EIO on its open and stat at the
  * start; the damage question would refuse. Then the card answers again and the game saves twice. */
 static void review_probe(void)
 {
@@ -135,7 +135,7 @@ static void mixed(void)
   memset(ram,50,128);bool saved=bb_save_flush();
   fault.armed=false;
   /* the save needs both: the current file goes to Backups first, and the backup is deleted only once
-   * it reads back whole (review A finding 2): not saved, nothing changed */
+   * it reads back whole: not saved, nothing changed */
   assert(!saved && holds("battery.sav",42) && holds("battery.sav.bak",41));
   /* from here the backup two saves old goes as on any save (the battery keeps the current copy in
    * Backups before each write); the newest original must survive */
@@ -154,7 +154,7 @@ static bool same_file(const char *path,const unsigned char *want,size_t n)
 static size_t slurp(const char *path,unsigned char *b,size_t cap)
 {FILE *f=__real_fopen(path,"rb");size_t n=f?fread(b,1,cap,f):0;if(f)__real_fclose(f);return n;}
 
-/* Review A finding 2, the reviewer's probe: the clock file's backup (no history hook) cannot be read
+/* The clock file's backup (no history hook) cannot be read
  * when the clock changes again. The write stops; the backup is the old clock byte for byte. */
 static void clock_backup(void)
 {
@@ -190,7 +190,7 @@ static void final_backup(void)
  }
 }
 
-/* Review A finding 6: a Continue point the SD card cannot stat is not "no Continue": the start asks
+/* A Continue point the SD card cannot stat is not "no Continue": the start asks
  * (bb_save_exists), and if it then cannot be read, nothing in this session makes a new one over it
  * (a checkpoint, the end); the next start still has it. */
 static void continue_discovery(void)

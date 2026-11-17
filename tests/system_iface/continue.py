@@ -62,6 +62,9 @@ static void music_play(bool on){(void)on;}
 static void shelf_preload_end(bool menu){assert(!menu);}
 static void room_pace_priority(bool on){(void)on;}
 static bool welcome_live;   /* home_welcome.inc: the room is up for bb_welcome_open */
+enum {DEV_UI_NONE};static bool notes_present=true;
+static void bb_whatsnew_room(int screen,bool ready,void (*present)(void (*)(void *)))
+{assert(screen==DEV_UI_NONE && !ready && !present);notes_present=false;}
 typedef struct {int w,h;float a,b,c,d;} Tex3DS_SubTexture;
 static int cover_of(const char *p){(void)p;return -1;}
 static void room_scene_tv_upload(const u16 *p,bool snow){assert(p && !snow);}
@@ -97,7 +100,7 @@ int main(void){
  missing=true;run();assert(visible_runs==2 && !forbidden_runs && njobs==2 && jobs && low_jobs && !visible_jobs);
 assert(!cont_ok && !uploads && launches==1);assert(cont_poll());assert(cont_ok && cont_tex_ok && cont_saved==42 && !strcmp(cont_path,"new.cue"));assert(uploads==1);
  u16 *cached_card=continue_card,*cached_tv=continue_tv;int old_reads=reads;
- leave();assert(continue_card==cached_card && continue_tv==cached_tv && !cont_tex_ok);
+ leave();assert(continue_card==cached_card && continue_tv==cached_tv && !cont_tex_ok && !notes_present);
  room_tv();assert(card_tex_ok && reads==old_reads); // first reentry picture, no worker result
  cont_request_refresh();cont_poll();cont_request_refresh();run();assert(!cont_poll() && queued && cont_ok && uploads==2); // obsolete snapshot discarded
  run();assert(cont_poll() && uploads==3 && deletes==1);
@@ -114,6 +117,6 @@ with tempfile.TemporaryDirectory() as td:
  a=index.index('bool bb_index_visible_checkpoint(void)');b=index.index('/* At most one job',a)
  checkpoint=index[a:b]
  helper=home[home.index('static void cont_capture_prefix('):home.index('// The game the main menu would continue:')]
- p=Path(td);(p/'test.c').write_text(prefix+checkpoint+helper+source+home[home.index("static void leave(void)"):home.index("// as the library does before a game")]+home[home.index("static void room_tv(void)"):home.index("static void room_tv_poll(")]+main)
+ p=Path(td);(p/'test.c').write_text(prefix+checkpoint+helper+source+home[home.index("void leave(void)"):home.index("// as the library does before a game")]+home[home.index("static void room_tv(void)"):home.index("static void room_tv_poll(")]+main)
  subprocess.run(['cc','-std=gnu11','-Wall','-Wextra','-Werror','-Wno-format-truncation','-fsanitize=address,undefined',str(p/'test.c'),'-o',str(p/'test')],check=True)
  subprocess.run([str(p/'test')],check=True)

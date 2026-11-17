@@ -18,7 +18,7 @@ UVS = 16          # uv stored as texel * 16 in a signed short
 # room (static, the five places and the moving pieces) is ONE draw call; see SPEC.md.
 PALETTE = ['static', 'p_tv', 'p_lib', 'p_set', 'p_tog', 'p_share', 'a_clockh', 'a_clockm', 'a_knob', 'a_ctrl0', 'a_ctrl1', 'a_card']
 HAND = {'hand': 1, 'hand_sleeve': 0, 'hand_mitt': 1}     # bone slots inside the hand draw (17 per hand; per-vertex SL wins)
-SPRITE = {'rays': 0, 'glow': 0, 'dust': 1, 'steam': 2, 'trace': 3, 'motes': 4}   # round 5: motes in the window beam
+SPRITE = {'rays': 0, 'glow': 0, 'dust': 1, 'steam': 2, 'trace': 3, 'motes': 4}   # Motes in the window beam
 
 
 def _name(s, n):
@@ -66,7 +66,7 @@ def pack(parts, textures, anchors, style, probes=()):
                     size = HAND[n]
                 if getattr(p, 'SL', None):
                     size = p.SL[i]                     # per-vertex slot (the rigged hand: strongest bone)
-            u2, v2 = p.UV2[i] if getattr(p, 'UV2', None) is not None else (1.0, 1.0)     # round 4: lightmap uv (unlit: the neutral texel)
+            u2, v2 = p.UV2[i] if getattr(p, 'UV2', None) is not None else (1.0, 1.0)     # Lightmap uv (unlit: the neutral texel)
             V.append(struct.pack('<hhhhhhBBBBhh', int(x), int(y), int(z), size, int(round(u * UVS)), int(round(v * UVS)), *map(int, rgb), int(a),
                                  int(round(u2 * UVS)), int(round(v2 * UVS))))
         for t in p.T:
@@ -104,7 +104,7 @@ def pack(parts, textures, anchors, style, probes=()):
     for n, vals in anchors.items():
         vals = list(vals) + [0.0] * (10 - len(vals))
         out += _name(n, 16) + struct.pack('<10f', *vals[:10])
-    for pos, cols in probes:                         # round 4: light probes (ambient cube, light / 2 in 0..255)
+    for pos, cols in probes:                         # Light probes (ambient cube, light / 2 in 0..255)
         out += struct.pack('<3f', *map(float, pos)) + bytes(int(np.clip(round(c * 255), 0, 255)) for c in np.asarray(cols).ravel()) + b'\0\0'
     assert len(out) == off_v, (len(out), off_v)
     out += vb + ib
@@ -147,7 +147,7 @@ def anchors_from(A):
         out['hand3'] = list(A['hand3'])
     for k in sorted(A):
         if k.startswith('hb'):
-            out[k] = list(A[k])                     # the hand's bones (round 3e): head, flex axis, spread axis, parent
+            out[k] = list(A[k])                     # the hand's bones: head, flex axis, spread axis, parent
     for k in ('poster', 'board'):                  # room walls
         if k in A:
             out[k] = list(A[k])

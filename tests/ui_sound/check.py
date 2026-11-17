@@ -37,6 +37,7 @@ code = r'''
 #include <stdio.h>
 #include <string.h>
 #include "3ds.h"
+#include "ui_trace.h"
 #include "ui_motion.h"
 #include "ui_style.h"
 static void log_printf(const char *f, ...) { (void)f; }
@@ -61,6 +62,7 @@ typedef struct { bool init; float hl, hl_v, scroll, scroll_v, scroll_target, lif
 static u32 held, touch_y;
 static u32 input_keys_held(void) { return held; }
 void hidTouchRead(touchPosition *p) { p->px = 100; p->py = (u16)touch_y; }
+void ui_card_touch(touchPosition *p) { hidTouchRead(p); }   /* a straight card: the tilt has its own test (tests/card_tilt) */
 static int flist_row_at(const flist_t *f, float y0, float h, float py) { (void)f; return (int)((py - y0) / h); }
 static u32 ui_resume_pending, swap_keys, swap_buffer, swap_token, swap_buffer_token, swap_buffer_tick, swap_enter_tick;
 static u64 pause_open_tick, pause_closed_tick;

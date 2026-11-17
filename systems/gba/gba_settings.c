@@ -4,11 +4,13 @@
 #include <sys/stat.h>
 #include "app_policy.h"
 #include "gba_settings.h"
+#include "gba_color.h"
 #include "gba_touch.h"
 #include "safefile.h"
 #include "gba_saveid.h"
 
-GbaSettings gba_settings = { 1, 0, 0, 0, 1, 5, 1 };
+GbaSettings gba_settings = { 1, 0, 0, 0, 1, 5, 1, 0, 0 };
+void (*gba_settings_changed)(void);
 bool gba_settings_solar_game;
 static const char *system_path = APP_SD_ROOT "/config/gba.ini";
 static char game_path[512];
@@ -60,7 +62,7 @@ static void read_settings(const char *settings_path, bool game)
   }
 		if(!strcmp(key,"screen_fit")) {strcpy(key,"screen_size");value=value?1:0;}
 		for(int i=0;i<GBA_SETTING_FIELDS;i++) if(!strcmp(key,keys[i])) {
-			*field(&gba_settings,i)=i==5?(value<0?0:value>10?10:value):i?!!value:value<0?0:value>2?2:value;
+			*field(&gba_settings,i)=i==2?(value>=0 && value<GBA_COLOR_COUNT?value:0):i==5?(value<0?0:value>10?10:value):i?!!value:value<0?0:value>2?2:value;
 			if(game)overrides|=1u<<i;
 		}
 	}
@@ -87,6 +89,7 @@ void gba_settings_for_identity(const char *path, const char *identity)
 		if(!gba_saveid_copy(legacy,game_path))read_settings(legacy,true);
 	} else snprintf(game_path,sizeof(game_path),"%s",legacy);
 	read_settings(game_path,true);
+ if(gba_settings_changed)gba_settings_changed();
 }
 void gba_settings_for_game(const char *path)
 {
@@ -94,6 +97,7 @@ void gba_settings_for_game(const char *path)
 }
 void gba_settings_save(void)
 {
+ if(gba_settings_changed)gba_settings_changed();
 	mkdir(APP_SD_ROOT "/config",0777);
 	const char *path=game_path[0]?game_path:system_path;
 	FILE *f=safe_begin(path);if(!f)return;
@@ -107,7 +111,7 @@ void gba_settings_save(void)
 void gba_settings_set(int row,int dir)
 {
 	int *v=field(&gba_settings,row);
-	*v=row==0?(*v+3+dir)%3:row==5?(*v+11+dir)%11:!*v;
+	*v=row==2?(*v+GBA_COLOR_COUNT+dir)%GBA_COLOR_COUNT:row==0?(*v+3+dir)%3:row==5?(*v+11+dir)%11:!*v;
 	if(game_path[0]) overrides|=1u<<row;
 	gba_settings_save();
 }
@@ -132,10 +136,12 @@ void gba_touch_fps_save_global(void)
  char saved_path[sizeof(game_path)];strcpy(saved_path,game_path);
  GbaSettings saved_settings=gba_settings;gba_touch_config saved_touch=gba_touch_settings;
  unsigned saved_overrides=overrides,saved_touch_overrides=touch_overrides;
+ void (*changed)(void)=gba_settings_changed;gba_settings_changed=NULL;
  game_path[0]=0;gba_settings=inherited;gba_touch_settings=touch_inherited;
  gba_touch_settings.fps=selected;gba_settings_save();touch_inherited.fps=selected;
  strcpy(game_path,saved_path);gba_settings=saved_settings;gba_touch_settings=saved_touch;
  overrides=saved_overrides;touch_overrides=saved_touch_overrides;
+ gba_settings_changed=changed;
 }
 static const char *intro_path=APP_SD_ROOT "/config/touch-controls-seen-v2";
 bool gba_touch_intro(void)

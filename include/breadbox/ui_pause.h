@@ -66,6 +66,9 @@ void ui_card_draw(const flist_t *f, int n, int sel, void (*row)(int, void *, ui_
 // The notice's strip and the ruled line its text stands on (card_notice.c): the arguments of C2D_DrawRectSolid for the
 // strip, then the line's colour.
 void ui_card_notice_strip(float x, float y, float z, float w, float h, u32 color, u32 lines);
+float ui_card_tilt(void);   /* the Room's cards lie turned by this (radians); the list looks' are straight */
+void ui_card_touch(touchPosition *touch);   /* a touch turned back onto a tilted card */
+void ui_card_turn(float cx, float cy);   /* turn the next drawing about (cx, cy) by ui_card_tilt() */
 u32 ui_card_input(const flist_t *f, int n, int *sel, u32 keys);   /* the list's keys, touch on the card's own rows */
 bool ui_card_title_hit(void);                                    /* the touch is on the card's header row (title) */
 bool ui_card_row_cut(const ui_card_row_t *r);                    /* the card cuts this focused row ("...") */

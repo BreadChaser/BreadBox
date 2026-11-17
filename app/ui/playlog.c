@@ -70,7 +70,7 @@ static void trim(char *s)
 }
 
 /* Existing PS1 clients use legacy save names. New adapters supply id:key.
- * Keep this boundary out of frame code and preserve PSX3D's file format. */
+ * Keep this boundary out of frame code and preserve the existing file format. */
 static const char *metadata_key(const char *key,char out[NAME_LEN])
 {
  if(key && *key && !strchr(key,':')) {snprintf(out,NAME_LEN,"ps1:%.*s",NAME_LEN-5,key);return out;}

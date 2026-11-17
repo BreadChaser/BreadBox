@@ -18,7 +18,8 @@ SIZES = {'GPU_BYTE': 1, 'GPU_UNSIGNED_BYTE': 1, 'GPU_SHORT': 2, 'GPU_FLOAT': 4}
 # vertex type -> (file, AttrInfo it is drawn with); a literal stride (the colour stream) uses the room's
 LAYOUT = {'room_vertex': ('app/ui/room_scene.c', 'S.attr'), 'hand_vertex': ('app/ui/room_hands.c', 'H.attr_hand'),
           'prop_vertex': ('app/ui/room_hands.c', 'H.attr_prop')}
-FILES = ['app/ui/room_scene.c', 'app/ui/room_walls.c', 'app/ui/room_hands.c', 'app/ui/room_board.c', 'app/ui/shelf_scene.c']
+FILES = ['app/ui/room_scene.c', 'app/ui/room_walls.c', 'app/ui/room_hands.c', 'app/ui/room_board.c', 'app/ui/shelf_scene.c',
+         'app/ui/shelf_scene_draw.c', 'app/ui/shelf_scene_spines.c', 'app/ui/shelf_scene_wood.c']
 
 
 def attrs(path, var):

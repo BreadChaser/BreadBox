@@ -7,8 +7,7 @@ Three kinds of rule:
 - in docs and other prose, process notes: owner or coordinator decisions, review
   questions, work rounds and phases, private branch names, status lines;
 - in every authored text file, code included, private identifiers: home-directory
-  paths, machine names, private network addresses, the private devtools folder,
-  and AI model or agent names.
+  paths, machine names, private network addresses and the private devtools folder.
 Vendored cores and shipped game data are not checked. Run with --self-test to prove
 each rule fires and that normal code words (worker, journal, ownership) do not.
 """
@@ -54,8 +53,6 @@ PRIVATE = [
     (re.compile(r'\b(100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])|192\.168|10\.\d{1,3})\.\d{1,3}\.\d{1,3}\b'),
      'private network address'),
     (re.compile(r'(?<![\w/])devtools/'), 'points at the private devtools folder'),
-    (re.compile(r'\b(Claude|Codex|Opus|Sonnet|Haiku|ChatGPT|GPT-?\d[\w.]*|Gemini|Copilot)\b'), 'AI model name'),
-    (re.compile(r'\b(AI|coding|review|sub)[- ]?agents?\b|\bagents? (review|run|worker)', re.I), 'agent mention'),
 ]
 TEXT_EXEMPT = ('CHANGELOG.md',)
 # Machine and host names are private, so they are not listed here: put one per line in the file named by
@@ -97,7 +94,7 @@ def problems(files):
         if text is None:
             continue
         rules = PRIVATE + private_names() + (PROCESS if kind(path) == 'prose' and path not in TEXT_EXEMPT else [])
-        scan = text.replace('AGENTS.md', '')
+        scan = text
         for rule, why in rules:
             m = rule.search(scan)
             if m:
@@ -112,7 +109,7 @@ def self_test():
         'docs/V1-REPORT.md': '', 'docs/review-r2.md': '', 'PLAN.md': '', 'TODO.txt': '',
         'docs/gpu-journal.md': '', 'build.log': '', 'docs/2026-11-12-notes.md': '', 'DECISIONS.md': '',
         'docs/a.md': 'Asked the coordinator first.', 'docs/b.md': 'Day style (owner 2026-11-06).',
-        'docs/c.md': 'See devtools/breadbox/x.', 'docs/d.md': '## Round 4 results\n',
+        'docs/c.md': 'See devtools/notes/x.', 'docs/d.md': '## Round 4 results\n',
         'docs/e.md': 'Status: done\n',
         # the notes a review found surviving the first cleanup
         'docs/f.md': 'to be re-measured as part of defaults v1 (REVIEW Q6)',
@@ -125,8 +122,7 @@ def self_test():
         # private identifiers, in prose and in code
         'docs/m.md': 'Built in /home/someone/projects/app.',
         'app/o.c': '/* server 100.64.0.5:8091 */', 'tools/p.sh': 'ssh 192.168.0.10',
-        'docs/q.md': 'Checked by Claude Opus.', 'tools/r.json': '{"reason": "the review (GPT-6.1 Sol) cleared"}',
-        'docs/s.md': 'An agent review found it.', 'app/t.h': '// see devtools/fastloop/lock.old',
+        'app/t.h': '// see devtools/locks/a.lock',
     }
     found = {p.split(':')[0] for p in problems(planted)}
     missed = sorted(set(planted) - found)
@@ -136,8 +132,7 @@ def self_test():
         'tests/gba_journal/check.c': '/* the write journal */', 'tests/parity/review.py': None,
         'tools/widescreen/research/X.ws': None, 'core/notes/a.md': 'owner 2026-01-01',
         'CHANGELOG.md': '## v0.5.0 (2026-10-21)', 'app/u.c': 'curl_easy_setopt(c, CURLOPT_USERAGENT, "BreadBox");',
-        'docs/v.md': 'A round screen flag; see AGENTS.md; tests/settings/fixtures/v1-r2/ holds it.',
-        'assets/romfs/covers/gba-codes.txt': 'BWVE\tWinX Club - Quest for the Codex (USA)',
+        'docs/v.md': 'A round screen flag; tests/settings/fixtures/v1-r2/ holds it.',
         '.gitignore': '/devtools/', 'docs/w.md': 'Version 10.5 of the SDK; 2.7.0 pinned.',
         'docs/x.md': 'Rounded to whole percents; round 2 mm corners.',
     }

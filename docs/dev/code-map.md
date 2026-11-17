@@ -1,0 +1,140 @@
+# BreadBox code map
+
+BreadBox is the 3DS product (PS1, GBA, experimental NES), built with devkitARM,
+libctru, citro2d and citro3d. Main stays on `trunk`; work in a branch/worktree.
+PSX3D is retired: `APP=psx3d` is rejected. Its core hooks, `PSX3D_*` paths and
+one-time import from `sdmc:/3ds/PSX3D` remain live BreadBox compatibility code.
+
+## Where things live
+
+- `app/ui/`: `main.c` lifecycle, room/library, shared `components/*.inc` and
+  `ui.c` drawing; `components/value_card.inc` pages long focused values.
+  `bb_save.c` owns battery/RTC sessions; `bb_final.c` owns
+  immutable final files through retry/discard, including PS1 cards and Continue
+  (one writer; per path the newest wins).
+  `safefile.c`, `save_writer.c`, `history.c` provide atomic files and backups.
+  `bb_pause.c` is the shared pause card and Continue question; `folder_peek.c`
+  the folder picker's shallow look for games in the 3DS's own root folders.
+  `welcome.c` is the first-launch welcome's flag (`welcome` in config.ini) and
+  words; `home_welcome.inc` tours the room with it (`bb_welcome_open()` for
+  Settings > About > Welcome; dev `ui welcome`). `whatsnew.c`/`whatsnew_model.c`
+  track seen releases in config.ini; `whatsnew_ui.c` and `components/whatsnew.inc`
+  scroll the shared ruled card with `card_scroll.c` (list repeat/motion, whole-row
+  drag targets). `tools/build/changelog.py` generates its text from CHANGELOG.md
+  (test `whats-new`; measured fit in `tests/ui_fit/card_lines.py`).
+  `notice_bar.c` draws the shared screen-depth information footer on the top screen.
+  `place_cards.c`: the room cards' lines.
+  `home_model.c` owns the shared home places; `home_view.c` the home's moves to a place and back (the Room glides, the list themes arrive at once); `library_model.c` owns catalog
+  identity, order, favorites, history and launch; `shelf_geometry.c` adds room package dimensions.
+  `postcard_palette.c` resolves shared save-board colors;
+  `library_touch.c` owns shared system and game touch targets;
+  `library_actions.c` publishes the common library controls; `look_fonts.c` loads menu fonts.
+  `list_look.c` and its component draw PSX3D/Simple from that same state (their game list plays on A: no box is taken out), with `look_theme.c` selecting
+  artwork/font and `theme.c` supplying all shared screen colors.
+  `look_style.c` (component `look_style.inc`) paints the list themes' rules, selection and bar words; the shared
+  card, bar, list, postcards, tag and pause picture branch on `theme_is_room()` to use it (one implementation per screen).
+  `library_letters.c` is the A-Z index (L/R letter jumps); `letter_strip.c` draws and hits its letters for every theme.
+  `ui_terms.h` holds words with a per-theme term (postcard / state); `ui_help.c` the long-help pager.
+  Development-only `ui_trace.c`/`ui_trace_views.c` publish menu observations;
+  `tests/look_equivalence` compares scripted production controllers across looks,
+  including the PS1/GBA settings adapters, scoped files and both postcard browsers.
+  `home_empty.c` and `home_presentation.c` own the empty collection and shared home text.
+- `app/settings/`: the Settings pages (one list per page, a page stack; adapters own the rows);
+  `app/ui/card_notice.c` the card notice's strip and ruled line, and the Room cards' tilt and its touch mapping (its own file: `ui.o`'s cold code sits right ahead of the GBA save dialogs, so its size must not change: the layout gate checks it);
+  `app/ui/ui_mark.c` the selection highlighter (`ui_mark.h`, masks from `tools/ui/mark_masks.py`);
+  `app/ui/ui_font.c` where the loaded fonts' letters stand (`UI_PAPER_TOP` puts text on ruled lines with any font; test `tests/text_baseline`);
+  `app/services/`: updater (`update_pending.inc` keeps accepted downloads across starts;
+  the cold menu turn in `breadbox_import_ui.c` advances staging), sharing and `covers_fetch.c` (the cover worker thread, HTTP, cache files);
+  `app/ui/covers.c` the cover API and textures, `covers_match.c` cover names (host test `covers-match`),
+  shared state in the private `covers_internal.h`; `covers_wait.c` bounds transition drains
+  and services lifecycle cancellation (host test `launch-wait`).
+  `platform/3ds/bb_menu_release.c` releases menu backdrops and release notes only after a successful drain;
+  the platform restores them after a game. The shared title font stays loaded for game and pause screens.
+- `platform/3ds/`: device boundaries, video, audio, input and networking.
+- `systems/<id>/sys_<id>.c`: system descriptors behind `bb_system.h`.
+  `systems/common/retro_host.c` owns libretro callbacks/core validity;
+  `retro_ctr.c` is the shared runner. PS1 runs in `systems/ps1/emu.c`,
+  `systems/ps1/ps1_messages.c` routes routine BIOS/game-fix notices to the log,
+  `disc_timing.c` provides opt-in `BB_DISC_TIMING=1` counters (runtime `stats`);
+  `disc_thread.c` sets the read-ahead priority during PS1 session setup;
+  `card_question.c` asks about an unreadable memory card before a game runs,
+  `ps1_pad.h` suppresses automatic analog enable; `statefile.c` settles loaded
+  pads, and `presets.c` settles resets at the BIOS-initialized log callback;
+  `library.c` the PS1 list, cache and index import, `ps1_disc_groups.c` titles and
+  disc groups, `ps1_library_import.c` .cue/.m3u references (private `ps1_library.h`);
+  a system's `components/*.inc` are its drawing parts;
+  GBA runs in `systems/gba/gba.c`; `gba_picture.c` presents color/LCD mixing
+  through the offscreen helper `gba_picture_mix.h`;
+  `gba_color.c` builds the color tables and fuses lookup with texture upload
+  (host test `tests/gba_color/run.sh`). `core/` and `gba-core/` are vendored engines.
+- `include/breadbox/`: system contracts, shared style tokens and one header per
+  shell module (`app_config.h`, `platform_video.h`, `ui.h`, etc.); `ui_words.h`
+  holds the words every system says alike (postcards), defines only.
+  `ps1_hooks.h` holds the only PS1 calls the shell makes. Include paths are per
+  layer: systems/ sees include/breadbox and systems/common, only the shell also
+  sees app/ui and platform/3ds (`tools/architecture/include-graph.py`).
+  `bb_registry.h` declares the registry; `tools/build/systems-table.py` generates
+  its table from `SYSTEMS` in `apps/breadbox.mk`.
+  `tools/build/title-version.py` generates `include/breadbox/title_version.h`
+  (encode/decode/text); Share shows CIA versions with it (test `share-room`).
+  `source-epoch.py` invalidates timestamp-bearing objects when the epoch changes;
+  `jobs.py` preserves caller jobserver tokens and bounds standalone core builds.
+  `gate-record.py` validates structured local CI receipts from the fixed runner;
+  `host-tests.sh --list` is its suite manifest, and `summary.json` records suite results.
+  `tests/layout_baseline/build_contract.py` checks these build contracts;
+  real-ELF controls in `check.py` run in the CI layout stage.
+- `app/ui/room_*.c`: the room main menu (`room_bbr.c` portable BBR v3 tables,
+  styles, camera and library case; `room_scene.c` GPU draw and final dither pass;
+  `room_walls.c`/`room_board.c` the poster and corkboard). Room lighting is Day/Night; `theme.c` also supplies PSX3D/Simple; the room file is `assets/romfs/room/room.bbr`.
+- `app/ui/shelf_scene.c`: the room's Library (camera, visible spines, the case in the hands,
+  case backs, top screen); `shelf_scene_spines.c` the close-up spine atlas and its bake,
+  `shelf_scene_wood.c` the procedural grain, `shelf_scene_draw.c` primitives, text, the desk
+  and its cards; shared state in the private `shelf_scene_internal.h`.
+- `assets/`: ROMFS; `apps/breadbox/`: product metadata; `build/3ds/`: Makefile,
+  linker scripts and link order. `tools/`: build, layout, architecture, cleanup;
+  `tools/room/lamplight/` builds the room (Blender: `scene.py` geometry,
+  `gi.py` Cycles light per vertex, `soft.py` the soft texture finish
+  (test: `tests/room/soft-textures.py`, needs NumPy), `lights.json`/`refine.json` data;
+  `tools/room/README.md`).
+- `tests/`: host suites (`tests/ps1_pad` drives the core pad code; `tests/ps1_messages/check.py` covers both libretro
+  message callbacks and the production notice router); `docs/`: player docs,
+  `docs/dev/` developer docs (index `docs/dev/README.md`).
+
+## Build and test
+
+Set up devkitPro as `docs/building.md` says (`DEVKITPRO`, `DEVKITARM`). When the host SDK
+differs from the pin, build in the pinned container: `env -u TMPDIR PSX3D_CONTAINER=bwrap tools/build/container.sh make -j3`.
+Do not bypass or change the SDK pins.
+CIA: `make -j3 cia VERSION=<private counter> MAKEROM=<makerom-fixed>`;
+explicit development fixtures use `cia-development`.
+Leave `BB_EXPERIMENTAL_NES` unset for default/release builds.
+
+```sh
+bash tools/build/host-tests.sh
+bash tests/save_service/run.sh
+bash tests/app/save/run.sh
+bash tests/update/run.sh
+python3 tests/main_lifecycle/check.py
+python3 tools/architecture/ownership-guard.py --strict
+tools/build/container.sh bash tools/build/ci.sh gates   # size gate + source-text and UI_METRIC ratchets (docs/building.md)
+tools/build/trunk-gate.sh; tools/build/merge-to-trunk.sh <branch>   # full CI on a commit, ledger, gated fast-forward
+tools/build/container.sh bash tools/build/ci.sh layout   # both layout gates, after a build
+tools/build/container.sh bash tools/build/ci.sh all      # exactly what GitHub CI runs
+```
+
+Old 3DS code placement affects performance: `build/3ds/core-first.ld` pins the
+core and frame functions. Keep both layout gates passing; accept intentional
+changes per function in `tools/layout/accepted-changes.json`, never by moving
+the reference. The original build-2650 acceptance identity remains in `baseline.json`;
+`reference.py` verifies/rebuilds the qualified public-source reference;
+`pin_contract.py` shares pin discovery with checks and `freeze-public.py` extends
+original names only from that verified reference.
+`accepted-2650.json` retains the exact qualification lineage.
+`function-diff.py BASE.elf NEW.elf` lists every function whose code differs
+(run in the container; same path, epoch and commit for both builds).
+Mark cold menus/saves `PSX3D_COLD` (`cold_code.h`). Speed claims
+require Old hardware. Shared code holds no system policy; adapters own it.
+UI uses shared components/tokens and American English.
+See `docs/building.md`, `docs/dev/save-service.md`, `docs/auto-update.md`.
+Keep evidence outside the checkout; no push, console contact or attribution
+unless the task explicitly authorizes it.

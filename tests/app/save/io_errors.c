@@ -1,5 +1,5 @@
 // Host test for safefile.c when the SD card errs while a copy is asked about
-// (harsh review 0.9.0 finding 1). The real safefile.c, linked with
+// The real safefile.c, linked with
 // -Wl,--wrap=stat,--wrap=fopen and its SAFEFILE_TEST hooks: EIO or EACCES on
 // the metadata (stat), the open, the read or the close of <name>, <name>.bak or
 // <name>.tmp, alone and followed by a full card, a failing close or failing
@@ -15,11 +15,30 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <time.h>
 #include "../../common/test_tmpdir.h"
 
 #define SIZE (4096 + 3)
 static unsigned char A[SIZE], B[SIZE], C[SIZE], N[SIZE];
 static int failures, checks;
+static int retry_left, retry_hits, retry_opens, retry_mode;
+static bool retry_ready;
+static FILE *retry_stream;
+static const char *retry_name="card";
+static bool retry_both, retry_wrong_size, retry_vanish, retry_partial;
+static unsigned pauses_seen, rename_attempts, opens_seen[3], retry_mask;
+static bool retry_each;
+static bool retry_target(const char *p)
+{
+	return !strcmp(p,retry_name) || (retry_both && !strcmp(p,"card.bak"));
+}
+int __wrap_nanosleep(const struct timespec *pause, struct timespec *remaining)
+{
+	(void)remaining;
+	pauses_seen++;
+	if(pause->tv_sec || pause->tv_nsec!=10000000)abort();
+	return 0;
+}
 static char ctx[200];
 #define CHECK(c) do { checks++; if (!(c)) { failures++; fprintf(stderr, "%s:%d: %s (%s)\n", __FILE__, __LINE__, #c, ctx); } } while (0)
 
@@ -44,7 +63,7 @@ static const safe_format_t PLAIN = { .size = SIZE, .head = 2, .valid = head_ok }
 
 // ---------------------------------------------------------------- faults
 // ON_TAIL: the whole payload reads, then the next read fails (stdio's error
-// flag, EOF alone does not tell; review A finding 5)
+// flag, EOF alone does not tell)
 enum { ON_STAT = 1, ON_OPEN = 2, ON_READ = 4, ON_CLOSE = 8, ON_TAIL = 16 };
 enum { LATER_NONE, LATER_FULL, LATER_CLOSE, LATER_RENAME, LATER_N };
 static const char *const later_name[] = { "-", "SD full", "close fails", "renames fail" };
@@ -73,15 +92,26 @@ static bool tmp_file(FILE *f) { return fd_is(f, "card.tmp") || fd_is(f, "card.re
 int __real_stat(const char *path, struct stat *st);
 int __wrap_stat(const char *path, struct stat *st)
 {
+	if(retry_ready && retry_vanish && retry_hits && retry_target(path)){errno=ENOENT;return -1;}
+	if(retry_left && retry_mode==ON_STAT && retry_stream && retry_target(path) &&
+		(!retry_each || !(retry_mask & (!strcmp(path,"card") ? 1u : 2u)))){
+		retry_mask |= !strcmp(path,"card") ? 1u : 2u;
+		retry_hits++;if(retry_left>0)retry_left--;errno=ENOENT;return -1;
+	}
 	if (fault.armed && (fault.on & ON_STAT) && is(path, fault.name)) { errno = fault.error; return -1; }
-	return __real_stat(path, st);
+	int rc=__real_stat(path,st);
+	if(!rc && retry_ready && retry_wrong_size && retry_hits && retry_stream && retry_target(path))st->st_size--;
+	return rc;
 }
 FILE *__real_fopen(const char *path, const char *mode);
 typedef struct { unsigned char *data; size_t len, pos; int error; } tail_t;
 static ssize_t tail_read(void *c, char *p, size_t n)
 {
 	tail_t *t = c;
-	if (t->pos == t->len) { errno = t->error; return -1; }
+	if (t->pos == t->len) {
+		if(retry_mode==ON_TAIL){retry_hits++;retry_left=0;}
+		errno = t->error; return -1;
+	}
 	if (n > t->len - t->pos) n = t->len - t->pos;
 	memcpy(p, t->data + t->pos, n);
 	t->pos += n;
@@ -90,21 +120,34 @@ static ssize_t tail_read(void *c, char *p, size_t n)
 static int tail_close(void *c) { tail_t *t = c; free(t->data); free(t); return 0; }
 FILE *__wrap_fopen(const char *path, const char *mode)
 {
+	if(mode[0]=='w' && !strcmp(path,"card.tmp"))retry_ready=true;
+ if(mode[0]=='r')for(int i=0;i<3;i++)if(!strcmp(path,(const char *[]){"card","card.bak","card.tmp"}[i]))opens_seen[i]++;
+ if(retry_ready && retry_mode && mode[0]=='r' && retry_target(path)) {
+  retry_opens++;
+  if((retry_mode==ON_OPEN && retry_left) || (retry_vanish && retry_hits)){retry_hits++;if(retry_left>0)retry_left--;errno=ENOENT;return NULL;}
+ }
 	if (fault.armed && (fault.on & ON_OPEN) && mode[0] == 'r' && is(path, fault.name)) { errno = fault.error; return NULL; }
-	if (fault.armed && (fault.on & ON_TAIL) && mode[0] == 'r' && is(path, fault.name)) {
+	if ((fault.armed && (fault.on & ON_TAIL) && mode[0] == 'r' && is(path, fault.name)) ||
+		(retry_ready && retry_mode==ON_TAIL && retry_left && mode[0]=='r' && retry_target(path))) {
 		FILE *f = __real_fopen(path, "rb");
 		if (!f) return NULL;
 		tail_t *t = calloc(1, sizeof(*t));
 		t->data = malloc(2 * SIZE);
 		t->len = fread(t->data, 1, 2 * SIZE, f);
-		t->error = fault.error;
+		t->error = retry_mode==ON_TAIL ? ENOENT : fault.error;
 		fclose(f);
 		return fopencookie(t, "r", (cookie_io_functions_t){ .read = tail_read, .close = tail_close });
 	}
-	return __real_fopen(path, mode);
+	FILE *opened=__real_fopen(path,mode);
+	if(opened && retry_ready && retry_mode && mode[0]=='r' && retry_target(path)){retry_stream=opened;}
+	return opened;
 }
 size_t safe_test_fread(void *p, size_t size, size_t n, FILE *f)
 {
+	if(retry_left && retry_mode==ON_READ && f==retry_stream){
+		retry_hits++;if(retry_left>0)retry_left--;
+		size_t got=retry_partial ? fread(p,size,n/2,f) : 0;errno=ENOENT;return got;
+	}
 	if (fault.armed && (fault.on & ON_READ) && fd_is(f, fault.name)) { errno = fault.error; return 0; }
 	return fread(p, size, n, f);
 }
@@ -115,6 +158,7 @@ size_t safe_test_fwrite(const void *p, size_t size, size_t n, FILE *f)
 }
 int safe_test_fclose(FILE *f)
 {
+	if(f==retry_stream)retry_stream=NULL;
 	bool fail = fault.armed && ((fault.later == LATER_CLOSE && tmp_file(f)) || ((fault.on & ON_CLOSE) && fd_is(f, fault.name)));
 	int r = fclose(f);
 	if (fail) { errno = EIO; return EOF; }
@@ -122,6 +166,7 @@ int safe_test_fclose(FILE *f)
 }
 int safe_test_rename(const char *from, const char *to)
 {
+	rename_attempts++;
 	if (fault.armed && (fault.on & ON_STAT) && is(to, fault.name)) fault.renamed_onto++;
 	if (fault.armed && fault.later == LATER_RENAME) { errno = EIO; return -1; }
 	if (access(to, F_OK) == 0) return -1;   // FAT: never over a file
@@ -163,6 +208,10 @@ static bool kept(int w)   // some file in the folder holds payload w byte for by
 static void clean(void)
 {
 	memset(&fault, 0, sizeof(fault));
+	retry_left=retry_hits=retry_opens=retry_mode=0;
+	retry_ready=retry_both=retry_wrong_size=retry_vanish=retry_partial=false;
+	retry_stream=NULL;retry_name="card";pauses_seen=rename_attempts=retry_mask=0;retry_each=false;
+	memset(opens_seen,0,sizeof(opens_seen));
 	DIR *d = opendir(".");
 	struct dirent *e;
 	while (d && (e = readdir(d)))
@@ -193,7 +242,7 @@ static const unsigned kinds[] = { ON_STAT, ON_OPEN, ON_STAT | ON_OPEN, ON_READ, 
 #define KINDS (sizeof(kinds) / sizeof(kinds[0]))
 
 // ---------------------------------------------------------------- tests
-// The reviewer's second probe: a valid sole recovery .tmp, EIO while it is
+// A valid sole recovery .tmp, EIO while it is
 // probed, then a full card at the next write. It must stay, byte for byte.
 static void sole_tmp_probe(void)
 {
@@ -311,7 +360,7 @@ static void writes(void)
 						CHECK(kept('B'));
 					if (t == 0)   // the newest copy is never buried as .bad by a write
 						CHECK(past_head ? (ok ? content("card.bak") == 'A' : content("card") == 'A') : !ok && content("card") == 'A');
-					if (t == 1 && !hook)   // nothing keeps a backup the card cannot read: it stays (review A finding 2)
+					if (t == 1 && !hook)   // nothing keeps a backup the card cannot read: it stays
 						CHECK(!ok && content("card.bak") == 'B' && content("card") == 'A');
 					safe_info_t info;
 					CHECK(load_as(fmt, &info) == (ok ? 'N' : 'A'));
@@ -342,7 +391,7 @@ static void writes(void)
 	}
 }
 
-// Review A finding 3: a good backup or .tmp loads after a <name> the card
+// A good backup or .tmp loads after a <name> the card
 // cannot read, but repair (and a write's rescue of the .tmp) never sets that
 // <name> aside: it may be the newest copy. It stays at its name, byte for byte.
 static void repairs(void)
@@ -381,7 +430,7 @@ static void repairs(void)
 	free(d);
 }
 
-// Review A finding 5: an error right after the exact payload (EOF alone does
+// An error right after the exact payload (EOF alone does
 // not tell) is not a good copy, and a restore's read-back fails on it.
 static void tail_errors(void)
 {
@@ -405,6 +454,157 @@ static void tail_errors(void)
 	if (f) fclose(f);
 }
 
+static int cancel_checks;
+static bool cancel_retry(void *unused)
+{
+ (void)unused;
+ return !retry_hits || ++cancel_checks<3;
+}
+static void contradictory_probes(void)
+{
+ for(int mode=ON_STAT;mode<=ON_READ;mode*=2)
+ for(int scenario=0;scenario<3;scenario++) {
+  clean();put("card",A,SIZE);put("card.bak",B,SIZE);
+  snprintf(ctx,sizeof(ctx),"contradictory %s scenario %d",kind(mode),scenario);
+  retry_ready=false;retry_stream=NULL;
+  retry_left=scenario==0 ? 1 : -1;retry_hits=retry_opens=0;retry_mode=mode;
+  cancel_checks=0;
+  if(scenario==2)safe_set_checkpoint(cancel_retry,NULL);
+  FILE *log=__real_fopen("retry-log","w+b");CHECK(log!=NULL);
+  int saved=dup(STDERR_FILENO);CHECK(saved>=0);
+  fflush(stderr);CHECK(dup2(fileno(log),STDERR_FILENO)>=0);
+  bool ok=safe_write("card",&PLAIN,N,true);
+  fflush(stderr);CHECK(dup2(saved,STDERR_FILENO)>=0);close(saved);
+  safe_set_checkpoint(NULL,NULL);
+  retry_left=retry_mode=0;
+  rewind(log);char line[512]={0};size_t n=fread(line,1,sizeof(line)-1,log);fclose(log);unlink("retry-log");
+  if(scenario==0) {
+   CHECK(ok && retry_hits==1 && content("card")=='N' && content("card.bak")=='A');
+   CHECK(n>0 && strstr(line,"safefile: retry-succeeded") && pauses_seen==1);
+   CHECK(strchr(line,'\n') && !strchr(strchr(line,'\n')+1,'\n'));
+  } else {
+   CHECK(!ok && content("card")=='A' && content("card.bak")=='B');
+   CHECK(content("card.tmp")==0);
+   CHECK(strstr(line,"safefile: refused step=") && strstr(line,"role=primary"));
+   CHECK(strchr(line,'\n') && !strchr(strchr(line,'\n')+1,'\n'));
+   if(scenario==1) {
+    CHECK(retry_hits==3 && retry_opens==3 && pauses_seen==2);
+    CHECK(strstr(line,"errno=2") && strstr(line,mode==ON_STAT ? "step=stat" : mode==ON_OPEN ? "step=open" : "step=read"));
+    if(mode==ON_READ)CHECK(strstr(line,"expected=2 read=0"));
+   } else {
+    CHECK(retry_hits==1 && cancel_checks>=3 && pauses_seen==1);
+    CHECK(strstr(line,mode==ON_OPEN ? "step=open" : "step=retry-cancel") && strstr(line,"errno=125"));
+   }
+  }
+ }
+}
+
+static void retry_edges(void)
+{
+	clean();
+	snprintf(ctx,sizeof(ctx),"empty slot stays fast");
+	CHECK(safe_write("card",&PLAIN,N,true));
+	CHECK(pauses_seen==0 && opens_seen[0]==1 && opens_seen[1]==1 && opens_seen[2]==1);
+	clean();safe_info_t info;
+	CHECK(load_as(&PLAIN,&info)==0 && info.outcome==SAFE_ABSENT);
+	CHECK(pauses_seen==0 && opens_seen[0]==1 && opens_seen[1]==1 && opens_seen[2]==1);
+
+	for(int rescue=0;rescue<3;rescue++) {
+		clean();put("card",A,SIZE);put("card.bak",B,SIZE);
+		snprintf(ctx,sizeof(ctx),"contradiction then wrong size, rescue=%d",rescue);
+		if(rescue==1){unlink("card.bak");put("card.tmp",C,SIZE);}
+		retry_ready=rescue!=0;
+		retry_mode=ON_STAT;retry_left=1;retry_wrong_size=true;
+		CHECK(!safe_write("card",&PLAIN,N,true));
+		retry_mode=0;retry_wrong_size=false;
+		CHECK(content("card")=='A' && content("card.bak")== (rescue==1 ? 0 : 'B'));
+		CHECK(content("card.bad")==0 && content("card.tmp")== (rescue==1 ? 'C' : 0));
+		CHECK(rename_attempts==0 && pauses_seen==1);
+	}
+
+	for(int rescue=0;rescue<2;rescue++) {
+		clean();put("card.bak",B,SIZE);
+		if(!rescue)put("card",A,SIZE);
+		snprintf(ctx,sizeof(ctx),"backup contradiction, rescue=%d",rescue);
+		retry_name="card.bak";retry_mode=ON_STAT;retry_left=1;retry_ready=rescue;
+		CHECK(safe_write("card",&PLAIN,N,true));
+		retry_mode=0;
+		CHECK(content("card")=='N' && content("card.bak")== (rescue ? 'B' : 'A'));
+		CHECK(pauses_seen==1);
+	}
+
+	clean();put("card",A,SIZE);put("card.bak",B,SIZE);
+	snprintf(ctx,sizeof(ctx),"one success log for two recovered probes");
+	retry_both=retry_each=true;retry_mode=ON_STAT;retry_left=-1;
+	FILE *log=__real_fopen("retry-log","w+b");CHECK(log!=NULL);
+	int saved=dup(STDERR_FILENO);CHECK(saved>=0);
+	fflush(stderr);CHECK(dup2(fileno(log),STDERR_FILENO)>=0);
+	CHECK(safe_write("card",&PLAIN,N,true));
+	fflush(stderr);CHECK(dup2(saved,STDERR_FILENO)>=0);close(saved);
+	rewind(log);char line[512]={0};CHECK(fread(line,1,sizeof(line)-1,log)>0);fclose(log);unlink("retry-log");
+	CHECK(pauses_seen==2 && strstr(line,"retry-succeeded") && strstr(line,"pauses=2"));
+	CHECK(strchr(line,'\n') && !strchr(strchr(line,'\n')+1,'\n'));
+
+	for(int load=0;load<2;load++) {
+		clean();put("card",A,SIZE);put("card.bak",B,SIZE);put("card.tmp",C,SIZE);
+		snprintf(ctx,sizeof(ctx),"shared retry bound, load=%d",load);
+		retry_both=true;retry_mode=ON_OPEN;retry_left=-1;retry_ready=true;
+		if(load)CHECK(load_as(&PLAIN,&info)=='C');
+		else CHECK(!safe_write("card",&PLAIN,N,true));
+		CHECK(pauses_seen==2);
+	}
+
+	clean();put("card",A,SIZE);put("card.bak",B,SIZE);
+	snprintf(ctx,sizeof(ctx),"ten-file listing shared bounds");
+	retry_both=true;retry_mode=ON_OPEN;retry_left=-1;retry_ready=true;
+	for(int i=0;i<10;i++)CHECK(load_as(&PLAIN,&info)==0 && info.outcome==SAFE_UNREADABLE);
+	CHECK(pauses_seen==20);
+
+	for(int error=EIO;error<=EACCES;error+=EACCES-EIO) {
+		clean();put("card",A,SIZE);arm("card",error,ON_OPEN,LATER_NONE);
+		snprintf(ctx,sizeof(ctx),"nontransient open error %d",error);
+		CHECK(!safe_write("card",&PLAIN,N,true));
+		CHECK(pauses_seen==0);
+	}
+
+	for(int load=0;load<2;load++)
+	for(int tail=0;tail<2;tail++) {
+		clean();unsigned char good[SIZE];memcpy(good,A,SIZE);good[SIZE-1]=xor_of(good);
+		put("card",good,SIZE);
+		snprintf(ctx,sizeof(ctx),"whole-buffer retry, load=%d tail=%d",load,tail);
+		retry_mode=tail ? ON_TAIL : ON_READ;retry_left=1;retry_ready=load;retry_partial=true;
+		if(load){void *copy=safe_load("card",&DEEP,0,&info);CHECK(copy && !memcmp(copy,good,SIZE));free(copy);}
+		else CHECK(safe_write("card",&DEEP,good,true));
+		CHECK(pauses_seen==1);
+	}
+
+	clean();put("card.bak",B,SIZE);
+	snprintf(ctx,sizeof(ctx),"restore backup contradiction");
+	retry_name="card.bak";retry_mode=ON_STAT;retry_left=1;retry_ready=true;
+	CHECK(safe_restore("card",&PLAIN,N,NULL,NULL));
+	retry_mode=0;CHECK(content("card")=='N' && content("card.bak")=='B' && pauses_seen==1);
+
+	clean();put("card",A,SIZE);put("card.bak",B,SIZE);
+	snprintf(ctx,sizeof(ctx),"backup retry then wrong size");
+	retry_name="card.bak";retry_mode=ON_STAT;retry_left=1;retry_wrong_size=true;
+	CHECK(!safe_write("card",&PLAIN,N,true));
+	retry_mode=0;retry_wrong_size=false;
+	CHECK(content("card")=='A' && content("card.bak")=='B' && content("card.bad")==0 && content("card.tmp")==0);
+
+	clean();put("card",A,SIZE);put("card.tmp",C,SIZE);
+	snprintf(ctx,sizeof(ctx),"seen copy vanishes during rescue");
+	retry_mode=ON_STAT;retry_left=1;retry_vanish=true;retry_ready=true;
+	CHECK(!safe_write("card",&PLAIN,N,true));
+	retry_mode=0;retry_vanish=false;
+	CHECK(content("card")=='A' && content("card.tmp")=='C' && rename_attempts==0);
+
+	clean();put("card","bad",3);
+	for(int i=1;i<100;i++){char name[64];snprintf(name,sizeof(name),i==1 ? "card.bad" : "card.bad%d",i);put(name,A,SIZE);}
+	snprintf(ctx,sizeof(ctx),"full parking names");
+	errno=0;CHECK(!safe_park("card") && errno==EEXIST);
+	clean();
+}
+
 int main(void)
 {
 	char dir[4096];
@@ -417,6 +617,8 @@ int main(void)
 	}
 	A[0] = B[0] = C[0] = N[0] = 'M';
 	A[1] = B[1] = C[1] = N[1] = 'C';
+	contradictory_probes();
+	retry_edges();
 	sole_tmp_probe();
 	loads();
 	writes();

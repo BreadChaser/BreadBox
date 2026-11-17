@@ -1,5 +1,5 @@
 // Preset updates without an app release. The player does nothing: while the
-// library is idle, a cover worker (covers.c, same network lock and pauses)
+// library is idle, a cover worker (app/services/covers_fetch.c, same network lock and pauses)
 // asks presets_update_due() and runs presets_update_work(). That fetches a
 // small manifest at most once a day; a newer pack made for this app's preset
 // schema and defaults version is downloaded to the SD card, its size and

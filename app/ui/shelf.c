@@ -1,5 +1,6 @@
+#include "ui_trace_views.h"
 /* BreadBox bookshelf controller (room themes): content, navigation, motion and
- * launch. Painting is shelf_scene.c; the screens are components/shelf.inc.
+ * launch. Painting is shelf_scene*.c; the screens are components/shelf.inc.
  * Motion follows the approved mock (js/breadbox-r8.js) step for step: a
  * spring-damped camera along the shelf, a box that comes out by itself when
  * the shelf settles, a shared, eased dolly between all shelves and one shelf. */
@@ -26,10 +27,16 @@
 #include "games_dir.h"
 #include "app_main.h"
 #include "bb_settings.h"
+#include "bb_update.h"
+#include "home_presentation.h"
 #include "bb_registry.h"
 #include "bb_index.h"
 #include "devtools.h"
 #include "shelf.h"
+#include "library_model.h"
+#include "cold_code.h"
+#include "list_look.h"
+#include "shelf_geometry.h"
 #include "shelf_input.h"
 #include "presetupdate.h"
 #include "ui_motion.h"
@@ -59,56 +66,12 @@ static float ease(float x) { return ui_motion_ease(x); }
 static float lerpf(float a, float b, float t) { return a + (b - a) * t; }
 static float rnd(int i) { float x = sinf(i * 127.1f + 311.7f) * 43758.5453f; return x - floorf(x); }
 
-static bool item_of(const bb_system_t *s, int row, bb_catalog_item *item)
-{
-	memset(item, 0, sizeof(*item));
-	const bb_shell_ops *ops = s->shell;
-	if (ops && ops->catalog) return ops->catalog(row, item);
-	bb_entry e;
-	if (!bb_index_get(s, row, item->path, sizeof(item->path), &e)) return false;
-	snprintf(item->title, sizeof(item->title), "%s", e.title);
-	snprintf(item->key, sizeof(item->key), "%s", e.key);
-	item->cover_id = bb_system_cover_id(s, row);
-	return true;
-}
-// Favorites and the play log use "<system>:<key>" (breadbox_favorites.c).
-static void key_of(const bb_system_t *s, bb_catalog_item *item)
-{
-	if (strchr(item->key, ':')) return;
-	char key[sizeof(item->key)];
-	snprintf(key, sizeof(key), "%s:%.240s", s->id, item->key);
-	snprintf(item->key, sizeof(item->key), "%s", key);
-}
-
-// Resolve actions against the current catalog, never an index saved before a publication.
-// This runs only on an explicit action, with no filesystem work.
-static int box_item(const shelf_box *b, bb_catalog_item *item)
-{
- int count=bb_system_library_count(b->system);
- for(int row=0;row<count;row++) {
-  if(!item_of(b->system,row,item))continue;
-  key_of(b->system,item);
-  if(!strcmp(item->key,b->key))return row;
- }
- return -1; // removed or not published yet: never launch a different game
-}
-
-static int sort_mode;
-static int compare(const void *a, const void *b)
-{
-	const shelf_box *x = a, *y = b;
-	if (sort_mode == SHELF_SORT_RECENT && x->last != y->last) return x->last > y->last ? -1 : 1;
-	if (sort_mode == SHELF_SORT_MOST && x->seconds != y->seconds) return x->seconds > y->seconds ? -1 : 1;
-	return strcasecmp(x->title, y->title);
-}
-
 static void lay_out(void)
 {
 	float maxh = 0, end = CASE_W_MIN - 60;
 	for (int r = 0; r < view.nrows; r++) {
 		shelf_row *row = &rows[r];
-		sort_mode = view.sort;
-		qsort(row->box, row->n, sizeof(*row->box), compare);
+		bb_library_sort(row, view.sort);
 		row->hmax = 0;
 		for (int i = 0; i < row->n; i++) row->hmax = fmaxf(row->hmax, row->box[i].h);
 		float s = row->s = row->hmax > 0 ? fminf(SHELF_CLOSE_MAX, SHELF_CLOSE_PX / row->hmax) : SHELF_CLOSE_MAX;
@@ -135,99 +98,6 @@ static void lay_out(void)
 	for (int r = 0; r < view.nrows; r++)
 		rows[r].base = (view.nrows - 1 - r) * view.row_gap;
 	view.layout++;
-}
-
-// A PlayStation product code in the file name ("Game [SLUS-00594]", "SLPS_012.34",
-// "SCES 01234"): out "SLUS-00594", false when there is none. No file is read.
-static bool serial_of(const char *path, char out[12])
-{
-	static const char *const prefix[] = { "SLUS", "SCUS", "SLES", "SCES", "SCED", "SLPS", "SLPM", "SCPS", "SCPM", "SIPS", "SLKA" };
-	const char *name = strrchr(path, '/');
-	name = name ? name + 1 : path;
-	for (const char *p = name; *p; p++) {
-		if (p > name && ((p[-1] >= 'A' && p[-1] <= 'Z') || (p[-1] >= 'a' && p[-1] <= 'z') || (p[-1] >= '0' && p[-1] <= '9'))) continue;
-		size_t k = 0;
-		while (k < sizeof(prefix) / sizeof(prefix[0]) && strncasecmp(p, prefix[k], 4)) k++;
-		if (k == sizeof(prefix) / sizeof(prefix[0])) continue;
-		const char *q = p + 4;
-		if (*q == '-' || *q == '_' || *q == ' ') q++;
-		char d[6];
-		int n = 0;
-		bool dot = false;
-		for (; n < 5; q++) {
-			if (*q >= '0' && *q <= '9') d[n++] = *q;
-			else if (*q == '.' && n == 3 && !dot) dot = true;
-			else break;
-		}
-		if (n < 5 || (*q >= '0' && *q <= '9')) continue;
-		d[5] = 0;
-		snprintf(out, 12, "%.4s-%s", prefix[k], d);
-		return true;
-	}
-	return false;
-}
-// The region of a product code: SLUS/SCUS North America, SLES/SCES/SCED PAL, the rest Japan (and Asia).
-static u8 serial_region(const char *serial)
-{
-	if (!strncmp(serial, "SLUS", 4) || !strncmp(serial, "SCUS", 4)) return SHELF_REGION_US;
-	if (!strncmp(serial, "SLES", 4) || !strncmp(serial, "SCES", 4) || !strncmp(serial, "SCED", 4)) return SHELF_REGION_PAL;
-	return SHELF_REGION_JP;
-}
-
-// The release region from No-Intro/Redump style tags in the file name: "(USA)",
-// "(Europe)", "(Japan)", "(E)", "(J)"... North America when there is none.
-static u8 region_of(const char *path)
-{
-	static const char *const pal[] = { "Europe", "UK", "Germany", "France", "Spain", "Italy", "Australia", "Netherlands", "Sweden", "PAL" };
-	const char *name = strrchr(path, '/');
-	name = name ? name + 1 : path;
-	for (const char *p = strchr(name, '('); p; p = strchr(p + 1, '(')) {
-		const char *q = p + 1;
-		if (!strncmp(q, "USA", 3) || !strncmp(q, "U)", 2) || !strncmp(q, "NTSC-U", 6)) return SHELF_REGION_US;
-		if (!strncmp(q, "Japan", 5) || !strncmp(q, "J)", 2) || !strncmp(q, "NTSC-J", 6)) return SHELF_REGION_JP;
-		if (!strncmp(q, "E)", 2)) return SHELF_REGION_PAL;
-		for (size_t i = 0; i < sizeof(pal) / sizeof(pal[0]); i++)
-			if (!strncmp(q, pal[i], strlen(pal[i]))) return SHELF_REGION_PAL;
-	}
-	return SHELF_REGION_US;
-}
-
-// More than one disc in the case: the library's disc count (the system's own: its playlists
-// too), or a "(Disc N)" / "(Disk N)" tag (a set the library could not group). Names only.
-static bool multi_disc(const bb_catalog_item *item)
-{
-	if (item->discs > 1) return true;
-	const char *name = strrchr(item->path, '/');
-	name = name ? name + 1 : item->path;
-	for (const char *p = strchr(name, '('); p; p = strchr(p + 1, '('))
-		if ((!strncasecmp(p + 1, "Disc ", 5) || !strncasecmp(p + 1, "Disk ", 5)) && p[6] >= '1' && p[6] <= '9') return true;
-	return false;
-}
-// A jewel case's thickness: two or more discs 25 mm (any region), else PAL 17, else 10.5.
-static float case_depth(const shelf_box *b)
-{
-	if (b->discs > 1) return SHELF_CASE_MULTI;
-	return b->region == SHELF_REGION_PAL ? SHELF_CASE_PAL : SHELF_CASE_SINGLE;
-}
-
-static void fill_box(shelf_box *b, const bb_system_t *s, int row, const bb_catalog_item *item, int number)
-{
-	static const bb_package plain = { .width = 130, .height = 180, .depth = 16, .style = BB_PACKAGE_CARTON,
-		.spine_head = 0xff2a2a2a, .band = 0xff2a2a2a };
-	const bb_package *p = s->package ? s->package : &plain;
-	*b = (shelf_box){ .system = s, .row = row, .cover = item->cover_id, .w = p->width, .h = p->height, .t = p->depth,
-		.fav = playlog_favourite(item->key), .spine = -1,
-		.last = playlog_last(item->key), .seconds = playlog_seconds(item->key) };
-	snprintf(b->key, sizeof(b->key), "%s", item->key);
-	snprintf(b->title, sizeof(b->title), "%s", item->title);
-	b->region = region_of(item->path);
-	b->discs = item->discs > 0 ? (u8)(item->discs < 255 ? item->discs : 255) : 1;
-	if (p->style == BB_PACKAGE_CASE) {   // a jewel case: the product code's region, the case for its discs
-		if (serial_of(item->path, b->serial)) b->region = serial_region(b->serial);
-		if (multi_disc(item) && b->discs < 2) b->discs = 2;
-		b->t = case_depth(b);
-	}
-	snprintf(b->tag, sizeof(b->tag), "%s\xc2\xb7%02d", s->short_name ? s->short_name : s->id, number);
 }
 
 // Shelves from the registry: Favorites on top, then every system with games.
@@ -278,39 +148,8 @@ static void build(void)
 	const bb_system_t *row_sys = nkeep ? rows[view.row].system : NULL, *hsel_sys = nkeep ? rows[view.hsel].system : NULL,
 		*prow_sys = nkeep && view.prow < nkeep ? rows[view.prow].system : NULL;
 	int keep_row = nkeep ? view.row : -1, keep_hsel = view.hsel, keep_prow = view.prow;
-	nboxes = 0;
-	view.nrows = 0;
-	view.total = 0;
-	view.last_title[0] = 0;
-	u32 newest = 0;
-	shelf_row *fav = &rows[view.nrows++];
-	*fav = (shelf_row){ .name = "Favorites" };
-	snprintf(fav->plate, sizeof(fav->plate), "FAVORITES");
-	const bb_system_t *order[BB_MAX_SYSTEMS];
-	unsigned norder = bb_system_display_order(order, BB_MAX_SYSTEMS, true);
-	for (unsigned i = 0; i < norder && view.nrows < MAX_ROWS; i++) {
-		const bb_system_t *s = order[i];
-		int n = bb_system_library_count(s);
-		shelf_row *row = &rows[view.nrows++];
-		*row = (shelf_row){ .system = s, .name = s->name, .box = boxes + nboxes };
-		snprintf(row->plate, sizeof(row->plate), "%s", s->name);
-		for (char *c = row->plate; *c; c++) if (*c >= 'a' && *c <= 'z') *c -= 32;
-		for (int k = 0; k < n && nboxes < MAX_BOXES; k++) {
-			bb_catalog_item item;
-			if (!item_of(s, k, &item)) continue;
-			key_of(s, &item);
-			fill_box(&boxes[nboxes++], s, k, &item, row->n + 1);
-			row->n++;
-			view.total++;
-			shelf_box *b = &boxes[nboxes - 1];
-			if (b->last > newest) { newest = b->last; snprintf(view.last_title, sizeof(view.last_title), "%s", b->title); }
-		}
-	}
-	// Favorites: copies of the starred boxes, after the system shelves in memory
-	fav->box = boxes + nboxes;
-	int systems_end = nboxes;
-	for (int i = 0; i < systems_end && nboxes < MAX_BOXES; i++)
-		if (boxes[i].fav) { boxes[nboxes++] = boxes[i]; fav->n++; }
+ nboxes=bb_library_build(rows,MAX_ROWS,boxes,MAX_BOXES,&view.nrows,&view.total,
+  view.last_title,sizeof(view.last_title),shelf_geometry_fill);
 	lay_out();
 	if (nkeep) {
 		for (int r = 0; r < view.nrows; r++) view.sel[r] = sel_recall(rows[r].system);
@@ -409,22 +248,29 @@ static void step(float dt)
 	ui_motion_settle(&w->hcur, &w->hcv, w->hsel, UI_MOTION_SETTLE_RATE, dt);
 	w->zoom = lerpf(w->zfrom, w->zto, ease((w->t - w->zt0) / UI_MOTION_CAMERA_S));   // the UI mock's walk up to a shelf
 	w->pull = lerpf(w->pfrom, w->pto, ease((w->t - w->pt0) / w->pdur));
-	// stop and it comes out by itself after UI_SHELF_AUTO_TAKEOUT_S (owner 2026-10-30: off, "it pulls
-	// the case out too quick"; the selected box only tips out, A takes it)
+	// stop and it comes out by itself after UI_SHELF_AUTO_TAKEOUT_S (disabled: the case would come out
+	// too quickly; the selected box only tips out, A takes it)
 	if (UI_SHELF_AUTO_TAKEOUT_S > 0 && w->arm && w->level == SHELF_ONE && w->zoom > .99f && w->pto == 0 && w->pull < .002f &&
 	    w->t - w->last_move > UI_SHELF_AUTO_TAKEOUT_S && fabsf(w->cur - w->sel[w->row]) < .03f && rows[w->row].n)
 		take_out();
 }
 
+// The Room walks its camera up to a shelf and back (the keys wait for it); the list themes have no camera,
+// so there the walk is over at once and the next key counts right away.
+static void walk(float to)
+{
+	if (!theme_is_room()) view.zoom = to;
+	view.zfrom = view.zoom; view.zto = to; view.zt0 = view.t;
+}
 static void open_shelf(int r)
 {
 	view.level = SHELF_ONE; view.row = r; view.cur = view.sel[r]; view.cv = 0;
-	view.zfrom = view.zoom; view.zto = 1; view.zt0 = view.t; view.arm = true; view.last_move = view.t + UI_MOTION_CAMERA_S;
+	walk(1); view.arm = true; view.last_move = view.t + UI_MOTION_CAMERA_S;
 }
 static void to_all(void)
 {
 	view.level = SHELF_ALL; view.hsel = view.row; view.hcur = view.row; view.hcv = 0;
-	view.zfrom = view.zoom; view.zto = 0; view.zt0 = view.t;
+	walk(0);
 	log_printf("shelf: walk back row=%d selected=%d games=%d\n", view.row, view.sel[view.row], rows[view.row].n);
 }
 
@@ -456,13 +302,8 @@ static void favorite(void)
 	shelf_row *r = &rows[view.row];
 	if (!r->n) return;
 	shelf_box *b = &r->box[view.sel[view.row]];
-	bb_catalog_item item;
-	int live_row=box_item(b, &item);
-	if (live_row < 0) return;
-	key_of(b->system, &item);
-	bool on = playlog_toggle_favourite(item.key);
-	for (int i = 0; i < nboxes; i++)
-		if (boxes[i].system == b->system && boxes[i].row == b->row) boxes[i].fav = on;
+ int live_row;
+ if(!bb_library_favorite(boxes,nboxes,b,&live_row))return;
 	// A changed index also changes cover game indices. Defer geometry until the
 	// normal drain invalidates cover slots; a metadata-only rebuild is safe only
 	// while the exact published catalog is still current.
@@ -487,22 +328,21 @@ static void favorite(void)
 static const bb_system_t *launched_sys;
 static int launched_row;
 static char launched_path[512];
-// A game that can't start says why, once, through the shared dialog (review R3; the 2D list said so too).
+// A game that can't start says why, once, through the shared dialog.
+// The game the list is on (the list themes play and set it up from the list: no box is taken out there).
+static const shelf_box *chosen_box(void)
+{
+	return view.level == SHELF_ONE && rows[view.row].n ? &rows[view.row].box[view.sel[view.row]] : NULL;
+}
 #define SHELF_LAUNCH_TITLE "Can't start this game"
-#define SHELF_LAUNCH_GONE "BreadBox can't find this game in your games folder now. Hold Y in your collection to check it again."
-#define SHELF_LAUNCH_DISCS "BreadBox couldn't write this game's disc list. Is the SD card full or locked?"
 static const char *launch_why;   // why the last launch() failed
 static bool launch(char *path, size_t cap)
 {
-	const shelf_box *b = shelf_pulled_box(&view);
-	launch_why = SHELF_LAUNCH_GONE;
+	const shelf_box *b = theme_is_room() ? shelf_pulled_box(&view) : chosen_box();
+	launch_why = BB_LIBRARY_LAUNCH_GONE;
 	if (!b) return false;
-	const bb_shell_ops *ops = b->system->shell;
-	bb_catalog_item item;
-	int row=box_item(b,&item);
-	bool ok = row >= 0 && (ops && ops->launch ? ops->launch(row, path, cap)
-		: snprintf(path, cap, "%s", item.path) < (int)cap);
-	if (!ok && row >= 0 && item.discs > 1) launch_why = SHELF_LAUNCH_DISCS;   // a game of several discs: its disc list could not be written
+ int row=-1;
+ bool ok=bb_library_launch(b,path,cap,&launch_why,&row);
 	if (ok) {
 		launched_sys = b->system;
 		launched_row = row;
@@ -511,24 +351,19 @@ static bool launch(char *path, size_t cap)
 	return ok;
 }
 
-static const ui_button_t bar_all[] = { { KEY_X, "Sort", UI_ICON_SORT, false }, { KEY_Y, "Rescan", UI_ICON_RESCAN, false }   /* a press says "Hold Y to rescan" */,
-	{ KEY_SELECT, "Settings", UI_ICON_TOGGLE, false }, { KEY_A, "Open", UI_ICON_OPEN, false } };
-static ui_button_t bar_one[] = { { KEY_B, "Collection", UI_ICON_BACK, false }, { KEY_Y, "Favorite", UI_ICON_STAR, false },
-	{ KEY_X, "Sort", UI_ICON_SORT, false }, { KEY_A, "Take out", UI_ICON_OPEN, false } };
-static ui_button_t bar_out[] = { { KEY_B, "Put back", UI_ICON_BACK, false }, { KEY_Y, "Favorite", UI_ICON_STAR, false },
-	{ KEY_X, "Options", UI_ICON_TOGGLE, false }, { KEY_A, "Play", UI_ICON_PLAY, false } };
 static const ui_button_t *bar(void)
 {
-	if (view.level == SHELF_ALL) return bar_all;
-	bar_out[3].label = favorite_pending ? "Returning..." : view.pto == 0 ? "Take out"
-		: progress() < 1 ? (view.sped ? "Lifting..." : "Lift faster") : view.side ? "Front" : "Play";
-	bool on = false;
-	if (rows[view.row].n) on = rows[view.row].box[view.sel[view.row]].fav;
-	bar_one[1].on = bar_out[1].on = on;
-	return view.pto == 1 || view.pull > .002f ? bar_out : bar_one;
+ static ui_button_t buttons[BB_LIBRARY_ACTIONS];
+ int phase=view.level==SHELF_ALL ? BB_LIBRARY_SYSTEMS : !theme_is_room() ? BB_LIBRARY_LIST
+  : view.pto==1 || view.pull>.002f ? BB_LIBRARY_HELD : BB_LIBRARY_GAMES;
+ const char *primary=phase!=BB_LIBRARY_HELD ? NULL : favorite_pending ? "Returning..." : view.pto==0 ? "Take out"
+  : progress()<1 ? (view.sped ? "Lifting..." : "Lift faster") : view.side ? "Front" : "Play";
+ bool on=view.level!=SHELF_ALL && rows[view.row].n && rows[view.row].box[view.sel[view.row]].fav;
+ bb_library_actions(phase,on,primary,buttons,BB_LIBRARY_ACTIONS);
+ return buttons;
 }
 
-// A check that could not read part of the card says so once per check, through the shared dialog (review R3).
+// A check that could not read part of the card says so once per check, through the shared dialog.
 // Only a real read error: a slow or big card always finishes, and a memory limit keeps the games found before
 // (bb_index.h). No counts: the player can't act on them.
 #define SHELF_SCAN_TITLE "Some games may be missing"
@@ -653,8 +488,8 @@ static void refresh_played(void)
 	for (int n = 0; n < 16 && stats_at < nboxes; n++, stats_at++) {
 		shelf_box *b = &boxes[stats_at];
 		bb_catalog_item item;
-		if (!stats_sys || b->system != stats_sys || !item_of(b->system, b->row, &item) || strcasecmp(bare(item.path), bare(stats_path))) continue;
-		key_of(b->system, &item);
+		if (!stats_sys || b->system != stats_sys || !bb_library_item(b->system, b->row, &item) || strcasecmp(bare(item.path), bare(stats_path))) continue;
+		bb_library_key(b->system, &item);
 		b->last = playlog_last(item.key);
 		b->seconds = playlog_seconds(item.key);
 		log_printf("shelf: %s played, last %lu, %lu s in all\n", b->title, (unsigned long)b->last, (unsigned long)b->seconds);
@@ -711,7 +546,7 @@ bool shelf_preload_step(void)
 	refresh_played();
 	if (step == 0 || (step == 3 && (!built || generation != key))) {   // the shelves, once the library index has settled
 		if (!library_settled(still)) {shelf_preload_end(true);return false;}
-		// Round 16: opening the GBA library drains the covers' worker (covers_library_begin), which on a cold card
+		// Opening the GBA library drains the covers' worker (covers_library_begin), which on a cold card
 		// sits in a download or a decode for seconds: 2621 froze the room 5.2 s on its first start. Ask it to stop
 		// (never waits: the room goes on drawing); the shelves are built on the frame it has stopped.
 		preload_pause=true;
@@ -729,8 +564,8 @@ bool shelf_preload_step(void)
 		if (step == 0) preload_step = boxes ? 1 : 0;
 		return false;
 	}
-	if (step == 1) { shelf_scene_prepare(); preload_step = 2; return false; }
-	if (step == 2) { if (!theme_room(theme()) || room_hands_preload_step()) preload_step = 3; return false; }   // a part a frame
+	if (step == 1) { if(theme_is_room())shelf_scene_prepare(); preload_step = 2; return false; }
+	if (step == 2) { if (!theme_is_room() || room_hands_preload_step()) preload_step = 3; return false; }   // a part a frame
 	return built && generation == library_key();
 }
 bool shelf_wall_pose(room_pose *out)
@@ -781,7 +616,7 @@ static void show_played(void)
 		bool known = at >= 0;
 		for (int i = 0; i < rows[r].n && at < 0; i++) {
 			bb_catalog_item item;
-			if (!played_path[0] || !item_of(s, rows[r].box[i].row, &item)) continue;
+			if (!played_path[0] || !bb_library_item(s, rows[r].box[i].row, &item)) continue;
 			known = true;
 			if (!strcmp(item.path, played_path)) at = i;
 		}
@@ -804,6 +639,212 @@ static void show_played(void)
 	}
 }
 
+static PSX3D_COLD int shelf_publications(bool launching,bool *publication_changed,bool refresh_requested,
+ bool *hands_ready,bool *remote_settings,u64 *last,u64 logic0)
+{
+		// Every visit follows publication, including a scan started in the room.
+		// Rebuild only after the held box is back and the catalog has settled.
+		(*publication_changed) |= bb_index_poll(true); // Adapter presentation can finish after shared counts stop changing.
+		if(refresh_requested && bb_index_status()!=BB_INDEX_SCANNING && view.notice && !strcmp(view.notice,"Checking collection...")) {
+			view.notice=scan_stopped_early() ? NULL : "Collection checked";view.notice_t=view.t;   // an early stop has its card
+		}
+		if (!launching && view.pull < .002f && scan_card()) {
+			if (!aptMainLoop() || !gspHasGpuRight()) return 0;   // closed inside the card: no more drawing
+			settle_input(); *last = svcGetSystemTick();
+		}
+		if (covers_home_frame()) { *last = svcGetSystemTick(); return -2; }   // HOME: held back while the covers use the network (as at Home)
+		u64 l1 = svcGetSystemTick();
+		if (dev_tick(false)) return 3;
+		if (dev_ui_take() == DEV_UI_SETTINGS) *remote_settings = true;
+		int saves = bb_platform_saves(BB_SAVES_MENU);   // the last game's save could not be written: ask
+		if (saves == BB_SAVES_CLOSE) return 0;            // closed inside its dialog: no more drawing
+		if (saves == BB_SAVES_ASKED) { settle_input(); *last = svcGetSystemTick(); }
+		// the library changed: the shelves again, once the covers' worker has paused (never
+		// waited for here: it may be in a download, a stalled frame of half a second)
+		static unsigned seen_key, still;
+		still = library_key() == seen_key ? still + 1 : 0;
+		seen_key = library_key();
+		u64 l2 = svcGetSystemTick();
+		if(theme_is_room())room_scene_library_follow(false);   // the bookcase follows the library here too
+		u64 l3 = svcGetSystemTick();
+		if(kept.saved || __atomic_load_n(&restore.done,__ATOMIC_ACQUIRE))restore_boxes();
+		refresh_played();
+		u64 l4 = svcGetSystemTick();
+		if (l4 - logic0 > SYSCLOCK_ARM11 / 125)   // over 8 ms: which part (the pace line only says "logic")
+			log_printf("shelf: logic %.1f ms: library %.1f, remote %.1f, bookcase %.1f, played %.1f\n", (l4 - logic0) * 1000.0 / SYSCLOCK_ARM11,
+				(l1 - logic0) * 1000.0 / SYSCLOCK_ARM11, (l2 - l1) * 1000.0 / SYSCLOCK_ARM11, (l3 - l2) * 1000.0 / SYSCLOCK_ARM11, (l4 - l3) * 1000.0 / SYSCLOCK_ARM11);
+		if (theme_is_room() && !(*hands_ready)) {
+			u64 h0 = svcGetSystemTick();
+			bool still_shelf = view.pull < .002f && view.pto == 0 && fabsf(view.cv) < .3f && fabsf(view.zoom - view.zto) < .002f;
+			// a still shelf has time to spare; on the Old 3DS 1 ms: with the chosen box's case being
+			// made (warm_case, ~1.5 ms) 3 ms took its 4 ms drawing + 7.5 ms GPU past the frame (33 ms)
+			room_hands_prepare_ms(still_shelf && g_new3ds ? 3 : 1);
+			(*hands_ready) = room_hands_preload_step();
+			room_pace_add(ROOM_PACE_PRELOAD, svcGetSystemTick() - h0);
+		}
+		if (cover_drain(view.pull < .002f && view.pto == 0 && want_out < 0 && !launching && ((*publication_changed) || generation != library_key()) && library_settled(still))) {
+			// the covers' slots point at the old list: let them go. Not covers_reset(): that is the
+			// user's rescan (Y), it forgets the database's misses and writes them to the SD card on
+			// this thread (174 ms in Azahar, once after every game)
+			u64 t0 = svcGetSystemTick();
+			if (!covers_library_begin()) {covers_resume();return -2;} covers_library_end();
+			build(); (*publication_changed)=false; favorite_rebuild_pending=false; show_played(); cover_drain(false);
+			if(refresh_requested){view.notice="Collection updated";view.notice_t=view.t;}
+			log_printf("shelf: the library changed (%u games), shelves made again in %.1f ms\n", (unsigned)bb_system_total(),
+				(svcGetSystemTick() - t0) * 1000.0 / SYSCLOCK_ARM11);
+		}
+		if(return_catalog && bb_index_complete() && generation==library_key() && !kept.saved && !__atomic_load_n(&restore.done,__ATOMIC_ACQUIRE))return_catalog=false;
+ return -1;
+}
+
+static PSX3D_COLD u32 shelf_touch(u32 k)
+{
+		if (k & KEY_TOUCH) {
+			touchPosition tp;
+			hidTouchRead(&tp);
+			if (tp.py < BAR_TOP) {
+				int hit;
+				if (view.level == SHELF_ONE) {   // a box, a letter (-2: one without games), else the card: A
+					hit = theme_is_room() ? shelf_scene_strip_hit(&view, tp.px, tp.py) : list_look_library_hit(&view, tp.px, tp.py);
+					if (hit == -1 && theme_is_room()) hit = shelf_room_letter_hit(&view, tp.px, tp.py);
+					if (hit >= 0 && hit != view.sel[view.row]) {
+						if (view.pto == 1) put_back(1.5f);
+						view.sel[view.row] = hit; view.last_move = view.t; view.arm = true;
+					} else if (theme_is_room() ? hit == -1 : hit >= 0 && list_look_library_in_rows(&view, tp.py)) k |= KEY_A;   // the Room's card; a list's chosen row again
+				} else if (view.level == SHELF_ALL && (hit = (theme_is_room()?shelf_scene_card_hit(&view,tp.px,tp.py):list_look_library_hit(&view,tp.px,tp.py))) >= 0) {
+					if (hit == view.hsel) k |= KEY_A; else view.hsel = hit;
+				}
+			}
+		}
+ return k;
+}
+
+static PSX3D_COLD int shelf_system_keys(u32 k,u32 held,shelf_repeat *repeat,shelf_hold *rescan_hold,bool *refresh_requested)
+{
+			shelf_browse_step(repeat, 0, 0, view.t);
+			if (fabsf(view.zoom - view.zto) > .01f) return -1;
+			if (k & (KEY_UP | KEY_LEFT | KEY_CPAD_UP | KEY_CPAD_LEFT)) {
+				if (view.hsel > 0) { view.hsel--; sfx_play(SFX_MOVE); } else view.hcv -= .7f;
+			}
+			if (k & (KEY_DOWN | KEY_RIGHT | KEY_CPAD_DOWN | KEY_CPAD_RIGHT)) {
+				if (view.hsel < view.nrows - 1) { view.hsel++; sfx_play(SFX_MOVE); } else view.hcv += .7f;
+			}
+			if (k & KEY_A) { open_shelf(view.hsel); sfx_play(SFX_SELECT); }
+			if (k & KEY_B) {
+				sfx_play(SFX_BACK);
+				return 4;
+			}
+			if (k & KEY_X) {
+				view.sort = (view.sort + 1) % SHELF_SORTS; build();
+				view.notice = sort_names[view.sort]; view.notice_t = view.t; sfx_play(SFX_SELECT);
+			}
+			// Rescan is a deliberate hold, including a held touch on its existing tab.
+			if(k & KEY_Y){view.notice="Hold Y to rescan";view.notice_t=view.t;}
+			u32 rescan_keys = held | (k & KEY_Y);
+			if (held & KEY_TOUCH) rescan_keys |= ui_bar_input(bar(), BB_LIBRARY_ACTIONS, KEY_TOUCH) & KEY_Y;
+			if (shelf_hold_action(rescan_hold, (rescan_keys & KEY_Y) != 0, view.t)) {
+				if(!covers_stop_wait()){covers_resume();return -1;} covers_reset();
+				bb_games_dir_retry();
+				library_result loaded=library_load_result(g_cfg.games_dir,true);
+                if (!aptMainLoop()) return 0; // lifecycle takes ownership of the pause
+                covers_resume(); // staying in the menu, including empty/cancel results
+                if(loaded==LIBRARY_EMPTY && !bb_system_total()){return 5;}
+                if(loaded==LIBRARY_CANCELLED){view.notice=NULL;return -1;}
+				*refresh_requested=true;
+				view.notice = "Checking collection..."; view.notice_t = view.t; sfx_play(SFX_SELECT);
+			}
+
+			return -1;
+}
+
+static PSX3D_COLD bool shelf_game_keys(u32 k,u32 held,shelf_repeat *repeat,shelf_hold *rescan_hold,bool *launching)
+{
+		// one shelf
+		{
+			// All directions browse this shelf; bumpers page only while browsing.
+			shelf_hold_action(rescan_hold, false, view.t);
+			if (!theme_is_room()) { view.pull = view.pfrom = view.pto = 0; want_out = -1; }   // a box the Room left out or asked for (the theme changed in Settings)
+			static shelf_repeat shoulder;
+			bool out = view.pto == 1 || view.pull > .002f;
+			// The list themes' A-Z list: Left / Right step letters as L / R do (the list itself runs up and down).
+			const u32 sideways = KEY_LEFT | KEY_RIGHT | KEY_CPAD_LEFT | KEY_CPAD_RIGHT;
+			u32 side = !theme_is_room() && !out && view.sort == SHELF_SORT_AZ ? sideways : 0;
+			int delta = shelf_browse_step(repeat, k & ~side, held & ~side, view.t);
+			if (delta) move(delta, SFX_MOVE);
+			if (!out) {   // A to Z: the next / previous letter (stops at the ends); another order: five games
+				u32 as_l = KEY_LEFT | KEY_CPAD_LEFT, as_r = KEY_RIGHT | KEY_CPAD_RIGHT;
+				u32 kd = k | (k & side & as_l ? KEY_L : 0) | (k & side & as_r ? KEY_R : 0);
+				u32 hd = held | (held & side & as_l ? KEY_L : 0) | (held & side & as_r ? KEY_R : 0);
+				unsigned lr = shelf_shoulder_step(&shoulder, kd, hd, view.t);
+				int d = lr & KEY_L ? -1 : 1;
+				if (lr && view.sort == SHELF_SORT_AZ) move(bb_library_letter_jump(&rows[view.row], view.sel[view.row], d) - view.sel[view.row], SFX_JUMP);
+				else if (lr) move(d * UI_SHELF_PAGE, SFX_JUMP);
+				k &= ~(KEY_L | KEY_R);
+			}
+			if (k & (KEY_L | KEY_R)) {
+				if (out) {
+					if (theme_is_room() && !shelf_scene_hands()) {
+						view.notice = "Turning is unavailable in this theme"; view.notice_t = view.t; sfx_play(SFX_ERROR);
+					} else if (progress() < 1 || turning()) {   // after the lift / this turn, the same way
+						int q = view.turn_queued + shelf_turn_steps(k);
+						view.turn_queued = q > 2 ? 2 : q < -2 ? -2 : q;
+						view.turn_home = false;
+					} else turn(shelf_turn_steps(k));
+				}
+				// A rotation at either endpoint is still a rotation, never a page.
+				k &= ~(KEY_L | KEY_R);
+			}
+		}
+		if ((k & KEY_A) && !theme_is_room()) {   // the list themes: A plays the chosen game (PSX3D v0.5.2), no box to take out
+			if (rows[view.row].n) { view.play_t0 = view.t; *launching = true; sfx_play(SFX_LAUNCH); k &= ~(KEY_B | KEY_Y | KEY_X); }   // this game: nothing else pressed with A may change the list under it
+			else sfx_cancel();
+		} else if (k & KEY_A) {
+			if (view.pto == 1 && progress() < 1) hurry();                // already coming: sooner
+			else if (putting_back()) { take_back_out(); sfx_play(SFX_SELECT); }
+			else if (view.pto == 0 && view.pull < .02f && rows[view.row].n) { want_out = view.t; want_row = view.row; want_idx = view.sel[view.row]; sfx_play(SFX_SELECT); }   // its cover first
+			else if (view.pto == 1 && view.pull > .98f && (view.side || view.turn_queued) && turning()) { view.turn_home = true; view.turn_queued = 0; }   // Front after this turn
+			else if (view.pto == 1 && view.pull > .98f && view.side) turn(shelf_turn_home(view.side));
+			else if (view.pto == 1 && view.pull > .98f) { view.play_t0 = view.t; *launching = true; sfx_play(SFX_LAUNCH); }
+			else if (!rows[view.row].n) sfx_cancel();   // an empty shelf: nothing to take
+		}
+		// A on a box: out once its full-size cover, its back and its case texture are made (a moment, at most
+		// UI_SHELF_COVER_WAIT_S), never the small cover in the hand; moved on meanwhile: not
+		if (want_out >= 0) {
+			const shelf_row *wr = &rows[view.row];
+			if (view.row != want_row || view.sel[view.row] != want_idx || view.level != SHELF_ONE || !wr->n || view.pto != 0) want_out = -1;
+			else {
+				bool ready = covers_full(wr->box[view.sel[view.row]].cover) && (!theme_is_room() || shelf_scene_case_ready(&view));
+				if (ready || view.t - want_out > UI_SHELF_COVER_WAIT_S) {
+					log_printf("shelf: take-out after %.0f ms, case %s\n", (view.t - want_out) * 1000, ready ? "ready" : "late");
+					want_out = -1; take_out();
+				}
+			}
+		}
+		if (k & KEY_B) {
+			if (want_out >= 0) want_out = -1;
+			else if (view.pto == 1) { put_back(1); view.arm = false; }   // half way out: back the same way
+			else if (putting_back()) hurry();
+			else if (view.pull < .02f) to_all();
+			sfx_play(SFX_BACK);
+		}
+		if (k & KEY_Y) favorite();
+		if (k & KEY_X) {
+			const shelf_box *out = !theme_is_room() ? chosen_box() : (view.pto == 1 || view.pull > .002f) ? shelf_pulled_box(&view) : NULL;
+			if (out) {
+                bb_catalog_item item;
+                if(bb_library_resolve(out,&item)>=0)
+                    bb_settings_game(out->system,item.path,item.key,item.title,draw_top,NULL);
+                settle_input(); return true;
+            }
+			else if (!theme_is_room()) sfx_cancel();   // a list without games: no game for Options (Sort is on the systems' bar)
+			else {
+				view.sort = (view.sort + 1) % SHELF_SORTS; build();
+				view.notice = sort_names[view.sort]; view.notice_t = view.t; sfx_play(SFX_SELECT);
+			}
+		}
+ return false;
+}
+
 int shelf_run(char *path, size_t cap)
 {
 	// The Library is the room's bookcase. No room (its file failed to load after a game, e.g. out of memory):
@@ -824,7 +865,7 @@ int shelf_run(char *path, size_t cap)
 	bool raised = room_pace_priority(true);   // already raised by the room: it puts it back
 	shelf_scene_begin(&view);
 	shelf_scene_prepare();   // its textures before the first frame (~100 ms in that frame after a game)
-	ui_wants_3d = video_room_3d();   // the room's bookcase in 3D also on the Old (30 fps)
+	ui_wants_3d = theme_is_room() && video_room_3d();   // the room's bookcase in 3D also on the Old (30 fps)
 	music_play(true);
 	covers_resume();
 	// the hands file (1.5 MB) in parts, a part a frame, not on the first frame after a game
@@ -841,58 +882,9 @@ int shelf_run(char *path, size_t cap)
 	room_pace_restart();
 	while (aptMainLoop()) {
 		u64 logic0 = svcGetSystemTick();
-		// Every visit follows publication, including a scan started in the room.
-		// Rebuild only after the held box is back and the catalog has settled.
-		publication_changed |= bb_index_poll(true); // Adapter presentation can finish after shared counts stop changing.
-		if(refresh_requested && bb_index_status()!=BB_INDEX_SCANNING && view.notice && !strcmp(view.notice,"Checking collection...")) {
-			view.notice=scan_stopped_early() ? NULL : "Collection checked";view.notice_t=view.t;   // an early stop has its card
-		}
-		if (!launching && view.pull < .002f && scan_card()) {
-			if (!aptMainLoop() || !gspHasGpuRight()) break;   // closed inside the card: no more drawing
-			settle_input(); last = svcGetSystemTick();
-		}
-		if (covers_home_frame()) { last = svcGetSystemTick(); continue; }   // HOME: held back while the covers use the network (as at Home)
-		u64 l1 = svcGetSystemTick();
-		if (dev_tick(false)) { result = 3; break; }
-		if (dev_ui_take() == DEV_UI_SETTINGS) remote_settings = true;
-		int saves = bb_platform_saves(BB_SAVES_MENU);   // the last game's save could not be written: ask
-		if (saves == BB_SAVES_CLOSE) break;            // closed inside its dialog: no more drawing
-		if (saves == BB_SAVES_ASKED) { settle_input(); last = svcGetSystemTick(); }
-		// the library changed: the shelves again, once the covers' worker has paused (never
-		// waited for here: it may be in a download, a stalled frame of half a second)
-		static unsigned seen_key, still;
-		still = library_key() == seen_key ? still + 1 : 0;
-		seen_key = library_key();
-		u64 l2 = svcGetSystemTick();
-		room_scene_library_follow(false);   // the bookcase follows the library here too
-		u64 l3 = svcGetSystemTick();
-		if(kept.saved || __atomic_load_n(&restore.done,__ATOMIC_ACQUIRE))restore_boxes();
-		refresh_played();
-		u64 l4 = svcGetSystemTick();
-		if (l4 - logic0 > SYSCLOCK_ARM11 / 125)   // over 8 ms: which part (the pace line only says "logic")
-			log_printf("shelf: logic %.1f ms: library %.1f, remote %.1f, bookcase %.1f, played %.1f\n", (l4 - logic0) * 1000.0 / SYSCLOCK_ARM11,
-				(l1 - logic0) * 1000.0 / SYSCLOCK_ARM11, (l2 - l1) * 1000.0 / SYSCLOCK_ARM11, (l3 - l2) * 1000.0 / SYSCLOCK_ARM11, (l4 - l3) * 1000.0 / SYSCLOCK_ARM11);
-		if (!hands_ready) {
-			u64 h0 = svcGetSystemTick();
-			bool still_shelf = view.pull < .002f && view.pto == 0 && fabsf(view.cv) < .3f && fabsf(view.zoom - view.zto) < .002f;
-			// a still shelf has time to spare; on the Old 3DS 1 ms: with the chosen box's case being
-			// made (warm_case, ~1.5 ms) 3 ms took its 4 ms drawing + 7.5 ms GPU past the frame (33 ms)
-			room_hands_prepare_ms(still_shelf && g_new3ds ? 3 : 1);
-			hands_ready = room_hands_preload_step();
-			room_pace_add(ROOM_PACE_PRELOAD, svcGetSystemTick() - h0);
-		}
-		if (cover_drain(view.pull < .002f && view.pto == 0 && want_out < 0 && !launching && (publication_changed || generation != library_key()) && library_settled(still))) {
-			// the covers' slots point at the old list: let them go. Not covers_reset(): that is the
-			// user's rescan (Y), it forgets the database's misses and writes them to the SD card on
-			// this thread (174 ms in Azahar, once after every game)
-			u64 t0 = svcGetSystemTick();
-			covers_library_begin(); covers_library_end();
-			build(); publication_changed=false; favorite_rebuild_pending=false; show_played(); cover_drain(false);
-			if(refresh_requested){view.notice="Collection updated";view.notice_t=view.t;}
-			log_printf("shelf: the library changed (%u games), shelves made again in %.1f ms\n", (unsigned)bb_system_total(),
-				(svcGetSystemTick() - t0) * 1000.0 / SYSCLOCK_ARM11);
-		}
-		if(return_catalog && bb_index_complete() && generation==library_key() && !kept.saved && !__atomic_load_n(&restore.done,__ATOMIC_ACQUIRE))return_catalog=false;
+        int publication=shelf_publications(launching,&publication_changed,refresh_requested,&hands_ready,&remote_settings,&last,logic0);
+        if(publication==-2)continue;
+        if(publication>=0){result=publication;break;}
 		u64 now = svcGetSystemTick();
 		float elapsed = (float)(now - last) / SYSCLOCK_ARM11;
 		last = now;
@@ -905,7 +897,7 @@ int shelf_run(char *path, size_t cap)
 			if (steps) turn(steps);
 		}
 		if (launching) {
-			if (view.t - view.play_t0 > shelf_scene_launch_seconds(&view)) {
+			if (view.t - view.play_t0 > (theme_is_room() ? shelf_scene_launch_seconds(&view) : 0)) {   // the hands open the case; a list has nothing to wait for
                 input_poll();
                 u32 edge=launch_out ? 0 : UI_SWAP_REMOTE;
                 launch_out=true;
@@ -944,123 +936,13 @@ int shelf_run(char *path, size_t cap)
 			else if (k & KEY_B) hurry();
 			goto present;
 		}   // closes the shelf: home.c goes back to the room, never out of the app
-		if (k & KEY_TOUCH) {
-			touchPosition tp;
-			hidTouchRead(&tp);
-			if (tp.py < BAR_TOP) {
-				int hit;
-				if (view.level == SHELF_ONE && (hit = shelf_scene_strip_hit(&view, tp.px, tp.py)) >= 0) {
-					if (hit != view.sel[view.row]) {
-						if (view.pto == 1) put_back(1.5f);
-						view.sel[view.row] = hit; view.last_move = view.t; view.arm = true;
-					}
-				} else if (view.level == SHELF_ALL && (hit = shelf_scene_card_hit(&view, tp.px, tp.py)) >= 0) {
-					if (hit == view.hsel) k |= KEY_A; else view.hsel = hit;
-				} else if (view.level == SHELF_ONE)
-					k |= KEY_A;
-			}
-		}
-		if (view.level == SHELF_ALL) {
-			shelf_browse_step(&repeat, 0, 0, view.t);
-			if (fabsf(view.zoom - view.zto) > .01f) goto present;
-			if (k & (KEY_UP | KEY_LEFT | KEY_CPAD_UP | KEY_CPAD_LEFT)) {
-				if (view.hsel > 0) { view.hsel--; sfx_play(SFX_MOVE); } else view.hcv -= .7f;
-			}
-			if (k & (KEY_DOWN | KEY_RIGHT | KEY_CPAD_DOWN | KEY_CPAD_RIGHT)) {
-				if (view.hsel < view.nrows - 1) { view.hsel++; sfx_play(SFX_MOVE); } else view.hcv += .7f;
-			}
-			if (k & KEY_A) { open_shelf(view.hsel); sfx_play(SFX_SELECT); }
-			if (k & KEY_B) {
-				sfx_play(SFX_BACK);
-				result = 4;   // the room glides home (home.c)
-				break;
-			}
-			if (k & KEY_X) {
-				view.sort = (view.sort + 1) % SHELF_SORTS; build();
-				view.notice = sort_names[view.sort]; view.notice_t = view.t; sfx_play(SFX_SELECT);
-			}
-			// Rescan is a deliberate hold, including a held touch on its existing tab.
-			if(k & KEY_Y){view.notice="Hold Y to rescan";view.notice_t=view.t;}
-			u32 rescan_keys = held | (k & KEY_Y);
-			if (held & KEY_TOUCH) rescan_keys |= ui_bar_input(bar_all, 4, KEY_TOUCH) & KEY_Y;
-			if (shelf_hold_action(&rescan_hold, (rescan_keys & KEY_Y) != 0, view.t)) {
-				covers_stop_wait(); covers_reset();
-				bb_games_dir_retry();
-				library_result loaded=library_load_result(g_cfg.games_dir,true);
-                if (!aptMainLoop()) break; // lifecycle takes ownership of the pause
-                covers_resume(); // staying in the menu, including empty/cancel results
-                if(loaded==LIBRARY_EMPTY && !bb_system_total()){result=5;break;}
-                if(loaded==LIBRARY_CANCELLED){view.notice=NULL;goto present;}
-				refresh_requested=true;
-				view.notice = "Checking collection..."; view.notice_t = view.t; sfx_play(SFX_SELECT);
-			}
-
-			goto present;
-		}
-		// one shelf
-		{
-			// All directions browse this shelf; bumpers page only while browsing.
-			shelf_hold_action(&rescan_hold, false, view.t);
-			int delta = shelf_browse_step(&repeat, k, held, view.t);
-			if (delta) move(delta, SFX_MOVE);
-			if (k & (KEY_L | KEY_R)) {
-				if (view.pto == 1 || view.pull > .002f) {
-					if (!shelf_scene_hands()) {
-						view.notice = "Turning is unavailable in this theme"; view.notice_t = view.t; sfx_play(SFX_ERROR);
-					} else if (progress() < 1 || turning()) {   // after the lift / this turn, the same way
-						int q = view.turn_queued + shelf_turn_steps(k);
-						view.turn_queued = q > 2 ? 2 : q < -2 ? -2 : q;
-						view.turn_home = false;
-					} else turn(shelf_turn_steps(k));
-				} else if (k & KEY_L) move(-5, SFX_JUMP);
-				else move(5, SFX_JUMP);
-				// A rotation at either endpoint is still a rotation, never a page.
-				k &= ~(KEY_L | KEY_R);
-			}
-		}
-		if (k & KEY_A) {
-			if (view.pto == 1 && progress() < 1) hurry();                // already coming: sooner
-			else if (putting_back()) { take_back_out(); sfx_play(SFX_SELECT); }
-			else if (view.pto == 0 && view.pull < .02f && rows[view.row].n) { want_out = view.t; want_row = view.row; want_idx = view.sel[view.row]; sfx_play(SFX_SELECT); }   // its cover first
-			else if (view.pto == 1 && view.pull > .98f && (view.side || view.turn_queued) && turning()) { view.turn_home = true; view.turn_queued = 0; }   // Front after this turn
-			else if (view.pto == 1 && view.pull > .98f && view.side) turn(shelf_turn_home(view.side));
-			else if (view.pto == 1 && view.pull > .98f) { view.play_t0 = view.t; launching = true; sfx_play(SFX_LAUNCH); }
-			else if (!rows[view.row].n) sfx_cancel();   // an empty shelf: nothing to take
-		}
-		// A on a box: out once its full-size cover, its back and its case texture are made (a moment, at most
-		// UI_SHELF_COVER_WAIT_S), never the small cover in the hand; moved on meanwhile: not
-		if (want_out >= 0) {
-			const shelf_row *wr = &rows[view.row];
-			if (view.row != want_row || view.sel[view.row] != want_idx || view.level != SHELF_ONE || !wr->n || view.pto != 0) want_out = -1;
-			else {
-				bool ready = covers_full(wr->box[view.sel[view.row]].cover) && shelf_scene_case_ready(&view);
-				if (ready || view.t - want_out > UI_SHELF_COVER_WAIT_S) {
-					log_printf("shelf: take-out after %.0f ms, case %s\n", (view.t - want_out) * 1000, ready ? "ready" : "late");
-					want_out = -1; take_out();
-				}
-			}
-		}
-		if (k & KEY_B) {
-			if (want_out >= 0) want_out = -1;
-			else if (view.pto == 1) { put_back(1); view.arm = false; }   // half way out: back the same way
-			else if (putting_back()) hurry();
-			else if (view.pull < .02f) to_all();
-			sfx_play(SFX_BACK);
-		}
-		if (k & KEY_Y) favorite();
-		if (k & KEY_X) {
-			const shelf_box *out = (view.pto == 1 || view.pull > .002f) ? shelf_pulled_box(&view) : NULL;
-			if (out) {
-                bb_catalog_item item;
-                if(box_item(out,&item)>=0)
-                    bb_settings_game(out->system,item.path,item.key,item.title,draw_top,NULL);
-                settle_input(); last = svcGetSystemTick(); goto present;
-            }
-			else {
-				view.sort = (view.sort + 1) % SHELF_SORTS; build();
-				view.notice = sort_names[view.sort]; view.notice_t = view.t; sfx_play(SFX_SELECT);
-			}
-		}
+        k=shelf_touch(k);
+        if(view.level==SHELF_ALL) {
+            int action=shelf_system_keys(k,held,&repeat,&rescan_hold,&refresh_requested);
+            if(action>=0){result=action;break;}
+            goto present;
+        }
+        if(shelf_game_keys(k,held,&repeat,&rescan_hold,&launching))last=svcGetSystemTick();
 	present:
 		// every path here may follow a dialog that HOME > Close ended: no covers, scene or present after it
 		if (!aptMainLoop() || !gspHasGpuRight()) break;
@@ -1072,7 +954,7 @@ int shelf_run(char *path, size_t cap)
 		// a preset pack the covers' worker downloaded: checked and swapped in here, used from the next game
 		// (the Library is its one main-thread step; one parse, ~0.2 s on the Old 3DS, once per new pack)
 		if (!launching) presets_update_poll();
-		shelf_scene_frame(&view);
+		if(theme_is_room())shelf_scene_frame(&view);
 		music_update();
 		{   // frame pacing by moment (the log's "pace:" lines)
 			const char *moment = launching ? "library start" : view.pull > .002f ? "library hands"
@@ -1086,7 +968,7 @@ int shelf_run(char *path, size_t cap)
 		// bookcase both models draw it at 1x, as the room menu (video_room_plain)
 		ui_wants_plain = true;
 		video_room_plain(true);
-		ui_room_eyes = true;   // the room's bookcase: 3D also on the Old 3DS (video.c)
+		ui_room_eyes = theme_is_room();   // the room's bookcase: 3D also on the Old 3DS (video.c)
 		video_present_vsync(false, draw_top, draw_bottom, NULL);
 		ui_room_eyes = false;
 		video_room_plain(false);

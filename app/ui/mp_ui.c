@@ -1,4 +1,4 @@
-// Play together and Share PSX3D screens (MULTIPLAYER-DESIGN.md in the UI mock).
+// Play together and Share BreadBox screens.
 #include "share_about.h"
 #include "play_together.h"
 
@@ -7,7 +7,7 @@ void mp_hub_run(void)
 {
 }
 
-// Main menu > Share PSX3D.
+// Main menu > Share BreadBox.
 void share_run(void)
 {
 	share_about_run(false);

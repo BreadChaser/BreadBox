@@ -159,7 +159,7 @@ def extract(path,start,end):
 
 # S2: the real exit_step / exit_step_main under a scheduling fake. The audio helper's entry is
 # delayed past its join timeout, the GPU helper then runs, then the first one is let in. Each
-# helper must run the step it was given (round 1's shared pointer gave audio=0, gfx=2).
+# helper must run the step it was given (a shared pointer gave audio=0, gfx=2).
 step_src=extract('app/ui/main.c','typedef struct { void (*fn)(void); } exit_step_t;','\nint main(int argc')
 assert 'exit_step_fn' not in s
 with tempfile.TemporaryDirectory(prefix='exit-step-') as d:
@@ -277,7 +277,7 @@ static bool aptShouldClose(void){return closing;}
 static void log_resume(void){call("log-resume");}
 static void breadbox_import_shutdown(void){call("import");}
 static bool bb_index_background_start(void){if(index_closed)return false;index_worker=true;if(index_shutdowns)index_started_late=true;return true;}
-static void covers_stop_wait(void){call("covers-stop");if(stranded){stranded=0;assert(bb_index_background_start());}}
+static bool covers_stop_wait_apt(void){call("covers-stop");if(stranded){stranded=0;assert(bb_index_background_start());}return true;}
 static void bb_index_shutdown(void){call("index-stop");index_shutdowns++;if(scenario!=1)index_worker=false;}
 static void bb_index_close(void){call("index-close");index_closed=true;}
 static bool bb_index_shutdown_done(void){return !index_worker;}
@@ -295,6 +295,7 @@ static void libui_exit(void){touch_check("library");call("libui");}
 static void romfsExit(void){touch_check("romfs");call("romfs");}
 static void bb_system_deinit(void){touch_check("systems");call("systems");}
 static void ui_exit(void){touch_check("ui");call("ui");}
+static void bb_whatsnew_exit(void){touch_check("notes");call("notes");}
 static void video_exit(void){touch_check("video");call("video");}
 static void irrstExit(void){call("irrst");}
 static void cfguExit(void){call("cfgu");}
@@ -315,7 +316,7 @@ int main(int argc,char **argv){
  return 0;}
 ''')
  subprocess.run([os.environ.get('CC','cc'),'-std=gnu11','-Wall','-Wextra','-Werror','-Wno-unused-function','-Wno-unused-variable','-fsanitize=address,undefined','-g',str(p/'normal.c'),'-o',str(p/'normal')],check=True)
- clean="update import covers-stop index-stop index-close saves devnet config sound covers-exit libui romfs systems ui video irrst cfgu log-close "
+ clean="update import covers-stop index-stop index-close saves devnet config sound covers-exit libui romfs systems notes ui video irrst cfgu log-close "
  for sc,want in ((0,clean),
                  (1,"update import covers-stop index-stop index-close abandon saves config terminal "),
                  (2,"log-resume saves config terminal "),
@@ -345,13 +346,13 @@ with tempfile.TemporaryDirectory(prefix='covers-exit-') as d:
 #define BB_MAX_SYSTEMS 2
 typedef uint64_t u64;typedef struct Thread_tag *Thread;typedef struct {int id;} C3D_Tex;
 static struct Thread_tag {int id;} w[WORKERS];
-static Thread workers[WORKERS];static void *video_pre_draw=(void*)1;static int apt_cookie,wake;
-static bool quit,initialized=true,soc_started=true;static int join_ok[WORKERS];
-static struct {void *pixels;bool tex_ok;C3D_Tex tex;} slots[SLOTS];
-static struct {bool tex_ok;C3D_Tex tex;} tslots[TSLOTS];
-static struct {void *px;int n;} logos[BB_MAX_SYSTEMS];
-static void *own_pngs,*thumb_tried,*easy,*share;static int dummy;
-static int released,texes,thumbs,nets,flushes,misses,curls,socs,unhooks,thread_frees;
+static Thread workers[WORKERS];static void *video_pre_draw=(void*)1;static int apt_cookie,covers_wake;
+static bool covers_quit,initialized=true,soc_started=true;static int join_ok[WORKERS];
+static struct {void *pixels;bool tex_ok;C3D_Tex tex;} covers_slots[SLOTS];
+static struct {bool tex_ok;C3D_Tex tex;} covers_tslots[TSLOTS];
+static struct {void *px;int n;} covers_logos[BB_MAX_SYSTEMS];
+static void *covers_own_pngs,*covers_thumb_tried,*covers_curl_easy,*covers_curl_share;static int dummy;
+static int released,texes,covers_thumbs,nets,flushes,misses,curls,socs,unhooks,thread_frees;
 #define free(p) do{if(p)released++;}while(0)
 #define log_printf(...) ((void)0)
 static void aptUnhook(int *c){(void)c;unhooks++;}
@@ -359,9 +360,9 @@ static void LightEvent_Signal(int *e){(void)e;}
 static int threadJoin(Thread t,u64 ns){(void)ns;return join_ok[t->id]?0:0x09401BFE;}
 static void threadFree(Thread t){(void)t;thread_frees++;}
 static void C3D_TexDelete(C3D_Tex *t){(void)t;texes++;}
-static void thumbs_free(void){thumbs++;}
-static void net_close(void){nets++;}
-static void state_flush(void){flushes++;}
+static void covers_thumbs_free(void){covers_thumbs++;}
+static void covers_net_close(void){nets++;}
+static void covers_state_flush(void){flushes++;}
 static void boxart_misses_free(void){misses++;}
 static void curl_easy_cleanup(void *c){(void)c;curls++;}
 static void curl_share_cleanup(void *c){(void)c;curls++;}
@@ -369,30 +370,30 @@ static void curl_global_cleanup(void){curls++;}
 static void socExit(void){socs++;}
 static void arm(void){
  for(int i=0;i<WORKERS;i++){w[i].id=i;workers[i]=&w[i];join_ok[i]=1;}
- for(int i=0;i<SLOTS;i++){slots[i].pixels=&dummy;slots[i].tex_ok=true;}
- for(int i=0;i<TSLOTS;i++)tslots[i].tex_ok=true;
- for(int i=0;i<BB_MAX_SYSTEMS;i++)logos[i].px=&dummy;
- own_pngs=thumb_tried=easy=share=&dummy;soc_started=true;
- released=texes=thumbs=nets=flushes=misses=curls=socs=thread_frees=0;}
-#define UNTOUCHED (!released && !texes && !thumbs && !nets && !flushes && !misses && !curls && !socs && easy && share && soc_started && own_pngs)
+ for(int i=0;i<SLOTS;i++){covers_slots[i].pixels=&dummy;covers_slots[i].tex_ok=true;}
+ for(int i=0;i<TSLOTS;i++)covers_tslots[i].tex_ok=true;
+ for(int i=0;i<BB_MAX_SYSTEMS;i++)covers_logos[i].px=&dummy;
+ covers_own_pngs=covers_thumb_tried=covers_curl_easy=covers_curl_share=&dummy;soc_started=true;
+ released=texes=covers_thumbs=nets=flushes=misses=curls=socs=thread_frees=0;}
+#define UNTOUCHED (!released && !texes && !covers_thumbs && !nets && !flushes && !misses && !curls && !socs && covers_curl_easy && covers_curl_share && soc_started && covers_own_pngs)
 '''+cx+r'''
 int main(void){
  arm();join_ok[1]=0;
- assert(!covers_exit() && quit && UNTOUCHED && workers[1] && !workers[0] && thread_frees==1);
+ assert(!covers_exit() && covers_quit && UNTOUCHED && workers[1] && !workers[0] && thread_frees==1);
  join_ok[1]=1;
  assert(covers_exit() && !workers[1] && thread_frees==2);
- assert(released==SLOTS+BB_MAX_SYSTEMS+2 && texes==SLOTS+TSLOTS && thumbs==1 && nets==1 && flushes==1 && curls==3 && socs==1 && !soc_started);
- arm();join_ok[0]=0;quit=false;
- assert(!covers_network_exit(5000000000ULL) && quit && UNTOUCHED && workers[0]);
+ assert(released==SLOTS+BB_MAX_SYSTEMS+2 && texes==SLOTS+TSLOTS && covers_thumbs==1 && nets==1 && flushes==1 && curls==3 && socs==1 && !soc_started);
+ arm();join_ok[0]=0;covers_quit=false;
+ assert(!covers_network_exit(5000000000ULL) && covers_quit && UNTOUCHED && workers[0]);
  join_ok[0]=1;
  assert(covers_network_exit(5000000000ULL) && !workers[0] && nets==1 && curls==3 && socs==1 && !released);
  return 0;}
 ''')
  subprocess.run([os.environ.get('CC','cc'),'-std=gnu11','-Wall','-Wextra','-Werror','-Wno-unused-function','-Wno-unused-variable','-Wno-misleading-indentation','-fsanitize=address,undefined','-g',str(p/'covers.c'),'-o',str(p/'covers')],check=True)
  subprocess.run([str(p/'covers')],check=True)
-worker=(root/'app/ui/covers.c').read_text()
-worker=worker[worker.index('static void worker_main(void *arg)'):worker.index('void covers_init(void)')]
-assert 'while (paused && !quit)\n\t\t\t\tsvcSleepThread(100000000LL);\n\t\t\tif (quit)\n\t\t\t\tbreak;' in worker
+worker=(root/'app/services/covers_fetch.c').read_text()
+worker=worker[worker.index('void covers_worker_main(void *arg)'):]
+assert 'while (covers_paused && !covers_quit)\n\t\t\t\tsvcSleepThread(100000000LL);\n\t\t\tif (covers_quit)\n\t\t\t\tbreak;' in worker
 print('covers exits: a timed-out worker keeps pixels, curl and sockets; the join that succeeds frees them once PASS')
 
 # PS1 HOME > Close: the real adapter run() and the real session end. run_game returns true
@@ -421,6 +422,9 @@ static const bb_system_t *bb_system_by_id(const char *id){assert(!strcmp(id,"ps1
 static bool gspHasGpuRight(void){return gpu;}
 static const char *emu_load_error(void){return "error";}
 /* emu.c's run_game: without the GPU right it skips rewind_stop/retro_deinit (core threads live). */
+static void dev_game_ended(bool ok){(void)ok;}
+static bool covers_stop_wait(void){return true;}
+static const char *covers_wait_error(void){return "busy";}
 static bool emu_run_game(const char *p,const char *s,const char *t){(void)p;(void)s;(void)t;core_threads=!gpu;return ended_ok;}
 static void cards_end(void){assert(!core_threads);cards_ends++;}
 static void bb_platform_drop(void){assert(!core_threads);drops++;}
@@ -453,9 +457,9 @@ assert tick.index('if(bb_update_committed())return true;',tick.index('if(bb_upda
 print('update minimal shutdown: bounded journaled teardown (covers, devnet, sound), the handoff decision, then the GPU; a timeout ends in exit_terminal (HOME), no title assets PASS')
 
 # Menu release must retire importer handles while its worker can still run.
-platform=(root/'platform/3ds/bb_platform.c').read_text()
-release=platform[platform.index('void bb_platform_release_menu(void)'):platform.index('void bb_platform_restore_menu(void)')]
-assert release.index('covers_stop_wait();')<release.index('bb_index_shutdown();')
+platform=(root/'platform/3ds/bb_menu_release.c').read_text()
+release=platform[platform.index('bool bb_platform_release_menu(void)'):]
+assert release.index('covers_stop_wait()')<release.index('bb_index_shutdown();')
 print('menu release drains importer before index shutdown PASS')
 
 # Bounded joins on the install/teardown path: run the real functions against fakes. A join

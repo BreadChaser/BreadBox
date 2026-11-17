@@ -56,7 +56,7 @@ void video_gpu_idle(void);
 bool video_gpu_poll_idle(void); /* UI thread, between frames, no active core */
 void video_top_rebind(void);   // back to the top target of the eye being drawn
 void video_room_plain(bool on); // the room menu: top screen at 1x on both models (with ui_wants_plain)
-extern bool ui_room_eyes;       // this menu frame is the room's own: 3D also on the Old 3DS (round 16)
+extern bool ui_room_eyes;       // this menu frame is the room's own: 3D also on the Old 3DS
 
 bool video_room_3d(void);       // ui_wants_3d for the room's loops
 int video_ui_steps(void);       // vblanks of the last UI frame (2: the Old's room locked at 30 fps)

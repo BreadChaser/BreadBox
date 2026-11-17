@@ -1,4 +1,4 @@
-// The loaded fonts' own metrics, read from their glyphs (owner 2026-11-12: on a real 3DS the card text sat ~3 px
+// The loaded fonts' own metrics, read from their glyphs (on a real 3DS the card text sat ~3 px
 // under the ruled lines while it sat on them in Azahar). citro2d draws a glyph's cell top at the y it is given and
 // scales every font to a 30 px cell; where the letters stand in that cell is the font's own. Nintendo's system font
 // stands at about 24-25 (hardware stills); Azahar's replacement declares 25 but its letters stand at 20; the title

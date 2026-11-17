@@ -27,7 +27,7 @@ int main(void)
  assert(gba_saveid_migrate("folder-a/Same.gba",a));assert(gba_saveid_migrate("folder-b/Same.gba",b));
  snprintf(p,sizeof(p),"sdmc:/3ds/BreadBox/saves/gba/%s.sav",a);assert(!access(p,F_OK));
  snprintf(p,sizeof(p),"sdmc:/3ds/BreadBox/saves/gba/%s.sav",b);assert(access(p,F_OK));
- /* J-14: the ownership record is completed in place, never left as <game>.id.bad */
+ /* The ownership record is completed in place, never left as <game>.id.bad */
  assert(access("sdmc:/3ds/BreadBox/saves/gba/Same.id.bad",F_OK) && access("sdmc:/3ds/BreadBox/saves/gba/Same.id.bak",F_OK));
  {FILE *f=fopen("sdmc:/3ds/BreadBox/saves/gba/Same.id","r");char line[64]={0};assert(f && fgets(line,sizeof(line),f));fclose(f);
   assert(!strncmp(line,a,strlen(a)) && line[strlen(a)]=='\n');}

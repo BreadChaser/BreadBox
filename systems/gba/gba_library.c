@@ -129,7 +129,7 @@ static bool sync_index(void)
  }
  bool busy = !bb_index_complete() || (copied < available && count < GBA_MAX);
  if (was_busy && !busy) {
-  covers_library_begin();
+  if (!covers_library_begin()) {covers_library_end();return changed;}
   qsort(entries, count, sizeof(entries[0]), title_cmp);
   covers_library_end();
   log_printf("gba-library: phase=list-ready count=%d of %d%s ms=%llu\n", count, available,

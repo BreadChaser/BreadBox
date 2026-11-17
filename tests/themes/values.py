@@ -38,8 +38,8 @@ def keys(types, name, prefix=''):
 
 def preprocessed(name, app_defs):
     """The header as the app build sees it (its members)."""
-    text = (src / name).read_text().replace('#include <3ds.h>', '').replace('#include "game_palette.h"', '')
-    return subprocess.run(['cc', '-E', '-P', *app_defs, '-x', 'c', '-'], input=text, capture_output=True,
+    text = (root / 'include/breadbox' / name).read_text().replace('#include <3ds.h>', '').replace('#include "game_palette.h"', '')
+    return subprocess.run(['cc', '-E', '-P', '-I', str(root / 'include/breadbox'), *app_defs, '-x', 'c', '-'], input=text, capture_output=True,
                           text=True, check=True).stdout
 
 

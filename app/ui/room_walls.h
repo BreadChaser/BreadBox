@@ -1,4 +1,4 @@
-// BreadBox room walls (owner 2026-10-30): a BreadBox poster on the left wall and,
+// BreadBox room walls: a BreadBox poster on the left wall and,
 // on the right, a corkboard that fills up as you play: one postcard per save state
 // and Continue point (the game's picture, its name and the date) and one ticket per
 // game played (its cover), pinned at slightly random angles, newest in front, at

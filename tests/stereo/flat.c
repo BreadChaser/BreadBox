@@ -1,7 +1,7 @@
 // Real 3D's screen depth fallback (gpustereo_core.c): frames without polygon
 // depth fade to the flat picture behind the screen, and back when depth
 // returns, without flicker for games that draw on every 2nd/3rd/4th frame.
-#include "../../include/breadbox/gpustereo.h"
+#include "../../systems/ps1/gpustereo.h"
 #include <assert.h>
 #include <math.h>
 #include <stdlib.h>

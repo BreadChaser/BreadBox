@@ -1,3 +1,4 @@
+#include "ui_trace_views.h"
 #include "ht_trace.h"
 #include "ui_motion.h"
 #include "share.h"
@@ -23,7 +24,7 @@
 #include "bb_platform.h"
 #include "platform_video.h"
 #include "dev_switches.h"
-#include "savestates.h"
+#include "ps1_hooks.h"
 #include "app_input.h"
 #include "ui_pause.h"
 #include "ui.h"
@@ -44,22 +45,25 @@
 #include "postcards.h"
 #include "breadbox_formats.h"
 #include "room.h"
+#include "home_view.h"
 #include "bb_update.h"
 #include "breadbox_import.h"
 #include "shelf.h"
 #include "welcome.h"
+#include "whatsnew.h"
 #include "cold_code.h"
 #include "place_cards.h"
+#include "home_model.h"
+#include "list_look.h"
+#include "home_presentation.h"
 #include "playlog.h"
 int breadbox_systems_run(char *path, size_t len);
 
 // the one card when the room cannot load (home_run): no main menu without it
 #define HOME_ROOM_MISSING_TEXT "Its room file is missing or there is not enough memory. Start BreadBox again; if this keeps happening, reinstall it."
 
-enum { E_CONTINUE, E_LIBRARY, E_HOST, E_JOIN, E_SHARE, E_SETTINGS, E_QUIT, E_TOGETHER };   // E_TOGETHER: the room's Play together tab, "coming soon" (no Host / Join, no network code)
-enum { K_HERO, K_MID, K_SMALL, K_SUB };
 
-typedef struct { int id, kind; float x, y, w, h; } tile_t;
+typedef struct { int id; } tile_t;
 
 static u32 accent(int i, u8 a)
 {
@@ -84,12 +88,9 @@ static char cont_path[PATH_LEN];
 static int sel_id = -1;              // selected entry; the first one at start
 static float clock_s, fade = 1, pop = 1, pop_v, title_t = 1;
 static int title_for = -1;
-static C2D_TextBuf mbuf;             // measuring only
 
 static tile_t tiles[6];
 static int ntiles;
-static tile_t group;                 // the Play together frame around Host and Join
-static bool have_group;
 static int picks[3], npicks;         // the Library tile's covers, chosen each start
 
 // three different games at random for the Library tile
@@ -110,7 +111,6 @@ static void pick_covers(void)
 	}
 }
 
-static float text_w(C2D_Font f, float size, const char *s); /* shared presentation */
 
 static const char *cont_title(void)
 {
@@ -134,11 +134,9 @@ static void cont_capture_prefix(char *out, size_t cap)
 // that still exists (the disc may have moved; then the library's copy).
 #include "home_continue.inc"
 
-// Play together is a frame with two buttons, Host and Join (owner: no sub-menu).
-static void together_at(float x, float y, float w, float h); /* shared presentation */
 
 // Play together arrives with multiplayer (v0.6): until then the tile is not
-// shown and the main menu is Continue, Library, Share PSX3D and Settings.
+// shown; the remaining home places stay available.
 #define HOME_PLAY_TOGETHER 0
 
 static void layout(void); /* shared presentation */
@@ -177,18 +175,11 @@ static void room_sfx(const char *name)
 	else if (!strcmp(name, "back")) sfx_play(SFX_BACK);
 }
 
-static int place_of(int id)
+static int place_of(int action)
 {
-	switch (id) {
-	case E_CONTINUE: return ROOM_CONTINUE;
-	case E_LIBRARY: return ROOM_LIBRARY;
-	case E_HOST:
-	case E_JOIN:
-	case E_TOGETHER:
-		return ROOM_TOGETHER;
-	case E_SHARE: return ROOM_SHARE;
-	}
-	return ROOM_SETTINGS;
+ if(action==E_HOST || action==E_JOIN)action=E_TOGETHER;
+ const bb_home_place *place=bb_home_find(action);
+ return place && place->place>=0 ? place->place : ROOM_SETTINGS;
 }
 
 static int tile_of(int place)
@@ -208,28 +199,25 @@ static int room_move(int place, int dir)
 	return q >= 0 && tile_of(q) >= 0 ? q : -1;
 }
 
-// The places in the bottom bar's order (owner 2026-10-30: Settings before Share); left / right
+// The places in the bottom bar's order (Settings before Share); left / right
 // and L / R go through them in this order too, each one a stop (Share was only below the
 // bookcase on the map, so left / right never reached it)
-static const int place_order[ROOM_PLACES] = { ROOM_CONTINUE, ROOM_LIBRARY, ROOM_TOGETHER, ROOM_SETTINGS, ROOM_SHARE };
-// the next shown place that way in the bar's order; -1 past the first / last one
 static int room_next(int place, int step)
 {
-	int at = 0;
-	while (at < ROOM_PLACES && place_order[at] != place) at++;
-	for (at += step; at >= 0 && at < ROOM_PLACES; at += step)
-		if (tile_of(place_order[at]) >= 0)
-			return place_order[at];
-	return -1;
+ return bb_home_neighbor(place,step,have_games && cont_ok);
 }
-
-// The bottom bar at home: one tab per shown place, in the mock's order.
 static int room_tabs(int *place)
 {
-	int n = 0;
-	for (int i = 0; i < ROOM_PLACES; i++)
-		if (tile_of(place_order[i]) >= 0) place[n++] = place_order[i];
-	return n;
+ return bb_home_room_places(place,ROOM_PLACES,have_games && cont_ok);
+}
+static void layout(void)
+{
+ ntiles=0;
+ int n=bb_home_count(have_games && cont_ok);
+ for(int i=0;i<n;i++) {
+  const bb_home_place *p=bb_home_at(i,have_games && cont_ok);
+  if(p->action!=E_QUIT)tiles[ntiles++]=(tile_t){p->action};
+ }
 }
 
 // At a place that stays in the room: its actions (B back to the room on the left, A on the right).
@@ -361,9 +349,64 @@ static bool room_start(void)
 	return true;
 }
 
+static PSX3D_COLD bb_home_picture home_list_picture(void)
+{
+ const bb_home_place *place=bb_home_place_at(room.focus);
+ int action=room_quit_on ? E_QUIT : place ? place->action : E_LIBRARY;
+ static char played[96],clean[BB_LIBRARY_TITLE],left_off[96],games[32],when[64];
+ ui_clean_title(cont_ok ? cont_title() : "",clean,sizeof(clean));
+ left_off[0]=0;
+ when[0]=0;
+ if(cont_saved) {   /* the tile: the date alone on its line, as PSX3D v0.5.2 ("Oct 23 2026 04:16") */
+  time_t saved=cont_saved;struct tm *tm=gmtime(&saved);
+  if(!tm || !strftime(when,sizeof(when),"%b %d %Y %H:%M",tm))when[0]=0;
+  char full[64];ui_format_when(full,sizeof(full),cont_saved);snprintf(left_off,sizeof(left_off),"Left off %s",full);
+ }
+ ui_format_games(games,sizeof(games),bb_system_total());
+ snprintf(played,sizeof(played),"%s",action==E_CONTINUE ? left_off : action==E_LIBRARY ? games : "");
+ const bb_home_place *focused=bb_home_find(action);
+ bb_home_picture picture={.action=action,.have_continue=have_games && cont_ok,
+  .at_place=room.mode==ROOM_AT || room.mode==ROOM_GO,
+  .picture=cont_tex_ok ? &cont_tex : card_tex_ok ? &card_tex : NULL,.picture_band=cont_band,
+  .title=action==E_CONTINUE ? clean : focused ? focused->name : "",.continue_title=clean,.continue_when=when,.games=games,.played=played,.covers=npicks};
+ for(int i=0;i<npicks;i++)picture.cover[i]=picks[i];
+ return picture;
+}
+/* The list looks' home: the D-pad moves between the tiles as they stand; A on Continue or Collection opens it
+   at once (nothing to glide to). Returns that action, or -1 with the keys the room's controls still take. */
+static PSX3D_COLD int home_list_input(u32 *keys)
+{
+ u32 k=*keys;
+ if(k&KEY_TOUCH) {
+  touchPosition touch;hidTouchRead(&touch);bb_home_picture picture=home_list_picture();
+  int action=list_look_home_hit(&picture,touch.px,touch.py);
+  const bb_home_place *place=bb_home_find(action);
+  if(place) {   /* the tiles are big: one tap opens (PSX3D v0.5.2) */
+   k|=KEY_A;
+   room_quit_on=action==E_QUIT;
+   if(!room_quit_on){room.focus=place->place;sel_id=action;}
+  }
+  k&=~KEY_TOUCH;
+ }
+ static const u32 pads[4]={KEY_DUP|KEY_CPAD_UP,KEY_DDOWN|KEY_CPAD_DOWN,KEY_DLEFT|KEY_CPAD_LEFT,KEY_DRIGHT|KEY_CPAD_RIGHT};
+ for(int d=LIST_UP;d<=LIST_RIGHT;d++) {
+  if(!(k&pads[d]))continue;
+  bb_home_picture picture=home_list_picture();
+  int action=list_look_home_move(&picture,d);
+  const bb_home_place *place=bb_home_find(action);
+  if(place){room_quit_on=action==E_QUIT;if(!room_quit_on){room.focus=place->place;sel_id=action;}room_sfx("focus");}
+ }
+ *keys=k&~(pads[0]|pads[1]|pads[2]|pads[3]|KEY_L|KEY_R);   /* PSX3D's main menu: no shoulder buttons */
+ if((k&KEY_A) && !room_quit_on && (room.focus==ROOM_CONTINUE || room.focus==ROOM_LIBRARY))
+  return room.focus==ROOM_CONTINUE ? E_CONTINUE : E_LIBRARY;
+ return -1;
+}
+
 // The room's controls; returns the tile action to run now, or -1.
 static int room_input(u32 k)
 {
+ if(!theme_is_room() && room.mode==ROOM_HOME){int action=home_list_input(&k);if(action>=0)return action;}
+
 	static const u32 pads[4] = { KEY_DUP | KEY_CPAD_UP, KEY_DDOWN | KEY_CPAD_DOWN, KEY_DLEFT | KEY_CPAD_LEFT, KEY_DRIGHT | KEY_CPAD_RIGHT };
 	static const int dirs[4] = { ROOM_UP, ROOM_DOWN, ROOM_LEFT, ROOM_RIGHT };
 	if (room.mode == ROOM_HOME) {
@@ -418,7 +461,7 @@ static int room_input(u32 k)
 		if (k & (KEY_A | KEY_X)) {
 			if (room.focus == ROOM_SHARE) return E_SHARE;   // Share owns the continuous entry and B reversal
 			if (room.focus == ROOM_SETTINGS) return E_SETTINGS;   // Settings owns entry, B reversal and the return glide
-			room_view_go(&room, room.focus);
+			home_view_go(&room, room.focus);
 			room_sfx("glide");
 		}
 		return -1;
@@ -429,7 +472,7 @@ static int room_input(u32 k)
 	const ui_button_t *act = room_actions(&nact);
 	if (act) k = ui_bar_input(act, nact, k);
 	if (k & KEY_B) {
-		room_view_back(&room);
+		home_view_back(&room);
 		room_sfx("back");
 		return -1;
 	}
@@ -450,8 +493,8 @@ static int room_input(u32 k)
 }
 
 // Borrow this exact room, not a second camera or scene instance.
-static void share_room_enter(void *ud) { room_view_go(ud, ROOM_SHARE); room_sfx("glide"); }
-static void share_room_leave(void *ud) { room_view_back(ud); room_sfx("back"); }
+static void share_room_enter(void *ud) { home_view_go(ud, ROOM_SHARE); room_sfx("glide"); }
+static void share_room_leave(void *ud) { home_view_back(ud); room_sfx("back"); }
 static bool share_room_settled(void *ud)
 {
  room_view *v = ud;
@@ -465,7 +508,7 @@ static void share_room_tick(void *ud, float dt)
  if (v->mode == ROOM_GO || v->mode == ROOM_AT)
   v->invitation = v->mode == ROOM_AT ? 1 : ui_motion_ease((v->t - v->t0 - (UI_MOTION_CAMERA_S - UI_MOTION_UI_S)) / UI_MOTION_UI_S);
 }
-static void share_room_top(void *ud) { room_scene_draw(ud, NULL, 0); }
+static void share_room_top(void *ud) { if(theme_is_room())room_scene_draw(ud,NULL,0);else list_look_backdrop(false); }
 // Library, first visit: its shelves are built here (the cue is on screen), then the room glides back home after it.
 static void room_to_library(void)
 {
@@ -491,18 +534,10 @@ static void room_to_library(void)
 
 // ---------------------------------------------------------------- top screen
 
-static void slow_banner(void); /* shared presentation */
+void home_slow_banner(void); /* shared presentation */
 
-static void big_title(const char *title, const char *line, float ease); /* shared presentation */
 /* the empty library's one sentence: where games go (the games folder, "/roms" before one is chosen) */
-static const char *empty_help(bool at_library)
-{
-	static char text[96];
-	ui_empty_help(text, sizeof(text), g_cfg.games_dir, at_library);
-	return text;
-}
 
-static void top_common(void); /* shared presentation */
 
 static bool no_title;
 static void draw_top(void *ud); /* rendered by the shared home component */
@@ -530,8 +565,8 @@ static void settings_top(void *ud)
 }
 
 // Settings borrows this room and camera through Share's neutral destination API.
-static void settings_room_enter(void *ud){room_view_go(ud,ROOM_SETTINGS);room_sfx("glide");}
-static void settings_room_leave(void *ud){room_view_back(ud);room_sfx("back");}
+static void settings_room_enter(void *ud){home_view_go(ud,ROOM_SETTINGS);room_sfx("glide");}
+static void settings_room_leave(void *ud){home_view_back(ud);room_sfx("back");}
 static bool settings_room_settled(void *ud){room_view *v=ud;return v->mode==ROOM_AT || v->mode==ROOM_HOME;}
 static void settings_room_tick(void *ud,float dt)
 {
@@ -547,7 +582,7 @@ static void room_plain(bool on)
 	ui_wants_plain = on;
 }
 // the room's own frames (not the dialogs over it): the Old 3DS draws them in 3D (video.c)
-static void room_eyes(bool on) { ui_room_eyes = on; }
+static void room_eyes(bool on) { ui_room_eyes = on && theme_is_room(); }
 
 // The app's first picture (main.c, right after the screens work): the lamp's glow in the dark,
 // until the room is loaded and fades up from the same picture.
@@ -595,9 +630,9 @@ static void launch_info(const char *path, home_launch_t *out)
 static u64 quit_tick;
 
 static bool welcome_live;   // home_run's room is up (bb_welcome_open uses it)
-static void leave(void)
+static PSX3D_COLD void leave(void)
 {
-	welcome_live = false;
+	welcome_live = false; bb_whatsnew_room(DEV_UI_NONE, false, NULL);
 	shelf_preload_end(false); // gameplay/Library/lifecycle takes over a pending pause
 	room_pace_priority(false);   // back to the menus' usual priority (before a game too)
 	aptSetHomeAllowed(true);
@@ -643,7 +678,7 @@ static void coming_soon(const char *what)
 			sfx_play(SFX_BACK);
 			return;
 		}
-		clock_s += UI_METRIC_1_0F / UI_METRIC_60_0F;
+		clock_s += 1.0f / 60.0f;
 		music_update(); HT("music");
 		ui_begin();
 		video_present_vsync(false, soon_top, soon_bottom, (void *)what);
@@ -662,43 +697,9 @@ static int room_missing(void)
 	return HOME_QUIT;
 }
 
-int home_run(bool games, char *path, size_t len, home_launch_t *out)
+enum { HOME_IDLE=-1, HOME_KEEP=-2 };
+static PSX3D_COLD void home_publications(bool first_frame)
 {
-	memset(out, 0, sizeof(*out));
-	have_games = games;
-	boot_mark("home");
-	// Keep the published Continue state while the low-priority worker checks it.
-	cont_request_refresh();
-	layout();
-	pick_covers();
-	if (sel_id < 0 || sel_index() == 0)
-		sel_id = tiles[0].id;
-	title_for = -1;
-	fade = 1;
-	music_play(true);
-	ui_wants_3d = true;
-	if (!room_start())
-		return room_missing();
-	room_pace_priority(true);
-	room_pace_restart();   // back from a game or the Library: the time away is not a frame
-	ui_wants_3d = video_room_3d();   // Old 3DS: the room in 3D at 30 fps (round 16; room3d=off: mono)
-	fade = 0;                 // the room glides in instead
-	boot_mark("room opened");
-    breadbox_import_start(true);
-
-	bool first_frame = true;
-	static bool cold = true;     // the app's first main menu: the room fades up after its first frame
-	if (cold) { room_intro = 0; room_intro_wait = 0; room_intro_tick = 0; }
-	cold = false;
-	covers_resume();
- int swap_act=-1;
- quit_tick=0;
-	welcome_live = true;
-	while (aptMainLoop() || bb_update_installing() || bb_update_committed()) {
- if(bb_update_committed())return HOME_QUIT;
- if(bb_update_installing() || bb_update_committed()){bb_update_install_frame();continue;}
- HT("loop");
-
         HT("cont begin");
         if(cont_poll()) {
             HT("cont publish done");layout();pick_covers();HT("layout done");
@@ -734,10 +735,8 @@ int home_run(bool games, char *path, size_t len, home_launch_t *out)
                     (l1 - l0) * 1000.0 / SYSCLOCK_ARM11, (svcGetSystemTick() - l1) * 1000.0 / SYSCLOCK_ARM11);
             room_pace_add(ROOM_PACE_LIBRARY, svcGetSystemTick() - l0);
         }
-        if(bb_update_tick())return HOME_QUIT;
-        if(bb_update_installing() || bb_update_committed()){bb_update_install_frame();continue;}
         HT("index done");
-        room_scene_library_follow(false);   // the bookcase follows the library
+        if(theme_is_room())room_scene_library_follow(false);   // the bookcase follows the library
         {
             // the Library is built in the background, one part per quiet frame at home, so
             // opening it is only the glide; its camera is the bookcase's wall view
@@ -748,42 +747,9 @@ int home_run(bool games, char *path, size_t len, home_launch_t *out)
             room_pose wall;
             if (shelf_wall_pose(&wall)) room_view_set_library(&room, &wall);
         }
-		HT("preload/dev begin");
-        if (dev_tick(false)) {
-			leave();
-			return HOME_AGAIN;
-		}
-		HT("dev done");
-        int screen = dev_ui_take();
-
-		if (screen == DEV_UI_LIBRARY) { leave(); return HOME_LIBRARY; }
-		if (screen == DEV_UI_WELCOME && bb_welcome_open()) { leave(); return HOME_FOLDERS; }
-		input_poll(); HT("input");
-        if(quit_tick) {
-            float u=(float)(svcGetSystemTick()-quit_tick)/SYSCLOCK_ARM11/sw_quitturn;
-            if(u>=1) {leave();return HOME_QUIT;}
-            room_view_turn(&room,u);room_view_step(&room,1.0f/60.0f*video_ui_steps());
-            fade=ui_motion_ease(u);music_update(); HT("music");present();continue;
-        }
-		u32 k = input_keys_down();
-        if(k || screen != DEV_UI_NONE)shelf_preload_end(true);
-
-		if (covers_home_frame()) continue;   // HOME: held back while the covers use the network (as in the Library)
-		if (welcome_ready()) {   // the first start's tour (or its games card again after the folder picker)
-			int w = welcome_run(welcome_resume >= 0 ? welcome_resume : 0);
-			if (w == WELCOME_FOLDERS) { leave(); return HOME_FOLDERS; }
-			if (w == WELCOME_CLOSED) { leave(); return aptMainLoop() ? HOME_AGAIN : HOME_QUIT; }
-			continue;
-		}
-
-		int act = room_input(k);
-		if (act >= 0 && act != E_LIBRARY && act != E_SETTINGS && act != E_SHARE)
-			sfx_play(act == E_CONTINUE ? SFX_LAUNCH : SFX_SELECT);
-        if(screen==DEV_UI_SETTINGS)act=E_SETTINGS;
-        u32 swap_key=UI_METRIC_0;
-        if(swap_act<0 && act==E_CONTINUE) {swap_act=act;swap_key=UI_SWAP_REMOTE;}
-        if(ui_swap_keys(swap_key,UI_SWAP_REMOTE)&UI_SWAP_REMOTE) {act=swap_act;swap_act=-1;}
-        else if(swap_act>=0)act=-1;
+ }
+static PSX3D_COLD int home_action(int act,char *path,size_t len,home_launch_t *out)
+{
 		switch (act) {
 		case E_CONTINUE: {
             const char *save_name=continue_save,*title=continue_title;
@@ -797,9 +763,9 @@ int home_run(bool games, char *path, size_t len, home_launch_t *out)
         }
 		case E_LIBRARY:
 			room_pose wall;
-			if (shelf_wall_pose(&wall)) {   // the room's own bookcase: the same scene goes on
+			if (!theme_is_room() || shelf_wall_pose(&wall)) {   // continue with the same library controller
 				int r = shelf_run(path, len);
-				ui_wants_3d = video_room_3d();
+				ui_wants_3d = theme_is_room() && video_room_3d();
 				if (r == 1) {
 					room_return = ROOM_LIBRARY;   // after the game: its shelf, then the room
 					launch_leave();
@@ -807,11 +773,11 @@ int home_run(bool games, char *path, size_t len, home_launch_t *out)
 				}
 				if (r == 4) {   // B on the wall: glide home from where the camera is
 					if (shelf_wall_pose(&wall)) room_view_set_library(&room, &wall);
-					room_view_back(&room);
+					home_view_back(&room);
 					log_printf("room: library returned, gliding home\n");
 					music_play(true);
 					covers_resume();
-					continue;
+					return HOME_KEEP;
 				}
 				leave();
 				return r == 2 ? HOME_FOLDERS : r == 0 && aptShouldClose() ? HOME_QUIT : HOME_AGAIN;   // Start closes the shelf: back in the room (only the system closing leaves)
@@ -835,26 +801,26 @@ int home_run(bool games, char *path, size_t len, home_launch_t *out)
 				return HOME_PLAY;
 			}
 			if (dev_transition()) { leave(); return HOME_AGAIN; }
-			room_view_back(&room);
-			continue;
+			home_view_back(&room);
+			return HOME_KEEP;
 		case E_SHARE: {
 			const ui_destination destination = { &room, share_room_enter, share_room_leave, share_room_tick, share_room_settled, share_room_top };
-			room_plain(true); room_eyes(true);
+			room_plain(true); room_eyes(theme_is_room());
 			share_destination_run(&destination);
 			room_eyes(false); room_plain(false);
 			if (dev_transition()) { leave(); return HOME_AGAIN; }
-			if (room.mode != ROOM_HOME) room_view_back(&room);
-			continue;
+			if (room.mode != ROOM_HOME) home_view_back(&room);
+			return HOME_KEEP;
 		}
-			continue;
+			return HOME_KEEP;
 		case E_QUIT:   // the room's Quit: asked first, then the way Start used to close the app
 			if (ui_confirm_pick("Quit BreadBox?", "BreadBox closes and takes you back to the HOME Menu. Your games and saves stay as they are.", "Quit", "Cancel")) {
 				quit_tick=svcGetSystemTick();
                 ui_swap_hold();
-                continue;
+                return HOME_KEEP;
 			}
 			room_pace_restart();
-			continue;
+			return HOME_KEEP;
 		case E_SETTINGS: {
 			room_plain(true);   // the room (and your hands) behind Settings
 			ui_destination scene={.userdata=&room,.enter=settings_room_enter,.leave=settings_room_leave,
@@ -870,15 +836,97 @@ int home_run(bool games, char *path, size_t len, home_launch_t *out)
             cont_request_refresh();
             layout();
 			room_tv();
-			room_view_back(&room);
+			home_view_back(&room);
+			return HOME_KEEP;
+		}
+		}
+ return HOME_IDLE;
+}
+
+int home_run(bool games, char *path, size_t len, home_launch_t *out)
+{
+ if(!theme_is_room())shelf_scene_prepare();
+	memset(out, 0, sizeof(*out));
+	have_games = games;
+	boot_mark("home");
+	// Keep the published Continue state while the low-priority worker checks it.
+	cont_request_refresh();
+	layout();
+	pick_covers();
+	if (sel_id < 0 || sel_index() == 0)
+		sel_id = tiles[0].id;
+	title_for = -1;
+	fade = 1;
+	music_play(true);
+	ui_wants_3d = true;
+	if (!room_start())
+		return room_missing();
+	room_pace_priority(true);
+	room_pace_restart();   // back from a game or the Library: the time away is not a frame
+	ui_wants_3d = theme_is_room() && video_room_3d();   // Old 3DS: the room in 3D at 30 fps (room3d=off: mono)
+	fade = 0;                 // the room glides in instead
+	boot_mark("room opened");
+    breadbox_import_start(true);
+
+	bool first_frame = true;
+	static bool cold = true;     // the app's first main menu: the room fades up after its first frame
+	if (cold) { room_intro = 0; room_intro_wait = 0; room_intro_tick = 0; }
+	cold = false;
+	covers_resume();
+ int swap_act=-1;
+ quit_tick=0;
+	welcome_live = true;
+	while (aptMainLoop() || bb_update_installing() || bb_update_committed()) {
+ if(bb_update_committed())return HOME_QUIT;
+ if(bb_update_installing() || bb_update_committed()){bb_update_install_frame();continue;}
+ HT("loop");
+
+        home_publications(first_frame);
+        if(bb_update_tick())return HOME_QUIT;
+        if(bb_update_installing() || bb_update_committed()){bb_update_install_frame();continue;}
+		HT("preload/dev begin");
+        if (dev_tick(false)) {
+			leave();
+			return HOME_AGAIN;
+		}
+		HT("dev done");
+        int screen = dev_ui_take(); bb_whatsnew_room(screen, room_intro >= 1 && room.mode == ROOM_HOME && !quit_tick && !room_quit_on && !bb_welcome_due(), present_with);
+
+		if (screen == DEV_UI_LIBRARY) { leave(); return HOME_LIBRARY; }
+		if (screen == DEV_UI_WELCOME && bb_welcome_open()) { leave(); return HOME_FOLDERS; }
+		input_poll(); HT("input");
+        if(quit_tick) {
+            float u=(float)(svcGetSystemTick()-quit_tick)/SYSCLOCK_ARM11/sw_quitturn;
+            if(u>=1) {leave();return HOME_QUIT;}
+            room_view_turn(&room,u);room_view_step(&room,1.0f/60.0f*video_ui_steps());
+            fade=ui_motion_ease(u);music_update(); HT("music");present();continue;
+        }
+		u32 k = input_keys_down();
+        if(k || screen != DEV_UI_NONE)shelf_preload_end(true);
+
+		if (covers_home_frame()) continue;   // HOME: held back while the covers use the network (as in the Library)
+		if (welcome_ready()) {
+			int w = welcome_run(welcome_resume >= 0 ? welcome_resume : 0); if (w == WELCOME_FOLDERS) { leave(); return HOME_FOLDERS; }
+			if (w == WELCOME_CLOSED) { leave(); return aptMainLoop() ? HOME_AGAIN : HOME_QUIT; }
 			continue;
 		}
-		}
+
+		int act = room_input(k);
+		if (act >= 0 && act != E_LIBRARY && act != E_SETTINGS && act != E_SHARE)
+			sfx_play(act == E_CONTINUE ? SFX_LAUNCH : SFX_SELECT);
+        if(screen==DEV_UI_SETTINGS)act=E_SETTINGS;
+        u32 swap_key=0;
+        if(swap_act<0 && act==E_CONTINUE) {swap_act=act;swap_key=UI_SWAP_REMOTE;}
+        if(ui_swap_keys(swap_key,UI_SWAP_REMOTE)&UI_SWAP_REMOTE) {act=swap_act;swap_act=-1;}
+        else if(swap_act>=0)act=-1;
+        int action_result=home_action(act,path,len,out);
+        if(action_result==HOME_KEEP)continue;
+        if(action_result>=0)return action_result;
 
 		if (bb_platform_saves(BB_SAVES_MENU) == BB_SAVES_CLOSE)   // closed inside its dialog: no more drawing
 			break;
 		music_update(); HT("music");
-		const float dt = UI_METRIC_1_0F / UI_METRIC_60_0F * (float)video_ui_steps();   // 2 frames long on the Old's 30 fps room
+		const float dt = 1.0f / 60.0f * (float)video_ui_steps();   // 2 frames long on the Old's 30 fps room
 		clock_s += dt;
 		{
 			u64 tv0=svcGetSystemTick();
@@ -893,10 +941,10 @@ int home_run(bool games, char *path, size_t len, home_launch_t *out)
 		if (title_for != s) {
 			title_for = s;
 			title_t = 0;
-			pop = UI_METRIC_0_9F;
+			pop = 0.9f;
 			pop_v = 0;
 		}
-		ui_motion_settle(&pop, &pop_v, UI_METRIC_1_0F, UI_MOTION_SETTLE_RATE, dt);
+		ui_motion_settle(&pop, &pop_v, 1.0f, UI_MOTION_SETTLE_RATE, dt);
 		if (title_t < 1) title_t = fminf(1, title_t + dt * 5);
 		if (fade > 0) fade = fmaxf(0, fade - dt * 3);
 		for (int i = 0; i < 5 && i < library_count(); i++)
@@ -913,10 +961,10 @@ int home_run(bool games, char *path, size_t len, home_launch_t *out)
 		// A published snapshot is usable during background validation. Never hold
 		// the room dark waiting for a long walk; shelves can fill after reveal.
 		room_intro_wait += dt;
-		if (room_intro < UI_METRIC_1 && ((bb_index_complete() && bb_system_total()>0) || room_intro_wait >= UI_MOTION_BOOT_WAIT_S)) {
-			if (room_intro == UI_METRIC_0) room_scene_library_follow(true);
+		if (room_intro < 1 && ((bb_index_complete() && bb_system_total()>0) || room_intro_wait >= UI_MOTION_BOOT_WAIT_S)) {
+			if (room_intro == 0) room_scene_library_follow(true);
 			if (!room_intro_tick) room_intro_tick=svcGetSystemTick();
-            room_intro = fminf(UI_METRIC_1, (float)(svcGetSystemTick()-room_intro_tick)/SYSCLOCK_ARM11/ROOM_INTRO_SECONDS);
+            room_intro = fminf(1, (float)(svcGetSystemTick()-room_intro_tick)/SYSCLOCK_ARM11/ROOM_INTRO_SECONDS);
 		}
 
 	}
@@ -946,101 +994,6 @@ void home_note_game(const char *path, const char *save_name, const char *title, 
 }
 
 // ---------------------------------------------------------------- empty library
-
-#define DEFAULT_GAMES_DIR "sdmc:/roms/psx"
-static char empty_msg[PATH_LEN / 2 + 128];   // a path (cut at 80) and the keys that help, wrapped by the shared text
-static int empty_msg_frames;
-// "<what> <end of the folder path><then>": the path keeps its last folder names (whole UTF-8 characters), cut by
-// RENDERED width so a long WWWW path and a CJK one both stay two lines (the text wraps at 304 px, from y 170,
-// and must end above the button bar); wide glyphs just keep fewer characters
-static void empty_say(const char *what, const char *dir, const char *then)
-{
-	enum { LINE_PX = 304, MESSAGE_PX = 2 * LINE_PX - 120, PATH_PX = LINE_PX - 16 };
-	char tail[PATH_LEN];
-	for (int chars = 80; ; chars -= chars > 12 ? 4 : 1) {
-		ui_path_tail(tail, sizeof(tail), dir, chars);
-		snprintf(empty_msg, sizeof(empty_msg), "%s %.200s%s", what, tail, then);
-		if (chars <= 1 || (ui_text_width(NULL, UI_FONT_SMALL, empty_msg) <= MESSAGE_PX && ui_text_width(NULL, UI_FONT_SMALL, tail) <= PATH_PX))
-			break;
-	}
-}
-#define EMPTY_RETRY ". Rescan tries again; Folders picks another folder."
-
-static void empty_top(void *ud); /* shared presentation */
-
-static const ui_button_t empty_bar[3] = {
-	{ KEY_B, "Menu", 0, false }, { KEY_Y, "Folders", UI_ICON_FOLDER, false }, { KEY_SELECT, "Rescan", UI_ICON_RESCAN, false },
-};
-
-static void empty_bottom(void *ud); /* shared presentation */
-
-int home_empty_library_run(void)
-{
-	have_games = false;
-	fade = 1;
-	empty_msg_frames = 0;
-	if (g_cfg.games_dir[0]) {   // a folder was chosen but holds no games: say so, don't just look unchanged
-		if (bb_games_dir_gone) {   // the saved choice is kept: the card may only be unreadable for now
-			empty_say("Can't read", g_cfg.games_dir, EMPTY_RETRY);
-			empty_msg_frames = 1 << 30;   // stays until the folder reads or another is chosen
-		} else
-		{
-		empty_say("No games found in", g_cfg.games_dir, ".");
-		empty_msg_frames = 300;
-		}
-	}
-	music_play(true);
-	ui_wants_3d = true;
-	int r = 0;
-	while (aptMainLoop()) {
- HT("loop");
-		if(bb_index_poll(true))shelf_library_changed();
-		if(bb_system_total()>0){r=3;break;}
-		HT("preload/dev begin");
-        if (dev_tick(false)) { r = 3; break; }
-		HT("dev done");
-        int screen = dev_ui_take();
-		if (screen == DEV_UI_SETTINGS) { settings_ui_run(false, empty_top); continue; }
-		input_poll(); HT("input");
-		u32 k = ui_header_back(ui_bar_input(empty_bar, 3, input_keys_down()));
-        k=ui_swap_keys(k,UI_SWAP_MENU);
-		if (k & KEY_B) { sfx_play(SFX_BACK); r = 1; break; }
-		if (k & KEY_Y) { sfx_play(SFX_SELECT); r = 2; break; }
-		if (k & KEY_X) { sfx_play(SFX_SELECT); settings_ui_run(false, empty_top); continue; }
-		if (k & KEY_SELECT) {
-			// the start's cheap look: the saved folder, else the usual roots and folders named like a system
-			char found[PATH_LEN];
-			sfx_play(SFX_SELECT);
-			bb_games_dir_retry();   // the saved folder reads again: that one
-			if (!bb_index_discover(g_cfg.games_dir, found, sizeof(found))) {
-				if (g_cfg.games_dir[0]) empty_say("Can't read", g_cfg.games_dir, EMPTY_RETRY);
-				else snprintf(empty_msg, sizeof(empty_msg), "No games folder found. Folders picks one.");
-				empty_msg_frames = g_cfg.games_dir[0] ? 1 << 30 : 240;
-			} else {
-				bb_games_dir_found(found);   // the saved folder, or a fallback for this session only
-				if (library_load(g_cfg.games_dir, true)) {
-					r = 3;
-					break;
-				}
-				if (!aptMainLoop()) { r = 0; break; }
-				if(bb_index_status()==BB_INDEX_SCANNING)empty_say("Finding games in",g_cfg.games_dir,"...");
-				else empty_say("Still no games in",g_cfg.games_dir,".");
-				empty_msg_frames = 180;
-			}
-		}
-		music_update(); HT("music");
-		clock_s += UI_METRIC_1_0F / UI_METRIC_60_0F;
-		if (fade > 0) fade = fmaxf(0, fade - UI_METRIC_3_0F / UI_METRIC_60_0F);
-		if (empty_msg_frames > 0) empty_msg_frames--;
-		// HOME > Close can end a library_load above (it polls aptMainLoop): nothing may be drawn after it
-		if (!aptMainLoop() || !gspHasGpuRight()) { r = 0; break; }
-		ui_begin();
-		video_present_vsync(false, empty_top, empty_bottom, NULL);
-	}
-	music_play(false);
-	ui_wants_3d = false;
-	return r;
-}
 
 // The place cards' lines before A (place_cards.h): what the room's Collection, Settings and Quit cards say.
 // The text lives here until the next frame builds it again (a few counts and one sum: no file, no allocation).
@@ -1073,9 +1026,9 @@ static void place_rows(shelf_card *c, int place)
 			was = now;
 		}
 		place_text = lines;
-		if (empty) c->hint = empty_help(false);   // where games go: the one sentence the empty library says everywhere
+		if (empty) c->hint = home_empty_help(false);   // where games go: the one sentence the empty library says everywhere
 	} else if (place == ROOM_SETTINGS) {
-		place_settings(&place_text, BB_VERSION, bb_update_glance(), theme()->name);   // Room style is on Settings' first page
+		place_settings(&place_text, BB_VERSION, bb_update_glance(), theme()->name);   // Theme is on Settings > Customize
 	} else if (place == ROOM_QUIT_PLACE) {
 		char clean[PATH_LEN];
 		ui_clean_title(cont_title(), clean, sizeof(clean));

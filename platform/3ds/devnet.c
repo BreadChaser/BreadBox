@@ -31,6 +31,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#ifdef BB_DISC_TIMING
+#include <sys/statvfs.h>
+#endif
 
 const char *const dev_columns[DEV_METRICS] = {
     "fps",       "speed_pct",     "emu_ms",  "present_ms", "wait_ms",   "gpu_ms",  "mcycles",
@@ -603,7 +606,12 @@ static void sd_mutate(int fd, const char *command, const char *args)
     bool ok=false;
     if (files_busy) { send_json(fd,"{\"error\":\"busy\"}"); return; }
     if (!strcmp(command,"mkdir")) ok=make_parents(path,true) && !stat(path,&st) && S_ISDIR(st.st_mode);
-    else if (!strcmp(command,"rm")) ok=!stat(path,&st) && S_ISREG(st.st_mode) && !unlink(path);
+    else if (!strcmp(command,"rm")) {
+        ok=!stat(path,&st) && S_ISREG(st.st_mode) && !unlink(path);
+#ifdef BB_DISC_TIMING
+        if (!ok && !stat(path,&st) && S_ISDIR(st.st_mode)) ok=!rmdir(path);
+#endif
+    }
     else {
         /* Rename only, refuse replacement: never remove a destination tree. */
         if (strcmp(path,dest) && stat(dest,&st) && errno==ENOENT && make_parents(dest,false))
@@ -723,6 +731,21 @@ static void put_file(int fd, const char *args, const u8 *extra, size_t extra_len
 }
 static bool file_command(int fd, const char *command, const u8 *extra, size_t extra_len)
 {
+#ifdef BB_DISC_TIMING
+    if (!strcmp(command, "sd-space")) {
+        if (!files_allowed(fd)) return true;
+        struct statvfs space;
+        char json[160];
+        if (statvfs("sdmc:/", &space)) send_json(fd, "{\"error\":\"SD space unavailable\"}");
+        else {
+            snprintf(json, sizeof(json), "{\"free\":%llu,\"total\":%llu}",
+                     (unsigned long long)space.f_bavail * space.f_frsize,
+                     (unsigned long long)space.f_blocks * space.f_frsize);
+            send_json(fd, json);
+        }
+        return true;
+    }
+#endif
 	char path[PATH_LEN];
 	if (!strcmp(command, "crashes") || !strcmp(command, "logs") || !strncmp(command, "ls ", 3) ||
 	    !strncmp(command, "get sdmc:", 9) || !strncmp(command, "put ", 4) || !strncmp(command, "put-game ", 9) || !strncmp(command,"mkdir ",6) ||

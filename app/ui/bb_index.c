@@ -5,6 +5,7 @@
 #include "bb_index.h"
 #include "bb_registry.h"
 #include "safefile.h"
+#include "cold_code.h"
 #include <ctype.h>
 #include <dirent.h>
 #include <errno.h>
@@ -40,11 +41,13 @@ static Thread worker;
 #define BB_INDEX_CACHE APP_SD_ROOT "/library-index"
 #endif
 #define PATH_CAP 512
-/* No time, file or folder limit: a big library always finishes (owner 2026-11-12). The only limits are memory:
+/* No time, file or folder limit: a big library always finishes. The only limits are memory:
  * a list keeps at most MAX_ITEMS games in MAX_BYTES of titles, keys, covers and paths (about 250-300 bytes a game),
  * and a check holds two lists at once (the one shown and the fresh one), 6 MiB at most of the Old 3DS's ~11 MiB
- * free in the room. That is about 12,000 games, eight times a 1,469-game card. A folder's subfolders wait in at
- * most MAX_PENDING bytes (about 9,000 folders in one folder). Reaching a limit never drops games a previous
+ * free in the room. That is about 12,000 games, eight times a 1,469-game card. The subfolders still waiting to be
+ * walked are packed names in at most MAX_PENDING bytes over the whole traversal, allocator overhead included; when
+ * the open levels together would pass it, the outer levels' lists are freed and those directories read again later, so
+ * only one directory's own list has to fit (as on trunk, with smaller entries). Reaching a limit never drops games a previous
  * complete check found: the cached list stays. */
 #define MAX_ITEMS 12288
 #define MAX_BYTES (3u * 1024u * 1024u)
@@ -284,9 +287,41 @@ static void cache_write(const char *root, snapshot *s, unsigned id)
     bool saved=safe_finish(f,BB_INDEX_CACHE,ok);
     LOG("index: cache write entries=%u bytes=%u ok=%d\n",(unsigned)count,s->bytes,saved);
 }
+/* The folders still waiting to be walked, per open directory level, with ONE cap over all levels (MAX_PENDING).
+ * A level's child list is packed names, {u16 priority, u8 length, name}, in 16 KiB blocks plus an array of pointers in
+ * visiting order. It is only a cache: when the cap would be passed, the shallowest open ancestor's list is freed
+ * (evicted); that level keeps a cursor (the key of the last child handed to the walk) and, when its child returns,
+ * re-reads its directory keeping only what follows the cursor. So a level never needs more than one directory's list, a
+ * directory that fits alone always fits, and visited siblings stop costing memory. Files are probed in the first
+ * enumeration only. Each block and each array is one allocation, charged its size + ALLOC_OVERHEAD: newlib (the 3DS)
+ * adds at most 19, and its fixed 16/32/64 pool slot is preallocated, never new heap; glibc (host tests) up to 40 below its
+ * 128 KiB mmap threshold, where an allocation costs page rounding instead (the host test raises the threshold). Capacity
+ * is at least trunk's except within one block (16 KiB + 64) of the cap. */
+#ifdef BB_INDEX_TEST
+/* Test overrides (0 = the real value): the cap, the block size, and the most re-reads a level may make. */
+unsigned bb_index_test_cap, bb_index_test_block, bb_index_test_reread_limit;
+#define PENDING_CAP (bb_index_test_cap?bb_index_test_cap:MAX_PENDING)
+#define LIST_BLOCK (bb_index_test_block?bb_index_test_block:16384u)
+#else
+#define PENDING_CAP MAX_PENDING
+#define LIST_BLOCK 16384u
+#endif
+#define ALLOC_OVERHEAD 64u
+#define MAX_LEVELS 13u   /* directory levels open at once: depth 0..12 */
+typedef struct blockhdr { struct blockhdr *next; unsigned used; } blockhdr;
+#define BLOCK_PAYLOAD (LIST_BLOCK-sizeof(blockhdr))
 typedef struct {
-    snapshot *s; unsigned id, dirs, entries, headers, omitted, ambiguous, errors;
-    uint64_t start, last; bool limited;
+    blockhdr *head,*tail; const unsigned char **order;   /* order: n pointers while resident */
+    unsigned n,total,next; bool resident;               /* total/next survive an eviction: what is left to visit */
+} plist;
+typedef struct {
+    plist list; bool have_cursor; unsigned char clen; unsigned cpri; char cname[256];
+    unsigned handed,rereads,first;   /* children handed to the walk, re-reads made, children first listed */
+    uint64_t prefix;                /* sum of raw name/priority signatures already handed out */
+} frame;
+typedef struct {
+    snapshot *s; unsigned id, dirs, entries, headers, omitted, ambiguous, errors, pending, peak;
+    uint64_t start, last; bool limited; frame *frames[MAX_LEVELS];
 } scan;
 static bool scan_stop(scan *c)
 {
@@ -306,58 +341,267 @@ static void progress(scan *c, const char *phase)
         c->last=now;
     }
 }
-typedef struct pending_dir {
-    struct pending_dir *next;
-    unsigned priority;
-    char path[];
-} pending_dir;
+#ifdef BB_INDEX_TEST
+#include <malloc.h>
+/* Test hooks. peak/live: the most pending bytes the last scan charged and those still charged after it. real_*: the same
+ * measured from the allocator (usable size plus its size word), independent of the charge; slack: the most one allocation
+ * cost beyond its request. evictions/rereads: lists freed for room and directories read again. fail_at: an allocation
+ * failure at the nth pending allocation (1-based, 0 = off). at_child: called on the worker before each subfolder is
+ * walked, with the bytes pending then. */
+static unsigned test_peak, test_live, test_real, test_real_peak, test_allocs, test_slack, test_evictions, test_rereads;
+unsigned bb_index_test_fail_pending_at;
+void (*bb_index_test_at_child)(const char *path,unsigned pending);
+unsigned bb_index_test_pending_peak(void){return test_peak;}
+unsigned bb_index_test_pending_live(void){return test_live;}
+unsigned bb_index_test_pending_real_peak(void){return test_real_peak;}
+unsigned bb_index_test_pending_real_live(void){return test_real;}
+unsigned bb_index_test_pending_cap(void){return PENDING_CAP;}
+unsigned bb_index_test_alloc_overhead(void){return ALLOC_OVERHEAD;}
+unsigned bb_index_test_worst_slack(void){return test_slack;}
+unsigned bb_index_test_evictions(void){return test_evictions;}
+unsigned bb_index_test_rereads(void){return test_rereads;}
+unsigned bb_index_test_pending_allocs(void){return test_allocs;}
+#endif
+/* One allocation charged to the scan; NULL (the scan limited) when the traversal's cap or the heap is out. */
+static void *pending_alloc(scan *c,size_t n)
+{
+    if(c->pending+n+ALLOC_OVERHEAD>PENDING_CAP) { c->limited=true; return NULL; }
+    void *p=malloc(n);
+#ifdef BB_INDEX_TEST
+    test_allocs++;
+    if(bb_index_test_fail_pending_at && test_allocs==bb_index_test_fail_pending_at){free(p);p=NULL;}
+    if(p){
+        unsigned real=(unsigned)(malloc_usable_size(p)+sizeof(size_t));
+        test_real+=real;if(test_real>test_real_peak)test_real_peak=test_real;
+        if(real>n && real-n>test_slack)test_slack=real-(unsigned)n;
+    }
+#endif
+    if(!p) { c->limited=true; return NULL; }
+    c->pending+=n+ALLOC_OVERHEAD; if(c->pending>c->peak)c->peak=c->pending;
+    return p;
+}
+static void pending_release(scan *c,void *p,size_t n)
+{
+    if(!p) return;
+#ifdef BB_INDEX_TEST
+    test_real-=(unsigned)(malloc_usable_size(p)+sizeof(size_t));
+#endif
+    c->pending-=n+ALLOC_OVERHEAD; free(p);
+}
 static unsigned directory_priority(const char *name)
 {
     const bb_system_t *system=bb_system_folder(name);
     if(system)return system->scan_priority;
     return bb_index_folder_hint(name)<0?257:256;
 }
-static void walk(scan *c, const char *dir, unsigned depth)
+/* Free a level's list (blocks and order array); what is left to visit (total, next) stays known. */
+static void list_free(scan *c,plist *l)
+{
+    for(blockhdr *b=l->head,*after;b;b=after){after=b->next;pending_release(c,b,LIST_BLOCK);}
+    pending_release(c,(void *)l->order,l->n*sizeof(*l->order));
+    l->head=l->tail=NULL;l->order=NULL;l->n=0;l->resident=false;
+}
+/* Free the shallowest open ancestor's list; false when no ancestor holds one. */
+static bool evict(scan *c,unsigned depth)
+{
+    for(unsigned k=0;k<depth;k++) {
+        frame *f=c->frames[k];
+        if(f && f->list.resident){
+            list_free(c,&f->list);
+#ifdef BB_INDEX_TEST
+            test_evictions++;
+#endif
+            return true;
+        }
+    }
+    return false;
+}
+/* Add one subfolder to a level's list. Room is made by evicting ancestors; the order array it will need (one pointer
+ * per folder) is reserved with it. False (the scan limited): one directory's list alone passes the cap. */
+static bool push(scan *c,frame *f,unsigned depth,const char *name)
+{
+    plist *l=&f->list; size_t len=strlen(name),need=3+len;
+    bool fresh=!l->tail || l->tail->used+need>BLOCK_PAYLOAD;
+    size_t extra=(fresh?LIST_BLOCK+ALLOC_OVERHEAD:0)+(l->n+1)*sizeof(*l->order)+ALLOC_OVERHEAD;
+    while(c->pending+extra>PENDING_CAP) if(!evict(c,depth)) { c->limited=true; return false; }
+    if(fresh) {
+        blockhdr *b=pending_alloc(c,LIST_BLOCK); if(!b) return false;
+        b->next=NULL; b->used=0;
+        if(l->tail) l->tail->next=b; else l->head=b;
+        l->tail=b;
+    }
+    unsigned char *r=(unsigned char *)(l->tail+1)+l->tail->used; unsigned pri=directory_priority(name);
+    r[0]=pri&255; r[1]=pri>>8; r[2]=(unsigned char)len; memcpy(r+3,name,len);
+    l->tail->used+=(unsigned)need; l->n++;
+    return true;
+}
+/* The visiting order: priority, then the name without case. */
+static int key_cmp(unsigned pa,const unsigned char *na,unsigned la,unsigned pb,const unsigned char *nb,unsigned lb)
+{
+    if(pa!=pb) return pa<pb?-1:1;
+    for(unsigned i=0;i<la && i<lb;i++){int x=tolower(na[i]),y=tolower(nb[i]);if(x!=y)return x<y?-1:1;}
+    return la==lb?0:(la<lb?-1:1);
+}
+static unsigned rec_pri(const unsigned char *r){return r[0]|(unsigned)r[1]<<8;}
+static int rec_cmp(const unsigned char *a,const unsigned char *b){return key_cmp(rec_pri(a),a+3,a[2],rec_pri(b),b+3,b[2]);}
+static void sift(const unsigned char **v,unsigned root,unsigned n)
+{
+    for(unsigned child;(child=2*root+1)<n;root=child) {
+        if(child+1<n && rec_cmp(v[child],v[child+1])<0) child++;
+        if(rec_cmp(v[root],v[child])>=0) return;
+        const unsigned char *t=v[root];v[root]=v[child];v[child]=t;
+    }
+}
+/* Where a record was pushed (names equal without case are visited later-pushed first, as the old sorted list did). */
+static unsigned chain_pos(const plist *l,const unsigned char *r)
+{
+    unsigned k=0;
+    for(const blockhdr *b=l->head;b;b=b->next)
+        for(unsigned off=0;off<b->used;k++){const unsigned char *p=(const unsigned char *)(b+1)+off;if(p==r)return k;off+=3+p[2];}
+    return k;
+}
+static void order_run(const plist *l,const unsigned char **v,unsigned n)
+{
+    for(unsigned i=1;i<n;i++){
+        const unsigned char *cur=v[i]; unsigned pos=chain_pos(l,cur),j=i;
+        while(j>0 && chain_pos(l,v[j-1])<pos){v[j]=v[j-1];j--;}
+        v[j]=cur;
+    }
+}
+/* Sort what has been pushed into visiting order (heap sort: in place, no recursion). */
+PSX3D_COLD static void finish_list(scan *c,frame *f)
+{
+    plist *l=&f->list; l->total=l->next=0; l->resident=true;
+    if(!l->n) return;
+    const unsigned char **v=pending_alloc(c,l->n*sizeof(*v));
+    if(!v) { list_free(c,l); return; }
+    unsigned i=0;
+    for(const blockhdr *b=l->head;b;b=b->next)
+        for(unsigned off=0;off<b->used;){const unsigned char *r=(const unsigned char *)(b+1)+off;v[i++]=r;off+=3+r[2];}
+    for(unsigned k=l->n/2;k-->0;) sift(v,k,l->n);
+    for(unsigned end=l->n;end-->1;){const unsigned char *t=v[0];v[0]=v[end];v[end]=t;sift(v,0,end);}
+    for(unsigned a=0,b;a<l->n;a=b) {
+        for(b=a+1;b<l->n && !rec_cmp(v[a],v[b]);b++);
+        if(b-a>1) order_run(l,v+a,b-a);
+    }
+    l->order=v; l->total=l->n;
+}
+enum { ENTRY_SKIP, ENTRY_FILE, ENTRY_DIR };
+/* What a directory entry is, building its path; ENTRY_DIR only for a folder the walk may descend into. `first` counts
+ * omissions once; metadata failures invalidate every pass, including a re-read. */
+static int classify(scan *c,const char *dir,unsigned depth,const struct dirent *de,char *path,bool first)
+{
+    if(de->d_name[0]=='.') return ENTRY_SKIP;
+    bool directory=de->d_type==DT_DIR;
+    if(de->d_type!=DT_DIR && de->d_type!=DT_REG && de->d_type!=DT_UNKNOWN) return ENTRY_SKIP;
+    if(snprintf(path,PATH_CAP,"%s/%s",dir,de->d_name)>=PATH_CAP) { c->omitted+=first; return ENTRY_SKIP; }
+    if(de->d_type==DT_UNKNOWN) {
+        struct stat st;
+        /* lstat prevents symlink cycles on hosts; FAT has no symlinks. */
+        if(lstat(path,&st)) { c->errors++; return ENTRY_SKIP; }
+        directory=S_ISDIR(st.st_mode);
+        if(!directory && !S_ISREG(st.st_mode)) return ENTRY_SKIP;
+    }
+    if(!directory) return ENTRY_FILE;
+    if(!strcasecmp(path,APP_SD_ROOT) || !strcasecmp(path,APP_LEGACY_PSX3D_ROOT) ||
+        !strcasecmp(path,"sdmc:/Nintendo 3DS") || !strcasecmp(path,"sdmc:/DCIM")) return ENTRY_SKIP;
+    if(depth>=12 || strlen(de->d_name)>255) { c->omitted+=first; return ENTRY_SKIP; }
+    return ENTRY_DIR;
+}
+/* Does a folder come after the cursor in visiting order? An entry equal without case is told apart by readdir order: the
+ * old sorted list put the later one first, so one met before the cursor's own entry is still to visit. */
+static bool after_cursor(const frame *f,const char *name,bool *seen)
+{
+    size_t len=strlen(name);
+    int k=key_cmp(f->cpri,(const unsigned char *)f->cname,f->clen,directory_priority(name),(const unsigned char *)name,(unsigned)len);
+    if(k) return k<0;
+    if(len==f->clen && !memcmp(name,f->cname,len)) { *seen=true; return false; }
+    return !*seen;
+}
+/* A bounded, order-independent signature of the consumed names and priorities. Include raw case-sensitive bytes:
+ * equal folded names can change places in readdir order while the cursor keeps the same rank. Count plus signature
+ * detects changed prefix membership without storing every visited name; as with any finite hash, collisions are possible. */
+static uint64_t folder_signature(unsigned pri,const unsigned char *name,unsigned len)
+{
+    uint64_t h=14695981039346656037ULL;
+    h=(h^(pri&255))*1099511628211ULL; h=(h^(pri>>8))*1099511628211ULL;
+    h=(h^len)*1099511628211ULL;
+    for(unsigned i=0;i<len;i++) h=(h^name[i])*1099511628211ULL;
+    return h;
+}
+/* Read an evicted level again, keeping folders after the cursor. Validate both the count and raw-name/priority
+ * signature of the consumed prefix. Changes after the cursor may still be discovered or omitted. Re-reads are bounded
+ * (each follows a visited child); a failed validation ends the scan with an error and preserves the cached list. */
+static bool rebuild(scan *c,frame *f,const char *dir,unsigned depth)
+{
+    plist *l=&f->list; list_free(c,l); l->total=l->next=0;
+    unsigned limit=2*f->first+16;
+#ifdef BB_INDEX_TEST
+    if(bb_index_test_reread_limit) limit=bb_index_test_reread_limit;
+    test_rereads++;
+#endif
+    if(++f->rereads>limit) { c->errors++; return false; }
+    DIR *d=opendir(dir);
+    if(!d) { c->errors++; return false; }
+    struct dirent *de; bool seen=false,whole=false; unsigned before=0,errors=c->errors; uint64_t prefix=0;
+    while(!scan_stop(c)) {
+        errno=0; de=readdir(d);
+        if(!de) { if(errno) c->errors++; else whole=true; break; }
+        char path[PATH_CAP];
+        if(classify(c,dir,depth,de,path,false)!=ENTRY_DIR) continue;
+        if(f->have_cursor && !after_cursor(f,de->d_name,&seen)) {
+            before++; prefix+=folder_signature(directory_priority(de->d_name),(const unsigned char *)de->d_name,(unsigned)strlen(de->d_name));
+            continue;
+        }
+        if(!push(c,f,depth,de->d_name)) break;
+    }
+    closedir(d);
+    if(whole && f->have_cursor && (before!=f->handed || prefix!=f->prefix)) c->errors++;
+    if(c->errors!=errors) { list_free(c,l); return false; }
+    finish_list(c,f);
+    return l->total>0;
+}
+PSX3D_COLD static void walk(scan *c, const char *dir, unsigned depth);
+/* Folder names prioritize supported systems, never override file validation.
+ * Other-system folders cost directory enumeration only for foreign formats;
+ * supported files in a mislabeled subtree are still discovered. */
+static void walk_children(scan *c,frame *f,const char *dir,unsigned depth)
+{
+    plist *l=&f->list;
+    if(c->limited) list_free(c,l); else finish_list(c,f);
+    f->first=l->total;
+    while(!scan_stop(c) && l->next<l->total) {
+        if(!l->resident && !rebuild(c,f,dir,depth)) break;   /* a child evicted this level's list */
+        if(l->next>=l->total) break;
+        const unsigned char *r=l->order[l->next++]; f->handed++;
+        f->cpri=rec_pri(r); f->clen=r[2]; memcpy(f->cname,r+3,r[2]); f->cname[r[2]]=0; f->have_cursor=true;
+        f->prefix+=folder_signature(f->cpri,r+3,r[2]);
+        char path[PATH_CAP];
+        /* the path fit when the folder was listed */
+        snprintf(path,sizeof(path),"%s/%s",dir,f->cname);
+#ifdef BB_INDEX_TEST
+        if(bb_index_test_at_child)bb_index_test_at_child(path,c->pending);
+#endif
+        if(!scan_stop(c)) walk(c,path,depth+1);
+    }
+    list_free(c,l);
+}
+PSX3D_COLD static void walk(scan *c, const char *dir, unsigned depth)
 {
     if(scan_stop(c)) return;
     DIR *d=opendir(dir); c->dirs++;
     if(!d) { c->errors++; return; }
     struct dirent *de;
-    pending_dir *children=NULL;
-    unsigned pending_bytes=0;
+    frame f; memset(&f,0,sizeof(f)); c->frames[depth]=&f;
     while(!scan_stop(c)) {
         errno=0;
         de=readdir(d);
         if(!de) { if(errno) c->errors++; break; }
         c->entries++; progress(c,"directory");
-        if(de->d_name[0]=='.') continue;
-        bool directory=de->d_type==DT_DIR;
-        if(de->d_type!=DT_DIR && de->d_type!=DT_REG && de->d_type!=DT_UNKNOWN) continue;
         char path[PATH_CAP];
-        if(snprintf(path,sizeof(path),"%s/%s",dir,de->d_name)>=(int)sizeof(path)) { c->omitted++; continue; }
-        if(de->d_type==DT_UNKNOWN) {
-            struct stat st;
-            /* lstat prevents symlink cycles on hosts; FAT has no symlinks. */
-            if(lstat(path,&st)) { c->errors++; continue; }
-            directory=S_ISDIR(st.st_mode);
-            if(!directory && !S_ISREG(st.st_mode)) continue;
-        }
-        if(directory) {
-            if(!strcasecmp(path,APP_SD_ROOT) || !strcasecmp(path,APP_LEGACY_PSX3D_ROOT) ||
-                !strcasecmp(path,"sdmc:/Nintendo 3DS") || !strcasecmp(path,"sdmc:/DCIM")) continue;
-            if(depth>=12) { c->omitted++; continue; }
-            size_t bytes=sizeof(pending_dir)+strlen(path)+1;
-            if(pending_bytes+bytes>MAX_PENDING) { c->limited=true; break; }
-            pending_dir *child=malloc(bytes);
-            if(!child) { c->limited=true; break; }
-            pending_bytes+=bytes;
-            child->priority=directory_priority(de->d_name); strcpy(child->path,path);
-            pending_dir **at=&children;
-            while(*at && ((*at)->priority<child->priority ||
-                  ((*at)->priority==child->priority && strcasecmp((*at)->path,child->path)<0))) at=&(*at)->next;
-            child->next=*at; *at=child;
-            continue;
-        }
+        int kind=classify(c,dir,depth,de,path,true);
+        if(kind==ENTRY_SKIP) continue;
+        if(kind==ENTRY_DIR) { if(!push(c,&f,depth,de->d_name)) break; continue; }
         bb_entry entry={0};
         const bb_system_t *system=bb_system_probe_path(path,&entry);
         if(system) {c->headers++;if(!append(c->s,system,path,&entry,true))c->limited=true; if(!(c->headers%16))pause_worker();}
@@ -371,14 +615,8 @@ static void walk(scan *c, const char *dir, unsigned depth)
         }
     }
     closedir(d);
-    /* Folder names prioritize supported systems, never override file validation.
-     * Other-system folders cost directory enumeration only for foreign formats;
-     * supported files in a mislabeled subtree are still discovered. */
-    while(children) {
-        pending_dir *child=children; children=child->next;
-        if(!scan_stop(c)) walk(c,child->path,depth+1);
-        free(child);
-    }
+    walk_children(c,&f,dir,depth);
+    c->frames[depth]=NULL;
 }
 #ifdef BB_INDEX_TEST
 static void *worker_main(void *unused)
@@ -426,7 +664,13 @@ static void worker_main(void *unused)
         snapshot *fresh=cached?calloc(1,sizeof(*fresh)):s;
         if(!fresh)goto finish;
         scan c={.s=fresh,.id=id,.start=millis(),.last=millis()};
+#ifdef BB_INDEX_TEST
+        test_real_peak=test_real; test_allocs=0;
+#endif
         walk(&c,root,0);
+#ifdef BB_INDEX_TEST
+        test_peak=c.peak; test_live=c.pending;
+#endif
         LOG("index: finish directory=%u entries=%u header=%u games=%u omitted=%u ambiguous=%u errors=%u limited=%d ms=%llu\n",
             c.dirs,c.entries,c.headers,fresh->count,c.omitted,c.ambiguous,c.errors,c.limited,(unsigned long long)(millis()-c.start));
         /* Omitted entries (a path over PATH_CAP, folders over 12 deep) are logged and skipped the same way every time:

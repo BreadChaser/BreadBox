@@ -4,7 +4,7 @@
 # 3DS SDK; they do not run on the 3DS and cannot certify GPU, SOC or APT timing, or the
 # real worker threads. What each one executes is described in docs/building.md.
 #
-# Usage: bash tools/build/host-tests.sh [name-filter]
+# Usage: HOST_TEST_JOBS=N bash tools/build/host-tests.sh [name-filter]
 # Needs: cc, python3, pkg-config, FreeType, libpng, libcurl, zlib, OpenSSL,
 # ImageMagick (`magick` or `convert`). Logs go to $HOST_TEST_OUT (default: a temp dir).
 # Each group gets its own empty TMPDIR and XDG_CACHE_HOME under it and keeps its
@@ -12,6 +12,9 @@
 # folder. Text widths use the bundled tests/fonts/DejaVuSans.ttf, not a system font.
 set -uo pipefail
 cd "$(dirname "$0")/../.."
+list_only=false
+[[ ${1:-} == --list ]] && list_only=true
+if $list_only; then out=/dev/null; else
 out=${HOST_TEST_OUT:-$(mktemp -d "${TMPDIR:-/tmp}/psx3d-host-tests.XXXXXX")}
 mkdir -p "$out"
 if ! command -v magick >/dev/null 2>&1; then   # ImageMagick 6 only ships `convert`
@@ -27,10 +30,25 @@ SH
 	chmod +x "$out/bin/magick"
 	export PATH="$out/bin:$PATH"
 fi
+fi
 filter=${1:-}
+$list_only && filter=''
+all_names=()
+cores=$(nproc 2>/dev/null || echo 1)
+default_jobs=$((cores / 2))
+(( default_jobs > 0 )) || default_jobs=1
+(( default_jobs < 4 )) || default_jobs=4
+jobs=${HOST_TEST_JOBS:-$default_jobs}
+[[ $jobs =~ ^[1-9][0-9]*$ ]] || { echo 'host-tests.sh: HOST_TEST_JOBS must be a positive integer' >&2; exit 2; }
 passed=0
 failed=()
 skipped=()
+suite_names=()
+suite_args_files=()
+
+# No suite currently needs serialization: test servers bind ephemeral ports, suites
+# use TMPDIR, and explicit build/output directories below are rewritten per suite.
+serial_suites=()
 # Exit 77 is a missing prerequisite, never a pass.
 
 # The gcc-12 AddressSanitizer in the pinned image crashes at random (an endless stream of
@@ -41,7 +59,7 @@ skipped=()
 norandom=()
 if setarch "$(uname -m)" -R true 2>/dev/null; then norandom=(setarch "$(uname -m)" -R); fi
 
-run() { # run <name> <command...>
+run_serial() { # run <name> <command...> (legacy execution path)
 	local name=$1 start=$SECONDS
 	shift
 	[[ -z $filter || $name == *$filter* ]] || return 0
@@ -68,13 +86,86 @@ run() { # run <name> <command...>
 	fi
 }
 
+register_suite() { # register_suite <name> <command...>
+	local name=$1 index=${#suite_names[@]}
+	shift
+	[[ -z $filter || $name == *$filter* ]] || return 0
+	local args_file="$out/.parallel/$index.args"
+	mkdir -p "$out/.parallel"
+	printf '%s\0' "$@" > "$args_file"
+	suite_names+=("$name")
+	suite_args_files+=("$args_file")
+}
+
+run_parallel_suite() { # run_parallel_suite <index>
+	local index=$1 name=${suite_names[$1]} args_file=${suite_args_files[$1]}
+	local scratch="$out/scratch/$name" suite_out="$out/suites/$name" start=$SECONDS rc=0
+	local -a command=() private_command=()
+	rm -rf "$scratch" "$suite_out"
+	mkdir -p "$scratch/tmp" "$scratch/cache" "$suite_out"
+	mapfile -d '' -t command < "$args_file"
+	local arg
+	for arg in "${command[@]}"; do
+		private_command+=("${arg//"$out"/$suite_out}")
+	done
+	(ulimit -f 204800
+		export TMPDIR="$scratch/tmp" XDG_CACHE_HOME="$scratch/cache" PYTHONPYCACHEPREFIX="$scratch/cache/pycache"
+		"${norandom[@]}" "${private_command[@]}") > "$out/$name.log" 2>&1 || rc=$?
+	local elapsed=$((SECONDS - start))
+	printf '%s %s\n' "$rc" "$elapsed" > "$out/.parallel/$index.result.tmp"
+	mv "$out/.parallel/$index.result.tmp" "$out/.parallel/$index.result"
+	case $rc in
+	0) printf 'PASS %3ds  %s\n' "$elapsed" "$name" ;;
+	77) printf 'SKIP %3ds  %s\n' "$elapsed" "$name" ;;
+	*) printf 'FAIL %3ds  %s\n' "$elapsed" "$name" ;;
+	esac
+	rm -rf "$scratch" "$suite_out"
+}
+
+wait_for_pool() { # wait for one running suite, preserving the manager's status
+	wait -n || true
+}
+
+finish_parallel() {
+	local count=${#suite_names[@]} active=0 i rc elapsed name
+	for ((i=0; i<count; i++)); do
+		name=${suite_names[$i]}
+		if [[ " ${serial_suites[*]} " == *" $name "* ]]; then
+			while (( active )); do wait_for_pool; active=$((active - 1)); done
+			run_parallel_suite "$i"
+			continue
+		fi
+		while (( active >= jobs )); do wait_for_pool; active=$((active - 1)); done
+		run_parallel_suite "$i" &
+		active=$((active + 1))
+	done
+	while (( active )); do wait_for_pool; active=$((active - 1)); done
+
+	for ((i=0; i<count; i++)); do
+		name=${suite_names[$i]}
+		read -r rc elapsed < "$out/.parallel/$i.result"
+		case $rc in
+		0) passed=$((passed + 1)) ;;
+		77) skipped+=("$name") ;;
+		*) failed+=("$name") ;;
+		esac
+	done
+}
+
+run() { # run <name> <command...>
+ if $list_only; then printf '%s\n' "$1"; return; fi
+ [[ -z $filter || $1 == *$filter* ]] && all_names+=("$1")
+	if (( jobs == 1 )); then run_serial "$@"; else register_suite "$@"; fi
+}
+
 # Frontend code against a fake SDK: menus, settings, input, config, presets, widescreen, clips.
 run auto-update bash tests/update/run.sh
 run share-room python3 tests/share_room/check.py
 run art-smdh24 python3 tests/art/smdh24.py
+run looks            bash tests/looks/run.sh
+run look-equivalence bash tests/look_equivalence/run.sh
 run shelf-input python3 tests/room/input.py
 run shelf-preload python3 tests/room/preload.py
-run shelf-identity python3 tests/room/identity.py
 run room-spines python3 tests/room/spines.py
 run shelf-camera python3 tests/room/camera.py
 run room-restore python3 tests/room/restore.py
@@ -100,6 +191,9 @@ run ui-mark bash -c 'python3 tools/ui/mark_masks.py --check && cc -std=gnu11 -Wa
 run ui-paper bash -c 'cc -std=gnu11 -Wall -Wextra -Werror -fsanitize=address,undefined -g -Iinclude/breadbox tests/ui_paper/check.c -lm -o "$1/ui-paper" && "$1/ui-paper"' _ "$out"
 run text-baseline bash tests/text_baseline/run.sh
 run play-controls    bash tests/play_controls/run.sh
+run ps1-pad          bash tests/ps1_pad/run.sh
+run disc-timing      python3 tests/disc_timing/check.py
+run disc-thread      python3 tests/disc_timing/thread.py
 run ps1-messages     python3 tests/ps1_messages/check.py
 run ps1-save-osd     python3 tests/ps1_messages/osd_saved.py
 run ps1-card-close   python3 tests/ps1_card_question/check.py
@@ -109,7 +203,10 @@ run retro-tooling    python3 tests/retro_host/tooling.py
 run retro-host       bash tests/retro_host/run.sh
 run shell-guard      python3 tools/architecture/shell-guard.py --strict
 run ownership-guard  python3 tools/architecture/ownership-guard.py --strict
+run include-graph    python3 tests/include_graph/check.py
 run ownership-guard-controls python3 tests/ownership/check.py
+run arch-gates       python3 tests/arch_gates/check.py
+run trunk-gate       bash tests/trunk_gate/run.sh
 run main-lifecycle python3 tests/main_lifecycle/check.py
 run docs-current     python3 tests/docs_current/check.py
 run build-contract   python3 tests/layout_baseline/build_contract.py
@@ -153,6 +250,8 @@ run gba-stereo       bash tests/gba_stereo/run.sh
 run gba-observation  python3 tests/gba/hw1.py
 run gba-remote       python3 tests/gba/remote.py
 run shared-library   bash tests/bb_library/run.sh
+run library-letters  bash tests/library_letters/run.sh
+run card-tilt        bash tests/card_tilt/run.sh
 run gba-cart         bash tests/gba_cart/run.sh
 run gba-identity     bash tests/gba_identity/run.sh
 run bb-disc          bash tests/bb_disc/run.sh
@@ -171,10 +270,11 @@ run theme-values     python3 tests/themes/values.py
 run shelf-carton     bash -c 'cc -std=c11 -Wall -Wextra -Werror tests/shelf_carton/check.c -lm -o "$0/shelf-carton" && "$0/shelf-carton"' "$out"
 run shelf            bash tests/shelf/run.sh
 run scene-batch      bash tests/scene_batch/run.sh
-run room             bash -c 'cc -std=gnu11 -Wall -Wextra -Werror -fsanitize=address,undefined -g -Iapp/ui -Iinclude/breadbox -Iplatform/3ds tests/room/check.c app/ui/room_bbr.c -lm -o "$0/room" && "$0/room" && python3 tests/room/transition.py && python3 tests/room/swap-sites.py && python3 tests/room/box-light.py' "$out"
+run room             bash -c 'cc -std=gnu11 -Wall -Wextra -Werror -fsanitize=address,undefined -g -Iapp/ui -Iinclude/breadbox -Iplatform/3ds tests/room/check.c app/ui/home_view.c app/ui/room_bbr.c -lm -o "$0/room" && "$0/room" && python3 tests/room/transition.py && python3 tests/room/swap-sites.py && python3 tests/room/box-light.py' "$out"
 run room-walls       bash -c 'cc -std=gnu11 -Wall -Wextra -Werror -fsanitize=address,undefined -g -Iapp/ui -Iinclude/breadbox -Iplatform/3ds tests/room/walls.c app/ui/room_board.c app/ui/room_bbr.c -lm -o "$0/room-walls" && "$0/room-walls"' "$out"
 run hands            bash -c 'cc -std=gnu11 -Wall -Wextra -Werror -fsanitize=address,undefined -g -Iapp/ui -Iinclude/breadbox -Iplatform/3ds tests/room/hands.c app/ui/hands.c -lm -o "$0/hands" && "$0/hands" && python3 tests/room/hands-sleeve.py' "$out"
 run turn-loop        bash -c 'cc -std=gnu11 -Wall -Wextra -Werror -fsanitize=address,undefined -g -Iapp/ui -Iinclude/breadbox -Iplatform/3ds tests/room/turn_loop.c app/ui/hands.c -lm -o "$0/turn-loop" && "$0/turn-loop"' "$out"
+run gba-color        bash tests/gba_color/run.sh
 run settings-b       bash tests/settings_b/run.sh
 run settings-ui      env PSX3D_SETTINGS_OUTPUT="$out/settings" python3 tests/settings/run.py
 run settings-spec    env SPEC_DUMP="$out/settings-menu.tsv" bash tests/settings/spec.sh
@@ -198,8 +298,11 @@ run save-safety      bash tests/app/save/run.sh
 run save-names       bash tests/app/saveid/run.sh
 run c3d-abi          bash tests/c3d_abi/run.sh
 run covers-worker    python3 tests/app/covers/worker.py
+run launch-wait      bash tests/app/covers/launch.sh
 run covers-rebuild   bash tests/app/covers/rebuild.sh
+run covers-match     python3 tests/app/covers/match.py
 run core-microtests bash tests/core/run.sh
+run whats-new       python3 tests/whatsnew/check.py
 run title-version   python3 tests/title_version/check.py
 # Core/renderer/video code extracted from the sources and run on the host.
 run video-scanout    python3 tests/app/vout/check.py
@@ -208,10 +311,36 @@ run video-teardown   python3 tools/frontend-overhead/library_check.py
 run gpu-reference    env BUILD_DIR="$out/gpu" bash tools/gpu-compare/regress.sh
 run pica-layout      env PICA_LAYOUT_CHECK_OUT="$out/pica-layout" bash tools/pica-layout/check.sh
 
+$list_only && exit 0
+
+if (( jobs > 1 )); then
+	finish_parallel
+	for ((i=0; i<${#suite_names[@]}; i++)); do
+		name=${suite_names[$i]}
+		read -r rc _ < "$out/.parallel/$i.result"
+		if [[ $rc == 77 ]]; then
+			cat "$out/$name.log"
+		elif [[ $rc != 0 ]]; then
+			tail -n 40 "$out/$name.log" | sed 's/^/     | /'
+		fi
+	done
+fi
+
 echo
+python3 - "$out/summary.json" "$passed" "${#failed[@]}" "${#skipped[@]}" "$filter" "${all_names[@]}" <<'PYCODE'
+import json, sys
+with open(sys.argv[1], 'w') as f:
+ json.dump(dict(passed=int(sys.argv[2]), failed=int(sys.argv[3]), skipped=int(sys.argv[4]),
+                complete=not sys.argv[5], suites=sys.argv[6:]), f)
+PYCODE
 echo "$passed passed, ${#failed[@]} failed, ${#skipped[@]} skipped (logs: $out)"
 (( passed + ${#failed[@]} + ${#skipped[@]} )) || { echo "no host test group matches '$filter'" >&2; exit 2; }
-[[ ${#failed[@]} -eq 0 ]] || { echo "failed: ${failed[*]}"; exit 1; }
+if [[ ${#failed[@]} -ne 0 ]]; then
+	printf 'failed:'
+	for name in "${failed[@]}"; do printf ' %s (%s/%s.log)' "$name" "$out" "$name"; done
+	printf '\n'
+	exit 1
+fi
 
 if (( ${#skipped[@]} )); then
  echo "skipped suites fail this run: ${skipped[*]}" >&2
