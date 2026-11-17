@@ -1,27 +1,6 @@
 // Postcards on a corkboard: shared save slot presentation (postcards.h).
 // Every metric is a UI_PC_* token (ui_style.h); every colour a theme role.
 
-typedef struct {
-	u32 paper, edge, frame, ink, soft, stamp, cont, cork, board, wall, wall_low, mark, light, glow, shade;
-	u32 pin[4];
-} pc_palette;
-
-// Room themes: paper, cork and pins of the room; other themes: their own roles.
-static void pc_palette_get(pc_palette *p)
-{
-	const theme_t *th = theme();
-	const theme_room_t *r = theme_room(th);
-	if (r && r->cork) {
-		*p = (pc_palette){ r->paper, r->paper_edge, r->wax, r->ink, r->ink_soft, r->pin[2], theme_alpha(r->stamp, 255),
-			r->cork, r->wood, r->wall, r->skirting, r->postmark, r->paper, theme_alpha(r->light, UI_PC_GLOW_ALPHA), th->shadow,
-			{ r->pin[0], r->pin[1], r->pin[2], r->pin[3] } };
-		return;
-	}
-	*p = (pc_palette){ th->card_top, th->card_bottom, th->light, th->heading, th->text_muted, th->accent[2], th->danger,
-		th->surface, th->section_line, th->help_bg, th->surface, th->value, th->text_bright, th->select_glow, th->shadow,
-		{ th->accent[0], th->accent[1], th->accent[2], th->accent[3] } };
-}
-
 // Card i's centre, size and resting tilt on the board.
 static void pc_layout(const pc_view *v, int i, float *x, float *y, float *w, float *h, float *tilt)
 {
@@ -258,7 +237,7 @@ static void pc_card_draw(const pc_view *v, const pc_palette *p, int i)
 		C2D_DrawRectSolid(UI_PC_INSET, UI_PC_INSET, UI_PC_Z_INK, pw, ph, theme_alpha(p->edge, alpha));
 	else if (!cont)
 		ui_text_ex(NULL, w / 2, UI_TEXT_CENTRED_TOP(UI_PC_INSET + ph / 2, UI_FONT_VALUE), UI_FONT_VALUE,
-			theme_alpha(p->edge, alpha), C2D_AlignCenter, v->saving ? "+" : "-");
+			theme_alpha(p->empty, alpha), C2D_AlignCenter, v->saving ? "+" : "-");
 	if (c->used && !c->tex && !cont)
 		ui_text_ex(NULL, w / 2, UI_TEXT_CENTRED_TOP(UI_PC_INSET + ph / 2, UI_FONT_VALUE), UI_FONT_VALUE, p->soft,
 			C2D_AlignCenter, "?");
@@ -296,6 +275,7 @@ static void pc_card_draw(const pc_view *v, const pc_palette *p, int i)
 void postcards_bottom(void *view)
 {
 	const pc_view *v = view;
+ ui_trace_postcards(v,pc_layout);
 	pc_palette p;
 	pc_palette_get(&p);
 	C2D_DrawRectSolid(0, 0, UI_PC_Z_BACK, UI_BOTTOM_SCREEN_WIDTH, UI_SCREEN_HEIGHT, p.wall_low);

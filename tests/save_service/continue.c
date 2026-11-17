@@ -1,4 +1,4 @@
-/* The Continue point around a pause and the Continue question (bb-uitest-fix-r1b, review findings 1 and 2),
+/* The Continue point around a pause and the Continue question,
  * on the real save service, final files, later thread and safe files.
  * 1: a pause makes the Continue point (taken at once, written by the later thread), so a crash, a flat
  *    battery or a stalled game after it loses nothing; quitting or HOME while still paused writes it once.

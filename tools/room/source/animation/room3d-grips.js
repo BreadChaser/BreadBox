@@ -1,4 +1,4 @@
-// BreadBox R10 round 3e: grip specs for the articulated hand (js/room3d-hands.js solves them).
+// BreadBox: grip specs for the articulated hand (js/room3d-hands.js solves them).
 // All in the held object's local space: x = thickness (front +x, x in [-T/2, T/2]), y = up (0..H),
 // z = width (spine / hinge at -W/2, free edge at +W/2). A hand frame: o (origin), ex = the palm's normal
 // (towards the object), ey = the thumb side, ez = towards the wrist; the model's palm surface is at x = -7.

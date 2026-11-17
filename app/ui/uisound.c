@@ -14,6 +14,7 @@
 #include "dev_switches.h"
 #include "csnd_out.h"
 #include "uisound.h"
+#include "ui_trace.h"
 #include "app_main.h"
 #include "bb_save.h"
 
@@ -199,6 +200,7 @@ static void play_file(int file)
 // Plays now: the shared moves, and every flush. Silent with Menu sounds off and once the system closes the app.
 void sfx_now(int event)
 {
+ ui_trace_sound(event);
 	if (!ok || !g_cfg.sounds || event < 0 || event >= SFX_COUNT || aptShouldClose())
 		return;
 	const sfx_event_t *e = &sfx_events[event];
@@ -212,6 +214,7 @@ void sfx_now(int event)
 static int pending = -1;
 void sfx_play(int event)
 {
+ ui_trace_request(event);
 	if (event == SFX_LAUNCH) {   // the game takes over right after: never deferred
 		pending = -1;
 		sfx_now(event);
@@ -221,8 +224,10 @@ void sfx_play(int event)
 }
 void sfx_default(int event)
 {
-	if (pending < 0)
+	if (pending < 0) {
+  ui_trace_request(event);
 		pending = event;
+ }
 }
 void sfx_cancel(void) { pending = -1; }
 static bool card_closes;

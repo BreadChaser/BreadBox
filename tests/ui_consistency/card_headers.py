@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Card titles stand in the header row on the red rule (owner 2026-11-11), and the place is called Collection.
+"""Card titles stand in the header row on the red rule, and the place is called Collection.
 
 1. Runs the shipped ui_card_header (app/ui/ui.c) with a recording text drawer for the pause/settings card and the
    room's cards (the arguments shelf_scene_draw.c's card_title passes): every title's cell lies inside the card above

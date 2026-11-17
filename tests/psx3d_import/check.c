@@ -318,13 +318,13 @@ int main(int argc,char **argv)
   assert(cr.kinds==PSX_IMPORT_POSTCARDS);   /* a postcard and its picture */
   assert(psx_import_finish(cursor));psx_import_close(cursor);
  }
- /* J-06: cheats (enabled list, own codes, own .cht) and BIOS files come over byte-exact,
+ /* Cheats (enabled list, own codes, own .cht) and BIOS files come over byte-exact,
   * copy-only, once; BreadBox's own file of the same name stays (PSX3D's is archived). */
  {
   setup("Extra-source");setup("Extra-dest");mk("Extra-source/cheats");mk("Extra-source/bios");mk("Extra-dest/cheats");
   size_t bios_n=512*1024;unsigned char *bios=malloc(bios_n);assert(bios);for(size_t i=0;i<bios_n;i++)bios[i]=(unsigned char)(i*7+3);
   put("Extra-source","bios/scph1001.bin",bios,bios_n);
-  put("Extra-source","bios/SCPH5501",bios,4096);   /* review finding 5: no extension, still a BIOS file */
+  put("Extra-source","bios/SCPH5501",bios,4096);   /* No extension, still a BIOS file */
   put("Extra-source","cheats/Exact Game (USA).on","Infinite lives\n",15);
   put("Extra-source","cheats/Exact Game (USA).txt","cheat0_desc = \"Mine\"\n",21);
   put("Extra-source","cheats/Empty.on","",0);

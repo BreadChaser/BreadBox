@@ -1,4 +1,4 @@
-"""Soft room textures (texture round 2026-11-11): the first room's painted surfaces at the Lamplight sizes.
+"""Soft room textures: the first room's painted surfaces at the Lamplight sizes.
 
 A texture set with "finish": "soft" (lights.json) draws wood, floor, wallpaper, wainscot and cushions here instead of
 tex.py's crisp ramps: soft shading across every plank and board, broad low-contrast grain, seams one step darker

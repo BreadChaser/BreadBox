@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Without its room there is no main menu (review m5): home_run's first act after a failed room load is the one
+"""Without its room there is no main menu: home_run's first act after a failed room load is the one
 error card, through the shared dialog (ui_confirm_action), then BreadBox closes (HOME_QUIT). After a game (the
-Library, review N1) shelf_run leaves first without its room, so home_run shows the same card. No tile home, no
+Library) shelf_run leaves first without its room, so home_run shows the same card. No tile home, no
 standalone shelf room is left to fall back to. Compiles the production room_missing() with fakes."""
 import pathlib, re, subprocess, tempfile
 root = pathlib.Path(__file__).resolve().parents[2]
@@ -11,7 +11,7 @@ start = home[home.index('static bool room_start(void)'):home.index('static int r
 assert re.search(r'bool ok = room_scene_open\(\);\s*boot_mark\("room file"\);\s*if \(!ok\)\s*return false;', start), 'room_start must stop at a failed load'
 assert re.search(r'if \(!room_start\(\)\)\s*return room_missing\(\);', run), 'home_run must show the card when the room did not load'
 assert 'room_on' not in home and 'shelf_theme_active' not in home, 'a room-less main menu is back'
-# review N1: after a game main.c opens the Library (bb_platform_restore_menu ignores a failed room load); without its room
+# After a game main.c opens the Library (bb_platform_restore_menu ignores a failed room load); without its room
 # the Library leaves before anything else (4), main goes home (at_home), and home_run shows the card. tests/shelf runs it.
 shelf = (root / 'app/ui/shelf.c').read_text()
 body = shelf[shelf.index('int shelf_run(char *path, size_t cap)\n{'):]
@@ -27,7 +27,7 @@ assert 'int breadbox_systems_run(char *path, size_t len) { return shelf_run(path
 for gone in ('app/ui/breadbox_favorites.c', 'app/ui/components/breadbox_systems.inc'):
     assert not (root / gone).exists(), gone
 text = re.search(r'#define HOME_ROOM_MISSING_TEXT ("[^"]*")', home)
-missing = home[home.index('static int room_missing(void)'):home.index('int home_run(')]
+missing = home[home.index('static int room_missing(void)'):home.index('enum { HOME_IDLE=')]
 code = '''#include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>

@@ -11,7 +11,7 @@ One list per page, no tab bar; each system has its own page. `app/settings/setti
 
 ```
 Settings          Customize >  Systems >  Collection >  Updates >  About >
-  Customize       Room style (Left/Right relights the room; A opens the styles) | Hands > (dev switch roomhands)
+  Customize       Look (Room, PSX3D, Simple) | Room style (Room only: Day or Night) | Hands > (dev switch roomhands)
                   | FF keys | Rewind keys (New) | Touch buttons (New: their side)  <- the shared shortcuts. one home
   Systems         one row per registered system with settings (PlayStation, Game Boy Advance; NES when built)
     <system>      its rows under red headings (Picture, Controls, Saves, Cartridge, Cheats), then More: Advanced >, Help
@@ -31,8 +31,9 @@ Settings          Customize >  Systems >  Collection >  Updates >  About >
   system, or this game). X restores the focused value (Inherit in a game). Reset controls stays on Button mappings.
 - The card's title is the page ("Settings", "Customize", "PlayStation", "Advanced"); the room's oscilloscope
   shows where you are ("PlayStation · Picture": on a system's list, the focused row's section).
-- The selected row is marked by the shared highlighter stroke (`ui_mark.h`), on every notebook card and the
-  room's lists. No mark for a System value; Changed (pencil), Recommended and All systems keep theirs.
+- The shared selection component (`ui_mark.h`) marks every notebook card: Room uses a highlighter stroke;
+  PSX3D and Simple use their selection color with a narrow edge. No mark for a System value;
+  Changed (pencil), Recommended and All systems keep theirs.
 
 ## Where a value comes from
 
@@ -47,8 +48,10 @@ An explicit game choice stays **Changed** even when its value equals the system 
 
 Bottom-screen button side and speed shortcuts are **All systems** preferences. Reset PlayStation defaults and Reset controls preserve them. Shared shortcut edits preserve older per-game shortcut exceptions; the focused card shows **Game exception: …** when that game will still use its own shortcut. Reset this game removes the exception.
 
-Room style is a single choice for the whole app (Day or Night), with no per-game
-value.
+Look is an all-systems choice: Room (the default), PSX3D, or Simple.
+PSX3D and Simple share a direct list layout and all the same controls and places.
+Room also has its own Day or Night lighting choice. Unknown saved looks fall back
+to Room with Day lighting; the default is omitted from config.ini.
 
 ## PlayStation rows
 
@@ -366,4 +369,6 @@ Room styles:
 ```settings-themes
 Day
 Night
+PSX3D
+Simple
 ```

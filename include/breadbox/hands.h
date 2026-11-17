@@ -84,7 +84,7 @@ void hands_track_sample(const hands_file *f, const hands_track *k, float now, ha
 // Bone matrices (3x4 row-major, clip space) of one hand of a frame.
 void hands_pose(const hands_file *f, const hands_frame *fr, int hand, bool mitten, float out[][12]);
 // A hand holding the case whose index fingertip stands up over the case's top
-// (UI mock round 3e's open/hold grips): turn and curl the index until the tip
+// in the open/hold grips: turn and curl the index until the tip
 // rests on the case, no point of it inside. hands_sample() applies it to every
 // keyframe; no change when the tip already rests (a fixed export).
 void hands_rest_index(const hands_file *f, const hands_clip *c, hands_frame *fr);

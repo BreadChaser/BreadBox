@@ -1,4 +1,4 @@
-/* Merge review B1: "Use it" for a save that may be from another emulator, killed at every file step (the
+/* "Use it" for a save that may be from another emulator, killed at every file step (the
  * process ends there, like a power cut) for 512 B, 8 KiB, 32 KiB and 64 KiB. Every step of the battery file
  * and of the Backups folder is a cut point. After each cut:
  *  - the byte-exact original is at the battery path or in Backups;

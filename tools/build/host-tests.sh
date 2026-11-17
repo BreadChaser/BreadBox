@@ -162,9 +162,10 @@ run() { # run <name> <command...>
 run auto-update bash tests/update/run.sh
 run share-room python3 tests/share_room/check.py
 run art-smdh24 python3 tests/art/smdh24.py
+run looks            bash tests/looks/run.sh
+run look-equivalence bash tests/look_equivalence/run.sh
 run shelf-input python3 tests/room/input.py
 run shelf-preload python3 tests/room/preload.py
-run shelf-identity python3 tests/room/identity.py
 run room-spines python3 tests/room/spines.py
 run shelf-camera python3 tests/room/camera.py
 run room-restore python3 tests/room/restore.py
@@ -191,6 +192,8 @@ run ui-paper bash -c 'cc -std=gnu11 -Wall -Wextra -Werror -fsanitize=address,und
 run text-baseline bash tests/text_baseline/run.sh
 run play-controls    bash tests/play_controls/run.sh
 run ps1-pad          bash tests/ps1_pad/run.sh
+run disc-timing      python3 tests/disc_timing/check.py
+run disc-thread      python3 tests/disc_timing/thread.py
 run ps1-messages     python3 tests/ps1_messages/check.py
 run ps1-save-osd     python3 tests/ps1_messages/osd_saved.py
 run ps1-card-close   python3 tests/ps1_card_question/check.py

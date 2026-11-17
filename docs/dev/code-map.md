@@ -24,6 +24,18 @@ one-time import from `sdmc:/3ds/PSX3D` remain live BreadBox compatibility code.
   (test `whats-new`; measured fit in `tests/ui_fit/card_lines.py`).
   `notice_bar.c` draws the shared screen-depth information footer on the top screen.
   `place_cards.c`: the room cards' lines.
+  `home_model.c` owns the shared home places; `library_model.c` owns catalog
+  identity, order, favorites, history and launch; `shelf_geometry.c` adds room package dimensions.
+  `postcard_palette.c` resolves shared save-board colors;
+  `library_touch.c` owns shared system and game touch targets;
+  `library_actions.c` publishes the common library controls; `look_fonts.c` loads menu fonts.
+  `list_look.c` and its component draw PSX3D/Simple from that same state, with `look_theme.c` selecting
+  artwork/font and `theme.c` supplying all shared screen colors.
+  `look_style.c` supplies list decoration; `look_list.c` draws shared visible rows.
+  Development-only `ui_trace.c`/`ui_trace_views.c` publish menu observations;
+  `tests/look_equivalence` compares scripted production controllers across looks,
+  including the PS1/GBA settings adapters, scoped files and both postcard browsers.
+  `home_empty.c` and `home_presentation.c` own the empty collection and shared home text.
 - `app/settings/`: the Settings pages (one list per page, a page stack; adapters own the rows);
   `app/ui/card_notice.c` the card notice's strip and ruled line (its own file: `ui.o`'s cold code sits right ahead of the GBA save dialogs, so growth there moves them);
   `app/ui/ui_mark.c` the selection highlighter (`ui_mark.h`, masks from `tools/ui/mark_masks.py`);
@@ -39,6 +51,8 @@ one-time import from `sdmc:/3ds/PSX3D` remain live BreadBox compatibility code.
   `systems/common/retro_host.c` owns libretro callbacks/core validity;
   `retro_ctr.c` is the shared runner. PS1 runs in `systems/ps1/emu.c`,
   `systems/ps1/ps1_messages.c` routes routine BIOS/game-fix notices to the log,
+  `disc_timing.c` provides opt-in `BB_DISC_TIMING=1` counters (runtime `stats`);
+  `disc_thread.c` sets the read-ahead priority during PS1 session setup;
   `card_question.c` asks about an unreadable memory card before a game runs,
   `ps1_pad.h` suppresses automatic analog enable; `statefile.c` settles loaded
   pads, and `presets.c` settles resets at the BIOS-initialized log callback;
@@ -67,8 +81,7 @@ one-time import from `sdmc:/3ds/PSX3D` remain live BreadBox compatibility code.
   real-ELF controls in `check.py` run in the CI layout stage.
 - `app/ui/room_*.c`: the room main menu (`room_bbr.c` portable BBR v3 tables,
   styles, camera and library case; `room_scene.c` GPU draw and final dither pass;
-  `room_walls.c`/`room_board.c` the poster and corkboard). Themes are room styles
-  (Day, Night: `theme.c`); the room file is `assets/romfs/room/room.bbr`.
+  `room_walls.c`/`room_board.c` the poster and corkboard). Room lighting is Day/Night; `theme.c` also supplies PSX3D/Simple; the room file is `assets/romfs/room/room.bbr`.
 - `app/ui/shelf_scene.c`: the room's Library (camera, visible spines, the case in the hands,
   case backs, top screen); `shelf_scene_spines.c` the close-up spine atlas and its bake,
   `shelf_scene_wood.c` the procedural grain, `shelf_scene_draw.c` primitives, text, the desk

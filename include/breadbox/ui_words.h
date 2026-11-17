@@ -2,7 +2,7 @@
 #define UI_WORDS_H
 /* The words every system says the same way. Defines only (no includes, no code): the PS1 frame file
  * (systems/ps1/emu.c) includes it without changing a byte of its pinned code. */
-/* A saved moment is a postcard everywhere (owner: "Save postcard", "Load postcard"); a slot is only its
+/* A saved moment is a postcard everywhere; a slot is only its
  * number. In-game saves stay "memory card" (PS1) and "game save" (GBA). Every system says these the same. */
 #define UI_PC_SAVED "Postcard %d saved"
 #define UI_PC_SAVED_OVER "Postcard %d saved. The old one is in the backups"

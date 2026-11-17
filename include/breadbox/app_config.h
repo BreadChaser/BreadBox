@@ -7,7 +7,7 @@
 typedef struct {
 	char last_dir[PATH_LEN];
 	char games_dir[PATH_LEN];   // Y in the browser jumps here
-	char reserved0[256];        // was last_title (the 2D library's selection, gone 2026-11-06): no reader or writer.
+	char reserved0[256];        // was last_title (the 2D library's selection, retired): no reader or writer.
 	                            // Frozen per-frame play controls read the members below by offset; drop it when the
 	                            // layout baseline moves.
 	int  smooth;       // bilinear filtering

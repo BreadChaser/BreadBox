@@ -22,8 +22,8 @@
 #include "psxcommon.h"
 #include "cdrom.h"
 #include "cdriso.h"
+#include "disc_timing.h"
 #include "ppf.h"
-
 #include <assert.h>
 #include <errno.h>
 #include "zlib_wrapper.h"
@@ -1339,8 +1339,8 @@ static int cdread_chd(FILE *f, unsigned int base, void *dest, int sector)
 		chd_img->current_buffer = 1;
 	else
 	{
-		chd_read(chd_img->chd, hunk, chd_img->buffer +
-			chd_img->current_buffer * chd_img->header->hunkbytes);
+		CDT_HUNK(chd_read(chd_img->chd, hunk, chd_img->buffer +
+			chd_img->current_buffer * chd_img->header->hunkbytes));
 		chd_img->current_hunk[chd_img->current_buffer] = hunk;
 	}
 
@@ -1369,8 +1369,8 @@ static int cdread_sub_chd(FILE *f, int sector, void *buffer_ptr)
 	else
 	{
 		buffer = chd_img->current_buffer ^ 1;
-		chd_read(chd_img->chd, hunk, chd_img->buffer +
-			buffer * chd_img->header->hunkbytes);
+		CDT_HUNK(chd_read(chd_img->chd, hunk, chd_img->buffer +
+			buffer * chd_img->header->hunkbytes));
 		chd_img->current_hunk[buffer] = hunk;
 	}
 

@@ -6,7 +6,7 @@ exception below. Presentation wrappers are discovered within each source file;
 gates must remain in the input loop itself. Literal-dead/zero-mask gates do not
 count; UI_SWAP_MENU (a menu-to-menu loop: no dim, no wait) does.
 Masks: every gate passes UI_SWAP_MENU unless it is a reviewed game hand-over in
-HANDOVERS below (launch, resume, quit), the only swaps that dim (owner 2026-11-11). Share and Shelf require independent branch gates. This is a source
+HANDOVERS below (launch, resume, quit), the only swaps that dim. Share and Shelf require independent branch gates. This is a source
 presence check, not proof of exit masks, all control-flow paths, or swap quality.
 """
 from pathlib import Path

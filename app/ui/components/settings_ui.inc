@@ -42,7 +42,7 @@ static void settings_tag(void *ud)
 {
  settings_state *s=ud;
  bool scope=!((s->context.game && !s->context.running) || (s->scene && s->scene_visibility<=0));
- if(scope && s->scene) {
+ if(scope && s->scene && theme_is_room()) {
   float gx=UI_SETTINGS_SCOPE_X,gy=UI_SETTINGS_SCOPE_Y,gw=UI_SETTINGS_SCOPE_W,cx,cy,w;
   if(room_scene_anchor_screen("slabel",&cx,&cy,&w)){gx=cx;gy=cy;gw=fminf(w*UI_SETTINGS_SCOPE_SPAN,UI_SETTINGS_SCOPE_MAX_W);}
   const char *path=settings_path_fit(s,gw);
@@ -65,7 +65,7 @@ static void draw_top(void *ud)
 }
 static void appearance_bottom(void *ud)
 {
- settings_state *s=ud;theme_picker_draw(s->appearance_list,s->appearance_selected,s->appearance_previous);
+ settings_state *s=ud;theme_picker_draw_look(s->appearance_list,s->appearance_selected,s->appearance_previous,s->look_picker);
  static const ui_button_t bar[]={{KEY_B,"Cancel",UI_ICON_BACK,false},{KEY_A,"Select",UI_ICON_CHECK,false}};
  ui_bar_draw(bar,2);
 }

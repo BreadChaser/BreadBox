@@ -224,7 +224,7 @@ static void stress_spad_smc(psxRegisters initial)
 // Load delay: "mfc2 r" followed by a conditional branch that reads the
 // old r, either on the not-taken side of a branch with the load in its
 // delay slot (Tekken 3) or right after a plain load. The dynarec compiles
-// these through LDTMP (round 4); compare GPR/HI/LO/PC with the interpreter.
+// these through LDTMP; compare GPR/HI/LO/PC with the interpreter.
 // Programs run block by block (the interpreter stops after every branch,
 // keeping its pending load; the dynarec stops at every cycle check).
 static void run_to(psxRegisters *r, R3000Acpu *cpu, uint32_t end)

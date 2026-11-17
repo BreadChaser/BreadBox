@@ -159,7 +159,7 @@ def extract(path,start,end):
 
 # S2: the real exit_step / exit_step_main under a scheduling fake. The audio helper's entry is
 # delayed past its join timeout, the GPU helper then runs, then the first one is let in. Each
-# helper must run the step it was given (round 1's shared pointer gave audio=0, gfx=2).
+# helper must run the step it was given (a shared pointer gave audio=0, gfx=2).
 step_src=extract('app/ui/main.c','typedef struct { void (*fn)(void); } exit_step_t;','\nint main(int argc')
 assert 'exit_step_fn' not in s
 with tempfile.TemporaryDirectory(prefix='exit-step-') as d:

@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-/* Owner 2026-11-12: "Before we click on Collection the bottom screen should kind of say something".
+/* Place cards summarize their contents before they are opened.
  * What the Collection, Settings and Quit cards show at a glance, as lines on the card's ruled paper:
  * a label, and a value right-aligned like the settings values (or a label alone). Text only, no SDK:
  * home.c fills the shared room card (shelf_card) from these; tests/place_cards checks them.

@@ -346,7 +346,7 @@ bool library_poll_index(void)
         int state=bb_later_state(&presentation_cache);
         if(state==BB_LATER_READING || state==BB_LATER_QUEUED)return false;
     }
-    if (!ps1_covers_held) {if (!covers_library_try_begin()) return false; ps1_covers_held=true;}   // never waits for the covers' worker (round 16)
+    if (!ps1_covers_held) {if (!covers_library_try_begin()) return false; ps1_covers_held=true;}   // never waits for the covers' worker
     if (ps1_phase && ps1_build_generation != generation) {
         candidate_done();
         ps1_library_scan_free(); library_free(); ps1_phase=0;

@@ -87,7 +87,7 @@ int main(int argc, char **argv)
 	unsigned first, count;
 	CHECK(hands_part(&f, "hand", &first, &count) && hands_part(&f, "hand_sleeve", &first, &count) && hands_part(&f, "hand_mitt", &first, &count), "parts");
 	CHECK(f.ntex == 1 && f.tex[0].w && f.tex[0].h, "one sleeve texture, the room's (%u)", f.ntex);
-	// review N5: the room's hands refuse a file without its sleeve (room_hands.c checks hands_has_sleeve before tex[0])
+	// The room's hands refuse a file without its sleeve (room_hands.c checks hands_has_sleeve before tex[0])
 	CHECK(hands_has_sleeve(&f), "the hands file's sleeve");
 	{ hands_file none = f; none.ntex = 0; CHECK(!hands_has_sleeve(&none), "a hands file without textures has a sleeve"); }
 	if (f.version >= 3) CHECK(f.tex[0].w >= 256 && f.tex[0].w == 2 * f.tex[0].h && f.glove[1][0] + f.glove[1][1] > 0 && f.glove[0][0] == 0, "v3 texture and glove table");
@@ -119,7 +119,7 @@ int main(int argc, char **argv)
 		CHECK(hands_clip_named(&f, c->name, false) == c || (c->flags & 1), "lookup %s", c->name);
 	}
 	CHECK(hands_clip_named(&f, "pick_ps1", true) && (hands_clip_named(&f, "pick_ps1", true)->flags & 1), "mitten twin");
-	// round 11: one hand, the right: no left hand in the take-out, the put-back, the hold or a turn (only the game start has it)
+	// One hand, the right: no left hand in the take-out, the put-back, the hold or a turn (only the game start has it)
 	for (unsigned i = 0; i < f.nclip; i++) {
 		const hands_clip *c = &f.clip[i];
 		if (strncmp(c->name, "pick_", 5) && strncmp(c->name, "putback", 7) && strncmp(c->name, "hold", 4) && strncmp(c->name, "turn", 4)) continue;
@@ -189,7 +189,7 @@ int main(int argc, char **argv)
 		}
 		CHECK(worst_run <= 2, "%s: index up over the case for %d frames", oc->name, worst_run);
 	}
-	// round 8 loops (hold): one period is frames - 1 keys (the last key is the first), and the
+	// Hold loops: one period is frames - 1 keys (the last key is the first), and the
 	// curve runs on across the seam: no stall, no jump
 	{
 		const hands_clip *hc = hands_clip_named(&f, "hold_ps1", false);
@@ -264,7 +264,7 @@ int main(int argc, char **argv)
 		printf("hands: worst palm step at 60 Hz through a clip change: %.1f mm blended, %.1f mm snapped\n", worst_blend, worst_snap);
 		CHECK(worst_blend <= worst_snap + .01f && worst_blend < 40, "clip changes jump %.1f mm", worst_blend);
 	}
-	// round 8 box classes: by thickness; a PAL / multi-disc case without its own clips plays the jewel case's
+	// Box classes: by thickness; a PAL / multi-disc case without its own clips plays the jewel case's
 	CHECK(hands_box_class(true, 23) == HANDS_BOX_CARTON && hands_box_class(false, 10.6f) == HANDS_BOX_CASE, "box class");
 	CHECK(hands_box_class(false, 16.9f) == HANDS_BOX_CASE_PAL && hands_box_class(false, 25) == HANDS_BOX_CASE_MULTI, "box class");
 	{
@@ -281,7 +281,7 @@ int main(int argc, char **argv)
 	{
 		const hands_clip *pk = hands_clip_for(&f, "pick", HANDS_BOX_CASE, false), *pb = hands_clip_for(&f, "putback", HANDS_BOX_CASE, false);
 		float lp = hands_clip_seconds(&f, pk), lb = hands_clip_seconds(&f, pb), worst_all = 0;
-		// round 11: the case flies into the hand, take-out and put-back are about 1.1 s (they were 2.7 s)
+		// The case flies into the hand, take-out and put-back are about 1.1 s (they were 2.7 s)
 		CHECK(lp > .9f && lp < 1.4f && lb > .9f && lb < 1.4f, "clip lengths %.2f %.2f", lp, lb);
 		static const char *const name[] = { "take out", "B half way", "A half way", "A in the put-back" };
 		for (int sc = 0; sc < 4; sc++) {

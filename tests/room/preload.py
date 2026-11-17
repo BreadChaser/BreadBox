@@ -26,6 +26,7 @@ static u64 svcGetSystemTick(void){return 1;}
 static void ensure_built(void){assert(paused);built=true;generation=2;boxes=&built;}
 #define log_printf(...) ((void)0)
 #define shelf_scene_prepare() ((void)0)
+#define theme_is_room() true
 #define theme() 0
 #define theme_room(t) false
 #define room_hands_preload_step() true

@@ -256,7 +256,7 @@ assert(covers_paused);covers_resume();assert(!covers_paused);covers_get(0,NULL);
 		remove(COVER_DIR "/cover.png");own_pngs_scan();assert(!own_png_maybe("cover"));
 		remove(THUMB_FILE);
 	}
-	// HOME during a cover download (review R2, one helper for Home and the Library): held back while a worker is busy;
+	// HOME during a cover download (one helper for Home and the Library): held back while a worker is busy;
 	// a press waits for the workers to stop, then goes to the HOME Menu itself; idle, HOME is simply allowed
 	{
 		home_jumps = 0; home_rejected = false;

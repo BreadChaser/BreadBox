@@ -30,7 +30,7 @@ class Versions(unittest.TestCase):
         for version, counter in [('0.9.0', 25615), ('0.9.1', 25631), ('0.10.0', 26639), ('1.0.0', 32783),
                                  ('1.0.1', 32799), ('1.1.0', 33807), ('2.15.63', 65535)]:
             self.assertEqual(v.encode(version), counter)
-        # The first public release installs over every private test CIA the owner's consoles ran (all 16xxx,
+        # The first public release installs over every previous development CIA (all 16xxx,
         # the highest 16641 at the 0.9.0 release) and the header's version is the one packaged.
         self.assertGreater(v.encode('0.9.0'), 16641 + 1000)
         self.assertEqual(v.header_version(ROOT / 'apps/breadbox/version.h'), '0.9.2')

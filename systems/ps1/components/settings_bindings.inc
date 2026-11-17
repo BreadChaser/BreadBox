@@ -22,6 +22,6 @@ static void binding_bottom(void *ud)
 }
 static void binding_top(void *ud)
 {
- /* no tag: it repeated the row's name (owner 2026-11-05) */
+ /* no tag: it repeated the row's name */
  (void)ud;bb_settings_child_top();
 }

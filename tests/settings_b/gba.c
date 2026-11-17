@@ -95,7 +95,7 @@ int main(void){
   for(unsigned i=0;i<rows();i++){bb_settings_row r;assert(read_row(i,&r));assert(r.short_help && strlen(r.short_help)<=36 && strchr(r.short_help,'.'));}
   for(int f=0;f<=GBA_SET_HOTKEY_REWIND;f++) {
    int i=find(f);if(i<0)continue;bb_settings_row r;assert(read_row(i,&r));assert(r.short_help && strlen(r.short_help)<=36 && strchr(r.short_help,'.'));
-   /* explicit rename 2026-11-05: the shortcut rows are "FF keys" / "Rewind keys" (the touch slots keep
+   /* Explicit rename: the shortcut rows are "FF keys" / "Rewind keys" (the touch slots keep
       "Fast forward" / "Rewind"); the frozen inventory keeps the old names */
    const char *frozen=r.label;
    if(f==GBA_SET_SMOOTH){assert(!strcmp(r.label,"Filter"));frozen="Smoothing";}

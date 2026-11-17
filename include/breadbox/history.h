@@ -1,4 +1,4 @@
-// Save backups (owner's decision 2026-10-22, from the save-backup design):
+// Save backups:
 // a ring of the last HIST_RING
 // automatic saves per game, so a misclick (Start game at "Continue?", a
 // wrong Load, saving over or deleting a slot, Reset) never destroys

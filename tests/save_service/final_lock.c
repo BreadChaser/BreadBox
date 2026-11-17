@@ -1,5 +1,5 @@
-/* The final files' metadata lock on one core with strict priorities (bb-uitest-fix-r1d, re-review R1c-1; the
- * reviewer's lock_probe made a test). Old 3DS: the later thread writes on core 0 below the menu thread, so once
+/* The final files' metadata lock on one core with strict priorities, exercised with
+ * a blocking lock probe. Old 3DS: the later thread writes on core 0 below the menu thread, so once
  * the menu thread wants the lock the later thread runs only while the menu thread sleeps. Model: the later thread
  * is stopped while it holds the lock (inside the real bb_final_write, letting go of an older failed point) until
  * the main thread sleeps (nanosleep, wrapped); the main thread then takes a new point, drops it, or asks a

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Review N5: the room's hands read the sleeve texture (tex[style_tex]) after the hands file loads; a file without
+"""The room's hands read the sleeve texture (tex[style_tex]) after the hands file loads; a file without
 one (case-motion.bbh's compact tracks have none) must be refused first. tests/room/hands.c tests hands_has_sleeve;
 this checks room_hands.c asks it before any tex[] use."""
 import pathlib, re

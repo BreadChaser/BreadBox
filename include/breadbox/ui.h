@@ -1,5 +1,6 @@
 // Text, dialogs, button bars and notices on the screens (ui.c)
 #pragma once
+#include "ui_trace.h"
 #include <3ds.h>
 #include <citro2d.h>
 #include <math.h>

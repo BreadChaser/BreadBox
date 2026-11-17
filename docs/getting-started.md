@@ -18,6 +18,11 @@ Keep `.cue` files next to the tracks they name. A zipped Game Boy Advance game i
 unpacked when you play it, so leave about 32 MB free on the SD card. Games over
 32 MB don't start.
 
+PlayStation CHDs save SD space and can be used as-is. On New 3DS, background
+disc decoding yields to rendering to reduce long video and audio pauses.
+Some games and scenes can still pause; BIN/CUE avoids decompression work when
+both formats are available.
+
 **BIOS.** Not needed. If you have a real BIOS, copy it to `sdmc:/3ds/BreadBox/bios/`
 and BreadBox uses it: for PlayStation `scph5500.bin`, `scph5501.bin`,
 `scph5502.bin`, `scph1001.bin`, `scph7001.bin`, `scph101.bin` or

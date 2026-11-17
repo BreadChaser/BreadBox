@@ -5,9 +5,9 @@ import os,pathlib,subprocess,tempfile
 root=pathlib.Path(__file__).resolve().parents[2]
 with tempfile.TemporaryDirectory(prefix='psx3d-scenes-') as tmp:
  tmp=pathlib.Path(tmp)
- for name in ('theme','scene'):
+ for name in ('theme','scene','look_theme'):
   source=(root/f'app/ui/{name}.c').read_text()
-  for header in ('scene.h','devtools.h','shelf.h','ui.h',*SPLIT_HEADERS):
+  for header in ('scene.h','devtools.h','shelf.h','ui.h','list_look.h',*SPLIT_HEADERS):
    source=source.replace(f'#include "{header}"','')
   # psx3d.h used to bring the SDK; this test fakes it in check.c
   source=source.replace('#include <3ds.h>\n','').replace('#include <citro2d.h>\n','').replace('#include "libretro.h"\n','')

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""The Continue question against the real save service (review fix r1b, finding 2; the reviewer's lifecycle
-probe made a test). The production bb_pause_prompt(), bb_continue_input(), bb_pause_suspend()/restore() and the
+"""The Continue question against the real save service (including lifecycle
+edge cases). The production bb_pause_prompt(), bb_continue_input(), bb_pause_suspend()/restore() and the
 GBA apt_event() run on scripted frames and APT events, linked with the real bb_save.c, final files, later thread,
 safe files and history on a temporary SD card. Before every case the game has a Continue point (99) and its
 backup (98); B, sleep/wake again and again, HOME > Close and power-off at the unanswered question, then the GBA

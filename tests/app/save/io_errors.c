@@ -1,5 +1,5 @@
 // Host test for safefile.c when the SD card errs while a copy is asked about
-// (harsh review 0.9.0 finding 1). The real safefile.c, linked with
+// The real safefile.c, linked with
 // -Wl,--wrap=stat,--wrap=fopen and its SAFEFILE_TEST hooks: EIO or EACCES on
 // the metadata (stat), the open, the read or the close of <name>, <name>.bak or
 // <name>.tmp, alone and followed by a full card, a failing close or failing
@@ -44,7 +44,7 @@ static const safe_format_t PLAIN = { .size = SIZE, .head = 2, .valid = head_ok }
 
 // ---------------------------------------------------------------- faults
 // ON_TAIL: the whole payload reads, then the next read fails (stdio's error
-// flag, EOF alone does not tell; review A finding 5)
+// flag, EOF alone does not tell)
 enum { ON_STAT = 1, ON_OPEN = 2, ON_READ = 4, ON_CLOSE = 8, ON_TAIL = 16 };
 enum { LATER_NONE, LATER_FULL, LATER_CLOSE, LATER_RENAME, LATER_N };
 static const char *const later_name[] = { "-", "SD full", "close fails", "renames fail" };
@@ -193,7 +193,7 @@ static const unsigned kinds[] = { ON_STAT, ON_OPEN, ON_STAT | ON_OPEN, ON_READ, 
 #define KINDS (sizeof(kinds) / sizeof(kinds[0]))
 
 // ---------------------------------------------------------------- tests
-// The reviewer's second probe: a valid sole recovery .tmp, EIO while it is
+// A valid sole recovery .tmp, EIO while it is
 // probed, then a full card at the next write. It must stay, byte for byte.
 static void sole_tmp_probe(void)
 {
@@ -311,7 +311,7 @@ static void writes(void)
 						CHECK(kept('B'));
 					if (t == 0)   // the newest copy is never buried as .bad by a write
 						CHECK(past_head ? (ok ? content("card.bak") == 'A' : content("card") == 'A') : !ok && content("card") == 'A');
-					if (t == 1 && !hook)   // nothing keeps a backup the card cannot read: it stays (review A finding 2)
+					if (t == 1 && !hook)   // nothing keeps a backup the card cannot read: it stays
 						CHECK(!ok && content("card.bak") == 'B' && content("card") == 'A');
 					safe_info_t info;
 					CHECK(load_as(fmt, &info) == (ok ? 'N' : 'A'));
@@ -342,7 +342,7 @@ static void writes(void)
 	}
 }
 
-// Review A finding 3: a good backup or .tmp loads after a <name> the card
+// A good backup or .tmp loads after a <name> the card
 // cannot read, but repair (and a write's rescue of the .tmp) never sets that
 // <name> aside: it may be the newest copy. It stays at its name, byte for byte.
 static void repairs(void)
@@ -381,7 +381,7 @@ static void repairs(void)
 	free(d);
 }
 
-// Review A finding 5: an error right after the exact payload (EOF alone does
+// An error right after the exact payload (EOF alone does
 // not tell) is not a good copy, and a restore's read-back fails on it.
 static void tail_errors(void)
 {

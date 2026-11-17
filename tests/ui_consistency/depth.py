@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A panel never covers its own text (J-03): citro2d tests depth, so a rectangle drawn deeper
+"""A panel never covers its own text: citro2d tests depth, so a rectangle drawn deeper
 than the shared text depth (ui_text_ex, 0.7) hides any text in the same function. Fades and
 covers (0.95 and above) are meant to hide what is under them and are skipped."""
 import re, sys

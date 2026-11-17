@@ -1,4 +1,4 @@
-// Guard for the citro3d internals PSX3D depends on.
+// Guard for the citro3d internals BreadBox depends on.
 //
 // renderqueue.c replaces citro3d's render queue and writes into its private
 // C3D_Context (vendor/citro3d/internal.h, a copy from citro3d 1.7.1-2);

@@ -110,7 +110,7 @@ if not re.search(r'!bb_pause_last_picture\(path\)\)\s*bb_last_picture_from_scree
     bad.append('the room takes the TV picture from the (dimmed) screen even after a quit from the pause card')
 if 'case K_QUIT: if(bb_save_checkpoint' in run:
     bad.append('Quit writes the Continue point twice')
-# review fix r1b finding 1: the pause's own Continue point, taken before the card and written after its first frame
+# The pause's own Continue point, taken before the card and written after its first frame
 if 'bb_save_pause_take()' not in opening or 'bb_save_pause_put()' in opening:
     bad.append('the pause card must take its Continue point at once and write it only after the first frame')
 loop = run[run.index('ui_pause_open()'):run.index('done:')]

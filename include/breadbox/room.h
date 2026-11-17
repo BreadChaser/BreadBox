@@ -162,8 +162,8 @@ typedef struct {
 // style, the cubby's wood back, a "star a game" card, decor; and the brass plate.
 #define ROOM_SHELF_W 256
 #define ROOM_SHELF_H 512
-// Which cubby each section fills (owner 2026-10-30, "one shelf per system": one cubby of the
-// 24 per system, never shared, never more than one), from the top left: Favorites, then the
+// Which cubby each section fills: one cubby of the
+// 24 per system, never shared, never more than one, from the top left: Favorites, then the
 // systems newest first; a system with more boxes than its cubby holds slides them behind its
 // uprights, one with fewer gets a bookend after its boxes. Cubbies nobody uses get decor.
 #define ROOM_CUBBIES 24
@@ -192,8 +192,8 @@ bool room_case_section(const room_file *f, int i, room_case_geo *g);
 void room_cubby_light(const room_file *f, const room_case_geo *g, float k, uint8_t rgb[3]);
 // the same light as 1.0 = neutral (the real boxes on that cubby's shelf)
 void room_cubby_light_f(const room_file *f, const room_case_geo *g, float light[3]);
-// The bookcase lamp (owner 2026-11-12: "it's pretty dim; add a light once you click on a system"; picked
-// the strip light): when a system's cubby opens, the strip under the board over it switches on (lamp 0..1,
+// The bookcase lamp brightens the selected system:
+// when its cubby opens, the strip under the board over it switches on (lamp 0..1,
 // eased up as the camera arrives, ~0.2 s). Vertex light only: the open cubby's back becomes a small lit
 // grid, the real boxes are lit per vertex, the case wood takes a small tint; no per-pixel pass.
 // the lamp's light added at a point (mm) of cubby g, 1.0 = neutral (0 when lamp is 0)
@@ -204,14 +204,14 @@ void room_lamp_case_tint(float lamp, float out[3]);
 // face: vertices to out (as room_case_mesh), returns the count.
 int room_lamp_mesh(const room_file *f, int cubby, float lamp, int slot, room_vertex *out, int cap);
 // The light a game box gets: the light's brightness without its colour, so cartons keep their printed
-// colours and black plastic stays black under a warm room or lamp (owner 2026-11-13); above KNEE it
+// colours and black plastic stays black under a warm room or lamp; above KNEE it
 // rises a quarter as fast, so a lit carton's colours never wash out to white.
 #define ROOM_BOX_KNEE .9f
 void room_box_light(const float in[3], float out[3]);
 // The black jewel case's plastic in the spine atlas (an RGB565 render target): exact greys only,
 // multiples of 8, which keep red, green and blue at one level. A grey between them loses more of its
-// red and blue than its green and reads green once the shelf's light multiplies it ("why are the
-// PlayStation discs green?", owner 2026-11-13). Bands top down: the middle, the rounded sides; the rails
+// red and blue than its green and reads green once the shelf's light multiplies it.
+// Bands top down: the middle, the rounded sides; the rails
 // along both long edges; the top and foot edges.
 #define ROOM_JEWEL_MID { 32, 24, 24, 16 }
 #define ROOM_JEWEL_SIDE { 24, 16, 16, 8 }

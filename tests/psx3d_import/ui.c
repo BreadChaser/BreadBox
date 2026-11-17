@@ -76,7 +76,7 @@ static void pump(void)
 }
 static void tick(void){pump();fake_tick+=SYSCLOCK_ARM11;breadbox_import_poll();}
 static void drain(void){for(unsigned i=0;i<100 && (job || launched || queued);i++)tick();assert(!job && !launched && !queued);}
-/* Review finding 5: the settings file copied at the first start counts (one cheat + settings: 2),
+/* The settings file copied at the first start counts (one cheat + settings: 2),
  * once; Import again says saves only */
 static void settings_count(void)
 {

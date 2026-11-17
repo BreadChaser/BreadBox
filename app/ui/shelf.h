@@ -14,35 +14,10 @@
 #include "theme.h"
 #include "room.h"
 
-#define SHELF_TITLE BB_TITLE_LEN
-typedef struct {
-	const bb_system_t *system;
-	int row;                 // the system's catalog row
-	char key[sizeof(((bb_catalog_item *)0)->key)]; // stable game identity; row indices can change during a hold
-	int cover;               // covers.c game id
-	float x;                 // spine centre along the shelf, mm
-	float w, h, t;           // cover width, height, spine thickness, mm
-	bool fav;
-	u32 color;               // average cover colour (0 until known)
-	u32 accent;              // the cover's dominant saturated colour (carton spines; 0 until known)
-	int spine;               // spine atlas cell, -1 none
-	u8 region;               // SHELF_REGION_*: the original-style spine
-	u8 discs;                // discs in the case (0 unknown: one)
-	char serial[12];         // product code from the file name ("SLPS-01234"), "" unknown
-	u32 last, seconds;       // play history
-	char title[SHELF_TITLE];
-	char tag[24];            // library label: short name and number
-} shelf_box;
-
-typedef struct {
-	const bb_system_t *system;   // NULL: Favorites
-	const char *name;
-	char plate[24];
-	shelf_box *box;
-	int n;
-	float base, end;             // board height, last spine edge (mm)
-	float hmax, s;               // tallest box (mm); close-up scale, screen px per mm at the spines
-} shelf_row;
+#include "library_model.h"
+#define SHELF_TITLE BB_LIBRARY_TITLE
+typedef bb_library_game shelf_box;
+typedef bb_library_row shelf_row;
 enum { SHELF_REGION_US, SHELF_REGION_PAL, SHELF_REGION_JP };
 // Jewel case thickness (mm, round 8): North America / Japan one disc, PAL one disc, two or more discs.
 #define SHELF_CASE_SINGLE 10.5f
@@ -56,7 +31,7 @@ enum { SHELF_REGION_US, SHELF_REGION_PAL, SHELF_REGION_JP };
 
 enum { SHELF_ALL, SHELF_ONE };
 
-enum { SHELF_SORT_AZ, SHELF_SORT_RECENT, SHELF_SORT_MOST, SHELF_SORTS };
+enum { SHELF_SORT_AZ=BB_LIBRARY_SORT_AZ, SHELF_SORT_RECENT=BB_LIBRARY_SORT_RECENT, SHELF_SORT_MOST=BB_LIBRARY_SORT_MOST, SHELF_SORTS=BB_LIBRARY_SORTS };
 
 typedef struct {
 	shelf_row *rows;
@@ -129,6 +104,8 @@ float shelf_scene_line_width(const char *s);   // a card line's width at its siz
 // The cold start's picture on the top screen (k 0..1): the room fades up out of the dark, the lamp first.
 void shelf_scene_intro(float k);
 void shelf_scene_dawn(bool top);   // the picture before the room exists (home_dawn)
+float bb_library_strip_length(const shelf_row *row);
+float shelf_scene_strip_position(const shelf_row *row,float x);
 int shelf_scene_strip_hit(const shelf_view *v, float x, float y);   // box under a strip touch, -1
 int shelf_scene_card_hit(const shelf_view *v, float x, float y);    // catalogue row, -1
 void shelf_scene_frame(const shelf_view *v);  // after covers_pump(): spine baking at the next frame start
@@ -144,3 +121,7 @@ float shelf_scene_launch_seconds(const shelf_view *v);   // Play to the game: th
 float shelf_scene_clip_seconds(const shelf_view *v, const char *action, float dflt);
 // Enqueue the owned kept-box read before longer Continue metadata probes.
 void shelf_restore_request(void);
+
+#if defined(BB_UI_FIXTURES) || defined(BB_UI_TRACE_HOST)
+void shelf_scene_library_targets(const shelf_view *v);
+#endif

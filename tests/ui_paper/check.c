@@ -1,5 +1,5 @@
-/* Ruled paper: every text line is a ruled line, from the layout tokens (owner 2026-11-05: "why doesn't the text
- * actually go on the lines?"). Where the letters stand on those lines with a given font (Nintendo's, Azahar's, the
+/* Ruled paper: every text line is a ruled line, from the layout tokens.
+ * Where the letters stand on those lines with a given font (Nintendo's, Azahar's, the
  * title font) is tests/text_baseline; the rendered Settings card is checked in tests/settings_b/model.c. */
 #include <assert.h>
 #include <math.h>

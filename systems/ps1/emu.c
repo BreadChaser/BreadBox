@@ -1,3 +1,4 @@
+#include "disc_timing_front.h"
 #include "ht_trace.h"
 #include "app_policy.h"
 // Individual cold sections keep menu variants from reordering save helpers.
@@ -60,7 +61,6 @@
 #include <errno.h>
 #include "../../core/plugins/gpulib/psx3d_frameskip.h"
 #include "../../core/plugins/gpu_pica/gpu_pica.h"
-
 #define SRM_CHECK_FRAMES 180
 #define DISPLAY_HZ 59.831        // 3DS LCD refresh rate   // look for memory card writes every ~3 seconds
 #define PACE_DEBT 3ULL            // frames of lateness the pacer keeps when far behind
@@ -172,7 +172,7 @@ static void core_log(enum retro_log_level level, const char *fmt, ...)
 	log_printf("%s", buf);
 }
 
-// J-07: a save's message still waiting (saves made in the pause card play after it) gives way
+// A save's message still waiting (saves made in the pause card play after it) gives way
 // to a newer save's, so resuming never reports an older slot. A save's message is UI_PC_SAVED or
 // UI_PC_SAVED_OVER ("Postcard %d saved..."); "Postcard %d loaded" is not one.
 #define OSD_SAVED "Postcard "
@@ -445,7 +445,7 @@ static void input_poll_cb(void) { input_poll(); }
 
 static int16_t input_state_cb(unsigned port, unsigned device, unsigned index, unsigned id)
 {
-	return dev_batch_active() ? 0 : input_state(port, device, index, id);
+	return CDT_INPUT(port, device, index, id, dev_batch_active() ? 0 : input_state(port, device, index, id));
 }
 
 // ---------------------------------------------------------------- files
@@ -740,7 +740,7 @@ static bool state_load_from(int slot)
 
 // ---------------------------------------------------------------- save backups
 
-// Owner's design (the save-backup design notes, "Recommended"):
+// Recommended save recovery:
 // every risky action first puts the game (or the slot) it would destroy into
 // the ring of automatic saves (history.h), and the pause menu offers one
 // Undo / Redo of the latest one.
@@ -806,7 +806,7 @@ PSX3D_COLD static void sta_retire(const char *bak, void *ctx)
 
 // The game as it is now, into the ring before a risky action. On Old 3DS a
 // Continue auto-save up to REUSE_SECONDS old is used instead of waiting
-// 2-3 s for a fresh one (owner's choice), unless it is not_this.
+// 2-3 s for a fresh one, unless it is not_this.
 #define REUSE_SECONDS (5 * 60)
 PSX3D_COLD static bool safety_copy(hist_kind_t kind, const save_ref_t *not_this, save_ref_t *out)
 {
@@ -2035,7 +2035,7 @@ static bool run_game(const char *path, const char *save_name, const char *title)
 	}
 	config_sync_stereo();
 
-	retro_init();
+	CDT_PREPARE(sw_stats); retro_init();
 	core_initialized = true;
 	if (!retro_load_game(&info)) {
 		log_printf("retro_load_game failed\n");
@@ -2253,7 +2253,7 @@ static bool run_game(const char *path, const char *save_name, const char *title)
 			// fast-forward: up to 3 more frames per shown frame, no sound
 			for (int extra = ff ? 3 : 0; extra > 0; extra--) {
 				audio_muted = true;
-				pmu_begin();
+				CDT_FRAME(); pmu_begin();
 				retro_run();
 				pmu_end();
 				emulated++;
@@ -2261,7 +2261,7 @@ static bool run_game(const char *path, const char *save_name, const char *title)
 				rewind_capture();
 			}
 			audio_muted = ff;
-			pmu_begin();
+			CDT_FRAME(); pmu_begin();
 			if (clip_active) clip_frame(); else retro_run();
 			pmu_end();
 			emulated++;
@@ -2469,7 +2469,7 @@ static bool run_game(const char *path, const char *save_name, const char *title)
 				double cycles, ev0, ev1;
 				pmu_sample(&cycles, &ev0, &ev1);
 				audio_stats(abuf, sizeof(abuf));
-				sample.audio = abuf; sample.renderer = renderer;
+				sample.audio = abuf; sample.renderer = renderer; CDT_AUDIO(abuf);
 				if (log_linked() || sw_prof || sw_stats)
 					log_printf("  %s\n", abuf);
 				if (renderer_is_gpu()) {
@@ -2551,7 +2551,7 @@ static bool run_game(const char *path, const char *save_name, const char *title)
 			fps_frames = 0;
 			fps_t0 = now;
 			stats_deadline = end_work + SYSCLOCK_ARM11;
-			log_hold(false);
+			CDT_REPORT(now, fps_target); log_hold(false);
 		}
 		if (psx3d_skip.timing) misc_ticks += svcGetSystemTick() - report_start;
 		if (psx3d_skip.enabled) {

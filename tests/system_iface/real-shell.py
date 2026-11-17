@@ -20,7 +20,7 @@ assert 'cont_probe(' not in publication,'index publication must not re-read Cont
 entry=home[home.index('int home_run('):home.index('covers_resume();',home.index('int home_run('))]
 assert 'cont_request_refresh();' in entry
 assert 'continue_pending &&' not in home
-assert 'bb_index_poll(true))shelf_library_changed();' in home[home.index('int home_empty_library_run('):]
+assert 'bb_index_poll(true))shelf_library_changed();' in (r/'app/ui/home_empty.c').read_text()
 with tempfile.TemporaryDirectory() as td:
  p=Path(td);(p/'roms').mkdir();(p/'roms/snes').mkdir()
  (p/'roms/snes/game.sfc').write_bytes(bytes(0x7fc0)+b"\x5a"+bytes(0x3f))

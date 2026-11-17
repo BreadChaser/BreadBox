@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The room's light range and dither strength reach the GPU (V3 review F2). The portable half (room_bbr.c) is tested
+"""The room's light range and dither strength reach the GPU. The portable half (room_bbr.c) is tested
 in check.c; this reads the draw path the host cannot run:
   - draw() sets the vertex shader's lscale to the style's range / 1020 before its first draw call (without it the
     uniform reads 0 and the whole room is black);

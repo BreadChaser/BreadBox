@@ -135,7 +135,7 @@ void aptSetChainloaderToSelf(void){chainloads++;}
 static unsigned chainload_title,chainload_clears;void aptSetChainloader(u64 id,u8 media){assert(id==BB_UPDATE_TITLE && media==MEDIATYPE_SD);chainload_title++;}
 void aptClearChainloader(void){chainload_clears++;}
 bool sw_nonet,sw_nocovers;
-/* A one-shot hook run at the first call inside update_poll (forced in-poll interleaving, re-check 2026-11-05). */
+/* A one-shot hook run at the first call inside update_poll (forced in-poll interleaving, cancellation race). */
 static void (*session_hook)(void);
 bool bb_session_active(void){if(session_hook){void (*h)(void)=session_hook;session_hook=NULL;h();}return game;}
 bool bb_index_cancelled(void){return false;}
@@ -347,7 +347,7 @@ int main(int argc,char **argv)
   assert(update_status==4 && update_machine.state==BB_UPDATE_IDLE && !starts);
  }
  update_discover_job(NULL);assert(update_status==7 && update_machine.state==BB_UPDATE_IDLE);
- /* merge review: no update file (404) or a server error (503) is not Wi-Fi; no answer at all is */
+ /* No update file (404) or a server error (503) is not Wi-Fi; no answer at all is */
  for(unsigned i=0;i<2;i++){
   update_discover_job(NULL);
   assert(update_status==16 && !strcmp(update_settings_status(),"Try again later") && update_machine.state==BB_UPDATE_IDLE && !starts);
@@ -627,7 +627,7 @@ int main(int argc,char **argv)
   /* ... it completes VERIFY -> READY and releases busy: the next poll sees READY and queues no staging job. */
   update_machine.state=BB_UPDATE_READY;__atomic_store_n(&update_job_busy,0,__ATOMIC_RELEASE);
   assert(update_poll(false)==UPDATE_POLL_WAIT && queued==before && update_view.state==BB_UPDATE_READY);
-  /* Forced in-poll interleaving (product regression from the 2026-11-05 re-check): the worker publishes VERIFY ->
+  /* Forced in-poll interleaving (cancellation race): the worker publishes VERIFY ->
      READY and releases busy inside this very poll, before its busy load. Whatever order the poll reads them in,
      it must see READY: nothing queued, no flush, the phase stays READY. */
   update_machine.state=BB_UPDATE_VERIFY;update_view.state=BB_UPDATE_VERIFY;update_job_busy=1;update_explicit_check=true;update_approved=true;
@@ -670,7 +670,7 @@ int main(int argc,char **argv)
   /* Settings never goes past READY: READY is for the room only. */
   update_machine.state=BB_UPDATE_READY;assert(update_poll(false)==UPDATE_POLL_WAIT);assert(update_poll(true)==UPDATE_POLL_READY);
   update_machine.state=BB_UPDATE_IDLE;
-  /* (8) J-04: Check now while the library scans: "Checking" at once; the scan cancels the first
+  /* (8) Check now while the library scans: "Checking" at once; the scan cancels the first
      discovery; the retry is still the player's check, so its result is asked, never auto-downloaded. */
   update_machine.state=BB_UPDATE_IDLE;update_view.state=BB_UPDATE_IDLE;update_explicit_check=update_explicit_pending=update_approved=false;
   update_checked=true;update_check_now=false;update_retry_after=0;update_job_busy=0;update_transport_deferred=0;update_preference=0;

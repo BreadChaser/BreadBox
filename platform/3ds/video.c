@@ -626,7 +626,7 @@ void video_present_screens(bool show_game, bool repaint_top, void (*draw_top)(vo
 		}
 
 		// Stereo 3D "screen depth": the game picture sits behind the screen,
-		// PSX3D's overlays (FPS, messages) stay on the screen surface. Each eye
+		// BreadBox's overlays (FPS, messages) stay on the screen surface. Each eye
 		// sees the picture shifted the opposite way.
 		float slider = slider_get();
         bool ui3d = !show_game && ui_wants_3d && (g_cfg.stereo || bb_session_stereo || (!g_new3ds && sw_room3d && ui_room_eyes)) && slider > 0.01f;
@@ -749,7 +749,7 @@ void video_top_rebind(void) { top_begin(ui_eye > 0 ? top_r : top); }
 void video_room_plain(bool on) { plain_ok = top_aa && !sw_aa && (on || !g_new3ds); }
 bool video_top_plain(void) { return plain_now; }
 
-// Round 16: the room and its shelves in 3D on the Old 3DS (owner: "there is no 3d on the old 3ds in the menu").
+// The room and its shelves use stereoscopic 3D on the Old 3DS.
 // Two eyes cost the Old's GPU twice the room's ~8-9 ms, which does not hold 60 fps, so with the slider up the
 // room runs locked at 30 fps (every frame two vblanks, no uneven 60/30 mix) and at 60 fps in mono with it down.
 // Only the room's own frames (ui_room_eyes: home, Library): dialogs over it and other screens stay flat there.

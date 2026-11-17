@@ -1,4 +1,4 @@
-// Host test of save names (harsh review M2): runs the real
+// Host test of save names: runs the real
 // systems/ps1/saveid.c (and safefile.c) on fixture folders in a temp
 // directory, against a stand-in library. A "launch" is what emu.c does:
 // saveid_begin before loading, saveid_confirm with the disc serial after.
@@ -257,7 +257,7 @@ static void reset(void)
 
 // ---------------------------------------------------------------- cases
 
-// The review's case: Game A/game.bin and Game B/game.bin
+// Same basename in different folders: Game A/game.bin and Game B/game.bin
 static void reviewer(void)
 {
 	ctx = "reviewer";
@@ -662,7 +662,7 @@ static void serials(void)
 	CHECK(!card_of_others("SLUS00001"));
 }
 
-// Review 3 F7d: the cases that used to fail open
+// Invalid identities must fail closed
 static void fail_closed(void)
 {
 	ctx = "fail closed";

@@ -28,7 +28,7 @@ static void draw_bottom(void *ud)
 {
 	(void)ud;
 	const theme_t *th = theme();
-	u32 muted = th->text_muted;
+	u32 muted = th->text_muted;ui_trace_browser(&lst,nentries,sel,row_label,row_value);
 	scene_draw(true);
 	const char *name = strrchr(cwd, '/');
 	LIST_HEADER("Folders", ui_fit(name && name[1] ? name + 1 : cwd, UI_FONT_META, 170));

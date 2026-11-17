@@ -104,7 +104,7 @@ static aptHookCookie update_apt_cookie;
 static CURLM *update_multi;
 static char update_asset_url[2048],update_asset_source[512];
 static _Atomic unsigned update_status;
-/* What the Updates card says (J-05): plain words that fit its one foot line, no codes. The technical
+/* What the Updates card says: plain words that fit its one foot line, no codes. The technical
  * reason of a failed install stays in status.txt and the log. */
 static const char *const update_status_text[]={"Not checked yet","Checking for updates...","Update found","No connection. Check Wi-Fi",
  "Bad update info. Try later","Bad download. Will retry","Install failed. Reopen app","BreadBox is up to date",
@@ -632,8 +632,8 @@ static void update_apt(APT_HookType type,void *unused)
  }
 }
 const char *bb_update_preference(void){return (const char *const[]){"Automatic","Ask first","Off"}[__atomic_load_n(&update_preference,__ATOMIC_ACQUIRE)];}
-/* An explicit Check now: the room's notice and the Updates card say what happens (owner 2026-11-05: it
- * showed nothing). Checking, then the confirm dialog as soon as an update is found (before any download),
+/* An explicit Check now: the room's notice and the Updates card say what happens.
+ * Checking, then the confirm dialog as soon as an update is found (before any download),
  * then "Downloading update NN%", or "BreadBox is up to date" / the failure. */
 static bool update_explicit_pending;
 static bool update_developer_busy(void)
@@ -666,7 +666,7 @@ static void update_view_refresh(void)
  update_view.state=update_machine.state;update_view.size=update_manifest.size;
  snprintf(update_view.display,sizeof(update_view.display),"%s",update_manifest.display);
 }
-/* Check now stays the player's check until a discovery really finishes (J-04): it waits for the
+/* Check now stays the player's check until a discovery really finishes: it waits for the
  * library scan, and a discovery the scan cancels is retried as the same explicit check, so its
  * result is always asked about, never turned into an automatic download. */
 static bool update_explicit_retry;
@@ -865,7 +865,7 @@ const char *bb_update_glance(void)
 static flist_t update_list;static int update_selected;
 static void update_row(int i,void *unused,ui_card_row_t *r)
 {(void)unused;*r=(ui_card_row_t){.label=i==BB_UPDATE_NOTES_ROW?bb_whatsnew_label():i?"Check now":"Install",.value=i?">":update_prefs_ready()?bb_update_preference():"-",.arrows=!i && update_prefs_ready()};}   /* not "Updates" again under the title */
-/* The card's foot line: what this visit's check is doing or found; no standing "Last check" status (owner 2026-11-05) */
+/* The card's foot line: what this visit's check is doing or found; no standing "Last check" status */
 static const char *update_card_notice(void)
 {const char *fixture=ui_fixture_notice();if(fixture){update_line_bad=ui_fixture_problem();return fixture;}
  return update_unavailable() || update_crypto_disabled || update_waits_for_save() || update_explicit_pending || update_explicit_check || update_view.staging || update_status>=3?update_settings_status():"";}

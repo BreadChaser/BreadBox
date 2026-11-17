@@ -1,6 +1,5 @@
 {
  "files": {
-  "app/ui/home.c": 1665,
   "app/ui/ui.c": 2073,
   "core/plugins/gpu_pica/gpu_pica.c": 4184,
   "systems/ps1/emu.c": 2712
@@ -8,10 +7,8 @@
  "functions": {
   "app/ui/devcontrol.c::dev_tick": 327,
   "app/ui/devupdate.c::dev_update": 211,
-  "app/ui/home.c::home_run": 261,
   "app/ui/main.c::main": 398,
   "app/ui/room_scene.c::draw": 154,
-  "app/ui/shelf.c::shelf_run": 306,
   "app/ui/ui.c::bar_icon": 194,
   "platform/3ds/devnet.c::serve_client": 200,
   "systems/gba/gba.c::gba_run": 421,

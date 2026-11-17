@@ -1,5 +1,5 @@
-/* Text stands on the ruled lines with any font (owner 2026-11-12: "the lines under text for the post-it notes cards:
- * the text still doesn't line up"). On a real 3DS the card text sat ~3 px under every rule while Azahar showed it on
+/* Text stands on the ruled lines with any font.
+ * On a real 3DS the card text sat ~3 px under every rule while Azahar showed it on
  * them: the placement was a fixed 20 px baseline in citro2d's 30 px cell, which is where Azahar's replacement font
  * draws its letters. Nintendo's system font stands lower in its cell (hardware stills: 3 px low at the 0.7 floor,
  * i.e. 24-25 of 30).

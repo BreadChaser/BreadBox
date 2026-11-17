@@ -17,6 +17,7 @@
 #include "presets.h"
 #include "ui_list.h"
 #include "ui_pause.h"
+#include "ui_trace_card.h"
 #include "ui.h"
 #include "libui.h"
 #include "ui_actions.h"
@@ -382,9 +383,9 @@ void flist_draw_sections(const flist_t *f, int n, int sel, float x, float y0, fl
  hy > y0 - row_h && hy < y0 + rows * row_h &&
 	    !(header && highlight_row >= 0 && highlight_row < n && header(highlight_row, ud))) {
 
-		C2D_DrawRectSolid(x - 2, hy - 2, 0.2f, w + 4, row_h + 4, th->select_glow);
-		C2D_DrawRectangle(x, hy, 0.21f, w, row_h, th->select_top, th->select_bottom, th->select_top, th->select_bottom);
-		C2D_DrawRectSolid(x, hy, 0.22f, 3, row_h, accent);
+		C2D_DrawRectSolid(x - 2, hy - 2, UI_LIST_GLOW_Z, w + 4, row_h + 4, th->select_glow);
+		C2D_DrawRectangle(x, hy, UI_LIST_FOCUS_Z, w, row_h, th->select_top, th->select_bottom, th->select_top, th->select_bottom);
+		C2D_DrawRectSolid(x, hy, UI_LIST_EDGE_Z, 3, row_h, accent);
 	}
 	int first = (int)floorf(f->scroll) - 1;
 	for (int i = first < 0 ? 0 : first; i < n && i <= f->scroll + rows; i++) {
@@ -606,6 +607,7 @@ void ui_dialog_draw_page(const char *title,const char *scope,const char *text,in
  int pages=ui_dialog_pages(text);
  scope=NULL;   /* no scope word ("BreadBox", the game): the page counter only, when there are pages */
  if(pages>1){snprintf(counter,sizeof(counter),"%d / %d",page+1,pages);scope=counter;}
+ ui_trace_dialog(title,text,page);
  ui_menu_backdrop();ui_menu_header(title,scope);
  dialog_text(text?text:"",page,true);ui_bar_draw(bar,n);
 }
@@ -708,6 +710,7 @@ typedef struct { const char *title, *message; ui_button_t tab[2]; int lit; } pic
 static void pick_draw(void *ud)
 {
 	pick_t *p = ud;
+ ui_trace_pick(p->title,p->lit,p->tab[UI_LOOK_ZERO].label,p->tab[UI_LOOK_ONE].label);
 	ui_menu_backdrop();
 	ui_menu_header(p->title, NULL);
 	dialog_text(p->message, 0, true);   // a two-way question is one page (its callers keep it short)
@@ -808,7 +811,7 @@ void ui_confirm_ok(const char *title, const char *message, bool show_game)
 typedef struct { const char *title, *message; ui_button_t tab[UI_BAR_MAX]; int n, lit; } pick_n_t;
 static void pick_n_draw(void *ud)
 {
-	pick_n_t *p = ud;
+	pick_n_t *p = ud;ui_trace_choices(p->title,p->tab,p->n,p->lit);
 	ui_menu_backdrop();
 	ui_menu_header(p->title, NULL);
 	dialog_text(p->message, 0, true);   // one page: callers keep it short
@@ -1224,6 +1227,7 @@ void ui_bar_draw(const ui_button_t *b, int n)
 	int order[UI_BAR_MAX];
 	float xs[UI_BAR_MAX], ws[UI_BAR_MAX];
 	int m = bar_layout(b, n, order, xs, ws);
+ for(int i=UI_LOOK_ZERO;i<m;i++)ui_trace_button(b[order[i]].key,b[order[i]].label,(int)xs[i],BAR_TOP,(int)ws[i],UI_SCREEN_HEIGHT-BAR_TOP);
 	u32 main_face = mix(th->select_bottom, th->select_top, 0.2f, UI_ALPHA_OPAQUE);   // the mock's btnMainBottom
 	u32 divider = theme_alpha(ui_bar_color(UI_COL_RULE), 110);
 	u32 ink = theme_row(th, 0.6f, UI_ALPHA_OPAQUE), ink_main = theme_row(th, 1, UI_ALPHA_OPAQUE);
@@ -1259,7 +1263,7 @@ static void tabs_draw(const ui_button_t *b, int n, int lit, bool icons_only)
 	u32 ink = theme_row(th, 0.6f, UI_ALPHA_OPAQUE), ink_main = theme_row(th, 1, UI_ALPHA_OPAQUE);
 	for (int i = 0; i < n; i++) {
 		float x = UI_BOTTOM_SCREEN_WIDTH_F * i / n, w = UI_BOTTOM_SCREEN_WIDTH_F * (i + 1) / n - x, cx = x + w / 2;
-		bool on = i == lit;
+		bool on = i == lit;ui_trace_tab(&b[i],i,x,w);
 		if (on)
 			C2D_DrawRectSolid(x, BAR_TOP, UI_Z_BAND, w, UI_SCREEN_HEIGHT - BAR_TOP, main_face);
 		else if (i && i != lit + 1)
@@ -1547,7 +1551,7 @@ PSX3D_COLD bool ui_pause_close(void)
 // The paused game in a wooden CRT on the wall with its hang tag (top screen), the menu on a
 // ruled notebook card (bottom screen). One palette from the theme's roles (the room's paper,
 // wood and ink; other themes their own), every number in ui_style.h. Cold: menus only.
-typedef struct { u32 paper, edge, ink, soft, rule, lines, stamp, blue, green, wood, dark, rim, wall, light; } paper_t;
+typedef struct { u32 paper, edge, ink, soft, rule, lines, stamp, blue, green, focus_icon, dark; float dim_opacity; u32 wall, light; } paper_t;
 
 PSX3D_COLD static void paper_get(paper_t *p)
 {
@@ -1555,11 +1559,11 @@ PSX3D_COLD static void paper_get(paper_t *p)
 	const theme_room_t *r = theme_room(th);
 	if (r) {
 		*p = (paper_t){ r->paper, r->paper_edge, r->ink, r->ink_soft, r->rule, r->rule_soft, r->stamp, r->pin[2], r->leaf[0],
-			r->wood, r->back, r->upright, r->wall, r->light };
+			r->card_focus_icon, r->back, r->card_dim_opacity, r->wall, r->light };
 		return;
 	}
 	*p = (paper_t){ th->card_top, th->card_bottom, th->text_bright, th->text_muted, th->accent[0], th->section_line, th->danger,
-		th->accent[2], th->accent[1], th->accent[0], th->card_bottom, th->card_top, th->surface, th->light };
+		th->accent[2], th->accent[1], th->accent[0], th->card_bottom, UI_CARD_DIM_ALPHA / (float)UI_ALPHA_OPAQUE, th->surface, th->light };
 }
 
 PSX3D_COLD static void rrect(float x, float y, float w, float h, float r, u32 c, float z)
@@ -1889,6 +1893,7 @@ PSX3D_COLD void ui_card_header(ui_text_fn text, float x, float right, float rule
 }
 PSX3D_COLD void ui_card_draw(const flist_t *f, int n, int sel, void (*row)(int, void *, ui_card_row_t *), void *ud, const ui_card_t *card)
 {
+ ui_trace_card(f,n,sel,row,ud,card);
 	bool calm = notice_calm;
 	notice_calm = false;
 	paper_t p;
@@ -1906,7 +1911,7 @@ PSX3D_COLD void ui_card_draw(const flist_t *f, int n, int sel, void (*row)(int, 
 	p.rule = theme_alpha(p.rule, (int)(255 * pause_progress));
 	p.lines = theme_alpha(p.lines, (int)(255 * pause_progress));
 	p.stamp = theme_alpha(p.stamp, (int)(255 * pause_progress));
-	p.wood = theme_alpha(p.wood, (int)(255 * pause_progress));
+	p.focus_icon = theme_alpha(p.focus_icon, (int)(255 * pause_progress));
 	C2D_DrawRectSolid(cx + UI_CARD_SHADOW, cy + UI_CARD_SHADOW, UI_CARD_Z_SHADOW, cw, ch, theme_alpha(th->shadow, (int)(UI_CRT_SHADOW_ALPHA * pause_progress)));
 	C2D_DrawRectangle(cx, cy, UI_CARD_Z_PAPER, cw, ch, p.paper, p.paper, p.edge, p.paper);
 	// ruled lines every UI_PAPER_LINE from the red rule to the card's foot: the rows' and the notice's text sits on them
@@ -1943,8 +1948,8 @@ PSX3D_COLD void ui_card_draw(const flist_t *f, int n, int sel, void (*row)(int, 
 		ui_card_row_t r = { 0 };
 		row(i, ud, &r);
 		float lift = i < FLIST_MAX ? f->lift[i] : (i == sel);
-		int a = (int)(255 * pause_progress * edge * (r.dim && !r.heading ? UI_CARD_DIM_ALPHA / (float)255 : 1.0f));
-		u32 ink = theme_alpha(r.heading ? p.rule : p.ink, a), soft = theme_alpha(r.icon && lift > 0.5f ? p.wood : p.soft, a);   // headings in the margin's red
+		int a = (int)(UI_ALPHA_OPAQUE * (pause_progress * edge * (r.dim && !r.heading ? p.dim_opacity : 1.0f)));
+		u32 ink = theme_alpha(r.heading ? p.rule : p.ink, a), soft = theme_alpha(r.icon && lift > 0.5f ? p.focus_icon : p.soft, a);   // headings in the margin's red
 		if(r.source!=BB_SOURCE_NONE)ui_source_mark(r.source,UI_CARD_ICON_X,mark,soft,p.paper);
   else bar_icon(r.icon, UI_CARD_ICON_X, mark, UI_CARD_ICON_SIZE, soft, p.paper, false);
 		card_fit_t fit;

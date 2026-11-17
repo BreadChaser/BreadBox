@@ -1,7 +1,7 @@
 #pragma once
 #include "ui_play_controls.h"
-/* The GBA on-screen touch buttons (Touch A, Touch B, Fast forward, Rewind) are off in 1.0 (owner 2026-11-12: they need
- * another mapping; to be relooked). Off: every slot is hidden, their settings rows are gone, saved bindings are neither
+/* The GBA on-screen touch buttons (Touch A, Touch B, Fast forward, Rewind) are off in 1.0 pending
+ * revised mappings. Off: every slot is hidden, their settings rows are gone, saved bindings are neither
  * read nor written and the touch-controls intro is not shown; touch-to-pause and the FPS counter work as before (the
  * play panel's no-buttons path). Building with -DGBA_TOUCH_BUTTONS=1 brings the buttons back unchanged. */
 #ifndef GBA_TOUCH_BUTTONS

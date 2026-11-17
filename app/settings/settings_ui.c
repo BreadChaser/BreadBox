@@ -1,5 +1,5 @@
-/* Settings: one list per page and a page stack, no tabs (owner 2026-11-12: "have it all in the settings list ...
- * the systems need to be in its own sub menu because we will add more"). Adapters own the values; the shell owns
+/* Settings: one list per page and a page stack, no tabs. A separate Systems submenu
+ * accommodates additional systems. Adapters own the values; the shell owns
  * the pages, the shared card and the app's own rows.
  *
  *   Settings     Customize >  Systems >  Collection >  Updates >  About >
@@ -45,7 +45,7 @@
 #define SETTINGS_DEPTH 4
 /* Row ids the shell owns (adapters use 0..9999). A system's row on the Systems page: APP_SYSTEM + registry index. */
 enum { APP_CUSTOMIZE=10000,APP_SYSTEMS,APP_COLLECTION,APP_UPDATES,APP_ABOUT,
- APP_APPEARANCE,APP_HANDS,APP_SKIN,APP_GLOVES,APP_HOTKEY,APP_HOTKEY_LAST=APP_HOTKEY+INPUT_HOTKEY_N-1,APP_SIDE,
+ APP_LOOK,APP_APPEARANCE,APP_HANDS,APP_SKIN,APP_GLOVES,APP_HOTKEY,APP_HOTKEY_LAST=APP_HOTKEY+INPUT_HOTKEY_N-1,APP_SIDE,
  APP_FOLDER,APP_IMPORT,APP_CREDITS,APP_INSTALL,APP_WELCOME,APP_ADVANCED,ACTION_HELP,APP_SYSTEM=11000 };
 typedef enum { PAGE_TOP,PAGE_CUSTOMIZE,PAGE_HANDS,PAGE_SYSTEMS,PAGE_SYSTEM,PAGE_ADVANCED,PAGE_COLLECTION,PAGE_ABOUT,PAGE_COUNT } settings_page;
 static const char *const page_titles[PAGE_COUNT]={"Settings","Customize","Hands","Systems",NULL,"Advanced","Collection","About"};
@@ -61,7 +61,7 @@ typedef struct {
  flist_t list;   /* the shown page's motion (one: a page reopens on its remembered row, not its scroll) */
  char folder_value[PATH_LEN];   /* one full path, in the existing static state; no per-row heap growth */
  bb_settings_context context;const bb_settings_ops *ops;const bb_system_t *ops_system;
- bool theme_picker;int value_page;
+ bool theme_picker,look_picker;int value_page;
  void (*top)(void *);void *top_ud;
  const ui_destination *scene;ui_destination backdrop;float scene_time,scene_visibility,page_time;
  char scope[192],source[96],title[128];   /* title: the game's clean name (ui_clean_title), as the library and pause card say it */
@@ -111,7 +111,8 @@ static const char *hotkey_notice(int slot,char *text,size_t cap)
 }
 static void customize_rows(settings_state *s)
 {
- append(s,(bb_settings_row){.id=APP_APPEARANCE,.label="Room style",.value=theme()->name,.help="How the room is lit: Day or Night. Left and right change it at once; A opens the styles with the room showing each.",.kind=BB_ROW_VALUE});
+ append(s,(bb_settings_row){.id=APP_LOOK,.label="Look",.value=theme_look_get(theme_look())->name,.help="Room, PSX3D, or Simple. The same places and controls in each look.",.kind=BB_ROW_VALUE});
+ append(s,(bb_settings_row){.id=APP_APPEARANCE,.label="Room style",.value=theme_get(theme_room_style())->name,.help="How the room is lit: Day or Night. Left and right change it at once; A opens the styles with the room showing each.",.kind=BB_ROW_VALUE});
  if(room_show_hands)page_row(s,APP_HANDS,"Hands","Choose a skin tone and gloves for the hands in the room.");
  static const char *const keys[INPUT_HOTKEY_N]={"FF keys","Rewind keys"};
  for(int h=0;h<INPUT_HOTKEY_N;h++) {
@@ -278,23 +279,24 @@ static void reset(settings_state *s)
  } else s->ops->reset(BB_RESET_SCOPE);
 }
 /* The room's style (Day, Night): the room behind takes the highlighted one at once; B keeps the old one. */
-static void appearance(settings_state *s)
+static void appearance(settings_state *s,bool look)
 {
- int before=g_cfg.theme,selected=before;flist_t list={0};ui_swap_enter();
+ int saved=g_cfg.theme,style=theme_room_style(),before=look?theme_look():style,selected=before;
+ int count=look?BB_LOOK_COUNT:2;flist_t list={0};s->look_picker=look;ui_swap_enter();
  while(aptMainLoop()) {
   if(dev_tick(false) || dev_ui_pending())break;
-  input_poll();u32 k=ui_list_input(&list,theme_count(),&selected,input_keys_down(),false);
+  input_poll();u32 k=ui_list_input(&list,count,&selected,input_keys_down(),false);
   k=ui_swap_keys(k,UI_SWAP_MENU);
-  g_cfg.theme=selected;theme_menu_refresh();
+  if(look)theme_select_look(selected);else theme_select_room_style(selected);
   if(k&KEY_B)break;
-  if(k&KEY_A){before=selected;config_user_changed("theme");break;}
-  flist_update(&list,selected,theme_count(),UI_LIST_ROWS);
+  if(k&KEY_A){saved=g_cfg.theme;style=theme_room_style();config_user_changed("theme");break;}
+  flist_update(&list,selected,count,UI_LIST_ROWS);
   s->theme_picker=true;
   /* Existing picker is the shared appearance component. */
   extern void settings_appearance_present(settings_state *,flist_t *,int,int);
   settings_appearance_present(s,&list,selected,before);
  }
- s->theme_picker=false;g_cfg.theme=before;theme_menu_refresh();if(aptMainLoop())config_save();ui_swap_enter();
+ s->theme_picker=false;s->look_picker=false;g_cfg.theme=saved;theme_select_room_style(style);theme_menu_refresh();if(aptMainLoop())config_save();ui_swap_enter();
 }
 static int settings_bar(settings_state *s,ui_button_t *bar)
 {
@@ -343,9 +345,12 @@ static bool activate(settings_state *s,bb_settings_row *r,int direction,bool pre
  case APP_ADVANCED:push(s,PAGE_ADVANCED,NULL);break;
  case APP_HANDS:push(s,PAGE_HANDS,NULL);break;
  case APP_UPDATES:bb_update_settings();break;
+ case APP_LOOK:
+  if(press){appearance(s,true);break;}
+  theme_select_look((theme_look()+BB_LOOK_COUNT+direction)%BB_LOOK_COUNT);config_user_changed("theme");config_save();return true;
  case APP_APPEARANCE:
-  if(press){appearance(s);break;}
-  g_cfg.theme=(g_cfg.theme+theme_count()+direction)%theme_count();theme_menu_refresh();config_user_changed("theme");config_save();return true;
+  if(press){appearance(s,false);break;}
+  theme_select_room_style((theme_room_style()+2+direction)%2);config_user_changed("theme");config_save();return true;
  case APP_SIDE:control_side_set(!control_side());input_touch_reset();config_user_changed("touch_click_left");config_save();return true;
  case APP_SKIN:g_cfg.hand_skin=(g_cfg.hand_skin+HAND_SKINS+direction)%HAND_SKINS;config_save();return true;
  case APP_GLOVES:g_cfg.hand_glove=(g_cfg.hand_glove+HAND_GLOVES+direction)%HAND_GLOVES;config_save();return true;

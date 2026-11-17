@@ -21,6 +21,8 @@ PSX3D_COLD bool ui_fixture_command(const char *command,const char *args)
   dev_reply("{\"ok\":true}");
   ui_confirm_choice("Update available","BreadBox can update now. Your saved games will be kept.","A  Update","B  Later",false);return true;
  }
+ if(!strcmp(args,"trace-reset"))ui_trace_reset();
+ if(!strcmp(args,"state")){dev_reply(ui_trace_json());return true;}
  if(!strcmp(args,"metrics")) {
   char reply[2048];int at=snprintf(reply,sizeof(reply),"{\"advance\":[");
   for(int i=32;i<127;i++){char text[2]={(char)i,0};at+=snprintf(reply+at,sizeof(reply)-at,"%s%.3f",i==32?"":",",ui_text_width(NULL,1,text));}

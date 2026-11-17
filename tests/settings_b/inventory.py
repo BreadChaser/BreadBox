@@ -1,7 +1,7 @@
 """The settings inventory against the immutable v1-r2 labels (GOLDEN.md): nothing lost, nothing doubled.
 
 Every frozen PS1 and GBA row is still in its system's list, in order, except the shared shortcuts, which moved to
-their one home, Settings > Customize (settings overhaul, 2026-11-12). Those must be on the Customize page the
+their one home, Settings > Customize. Those must be on the Customize page the
 production shell builds for that console (model.c prints it), and nowhere in the system's lists.
 usage: inventory.py FROZEN_PS1_TSV CANDIDATE_PS1_TSV GBA_RESULTS MODEL_RESULTS"""
 from pathlib import Path
@@ -53,7 +53,7 @@ for context, fr in expected.items():
     assert actual[context]['binding'] == fr['binding'], context
 # and Customize holds nothing else but the room's own rows
 for newer, labels in customize.items():
-    extra = [l for l in labels if (newer, l) not in moved_seen and l not in ('Room style', 'Hands')]
+    extra = [l for l in labels if (newer, l) not in moved_seen and l not in ('Look', 'Room style', 'Hands')]
     assert not extra, (newer, extra)
 print('Settings inventory PASS: %d PS1 contexts and %d GBA contexts keep every frozen row once; the shared shortcuts '
       '(%s) moved to Customize, nowhere else' % (len(frozen), len(expected), ', '.join(sorted({l for _, l in moved_seen}))))

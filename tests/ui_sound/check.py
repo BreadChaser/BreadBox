@@ -37,6 +37,7 @@ code = r'''
 #include <stdio.h>
 #include <string.h>
 #include "3ds.h"
+#include "ui_trace.h"
 #include "ui_motion.h"
 #include "ui_style.h"
 static void log_printf(const char *f, ...) { (void)f; }

@@ -31,3 +31,5 @@ void ui_list_context(const char *title, const char *right);
 
 void gba_settings_list_draw(const flist_t *list,int row,const char *scope);
 void theme_picker_draw(const flist_t *list, int selected, int committed);
+
+void theme_picker_draw_look(const flist_t *list, int selected, int committed, bool look);

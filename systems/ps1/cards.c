@@ -1,4 +1,4 @@
-// Memory cards on the SD card (harsh review C1, review 3 F1b/F1e). Card 1 is
+// Memory cards on the SD card. Card 1 is
 // normally the core's SAVE_RAM, kept as <game>.srm; card 2 (and card 1 "per
 // disc" or "shared") are files the core names. All are written crash-safe
 // with a backup (safefile.h) only when they changed, read from their best
@@ -21,6 +21,7 @@
 #include "ps1_pad.h"
 #include "clip.h"
 #include "history.h"
+#include "disc_thread.h"
 
 // What a memory card file is (safefile.h): its exact size and the header the
 // core looks at first ...
@@ -253,9 +254,9 @@ static bool srm_save(void)
 
 // Memory cards the core keeps in files of its own (card 2, card 1 "per disc"
 // or "shared"): the core would write them in place, 128 bytes at a time, and
-// read whatever is there. Instead PSX3D reads them here (best good copy, like
+// read whatever is there. Instead BreadBox reads them here (best good copy, like
 // <game>.srm), then takes the file name away from the core: it keeps the card
-// in memory only, exactly as it does for card 1 normally, and PSX3D writes the
+// in memory only, exactly as it does for card 1 normally, and BreadBox writes the
 // card crash-safe with a backup when it changed. (The HLE BIOS's "format"
 // then does nothing, as it already did for card 1.) Files with a header
 // (DexDrive, VGS) stay with the core as before.
@@ -374,6 +375,7 @@ void cards_begin(const char *srm)
 	// The first call after emu.c plugs the pad into the same port:
 	// suppress automatic analog enable before the game reads it (ps1_pad.h).
 	ps1_pad_settle();
+	ps1_disc_thread_prepare();
 	snprintf(srm_path, sizeof(srm_path), "%s", srm);
 	card_hist_init(&srm_hist, srm_path);
 	srm_load();
@@ -431,7 +433,7 @@ bool cards_retry(void)
 	return cards_trouble(dummy, sizeof(dummy)) == CARD_TROUBLE_NONE;
 }
 
-// The card that could not be read: its file, size and backup group (J-02).
+// The card that could not be read: its file, size and backup group.
 static bool trouble_card(const char **path, size_t *size, const card_hist_t **h)
 {
 	if (srm_trouble) {

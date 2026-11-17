@@ -1,15 +1,16 @@
 // Theme data: semantic UI roles, plus the artwork palettes owned by the disc
-// placeholder and the controls. Every theme is a room style (Day, Night).
+// placeholder and the controls. Room lighting and list looks share the same semantic roles.
 #pragma once
 #include <stdbool.h>
 #include <3ds.h>
+#include "look_theme.h"
 
 #define TH_RGBA(r, g, b, a) ((u32)(r) | ((u32)(g) << 8) | ((u32)(b) << 16) | ((u32)(a) << 24))
 #define TH_RGB(r, g, b) TH_RGBA(r, g, b, 255)
 
 #include "game_palette.h"
 
-// Unread since the cover placeholder disc went (2026-11-06); theme_t keeps the slot for the member offsets
+// Unread since the cover placeholder disc went; theme_t keeps the slot for the member offsets
 // pinned per-frame code reads (see theme_t). Drop it when the layout baseline moves.
 typedef struct {
 	u32 title, rim, inner, outer, mirror[2], hub[2], hole, rainbow[6];
@@ -32,6 +33,8 @@ typedef struct {
 	u32 sleeve;                              // the hand's sleeve
 	u32 leaf[2], wax;                        // a leaf and wax colour the paper and postcards use
 	u32 cork, pin[4], postmark;              // save slots: the corkboard, its pins, the postmark ink
+	u32 card_focus_icon;                    // focused card row's margin icon
+	float card_dim_opacity;                   // disabled card text opacity (0..1)
 } theme_room_t;
 
 typedef struct {
@@ -74,12 +77,13 @@ typedef struct {
 	u32 bar, title_shadow, cover_dim;
 	const theme_room_t *room;    // a room theme: the menus are a bookshelf in this room
 	unsigned char icon;          // the room style's picture in the picker (UI_ICON_SUN, UI_ICON_MOON)
+	unsigned char look;
 } theme_t;
 
 #define THEME_TITLE_SHADOW(t) ((t)->title_shadow ? (t)->title_shadow : (t)->shadow)
 #define THEME_COVER_DIM(t) ((t)->cover_dim ? (t)->cover_dim : (t)->shadow)
 
-// The themes are the room's styles (Day, Night): theme ids are the room file's style ids.
+// Room uses Day/Night IDs; PSX3D and Simple use their own saved IDs.
 // The look a fresh BreadBox starts with.
 #define THEME_DEFAULT_ID "day"
 int theme_default(void);

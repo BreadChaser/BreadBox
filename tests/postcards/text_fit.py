@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Postcard text sits on its card (owner 2026-11-11: "text does not line up with the post cards").
+"""Postcard text sits on its card.
 
 Runs the shipped drawing code (app/ui/components/postcards.inc: pc_card_draw, postcards_top, pc_hand,
 pc_postmark, pc_stamp, pc_layout) against the recording renderer of tests/postcards/harness.py, which keeps citro2d's view matrix

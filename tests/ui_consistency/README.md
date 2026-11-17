@@ -19,7 +19,7 @@ Library feel: shelf_scene.c's reviewed exception changes only room_step camera
 invalidation: preserve its current pose/velocity on catalog rebuilds and settle
 with ui_motion. Drawing primitives, style roles and shared composition are unchanged.
 
-Library review follow-up: shelf_scene.c adds one shared, state-dependent L/R
+shelf_scene.c adds one shared, state-dependent L/R
 hint to the existing shelf card (L R glyphs: Jump 5 games / Turn the box; none when L/R do nothing).
 components/gba_settings_ui.inc adds the existing Use default action to the shared
 bar and updates the help text to X, matching the GBA controller and pause card.

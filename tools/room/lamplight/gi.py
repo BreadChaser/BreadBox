@@ -1,4 +1,4 @@
-"""Cycles global-illumination bake of the Lamplight room (light round 3). Runs inside the pinned Blender.
+"""Cycles global-illumination bake of the Lamplight room. Runs inside the pinned Blender.
 
 The room's final mesh pieces (after the texture-repeat cuts) become Blender objects with flat diffuse materials whose
 colour is each texture's mean x its tint (so bounce light takes the room's colours: green paper, honey floor). Real

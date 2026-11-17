@@ -1,4 +1,4 @@
-// BreadBox R10 round 3e: the articulated hand. Rig (17 bones from the room file), forward kinematics,
+// BreadBox: the articulated hand. Rig (17 bones from the room file), forward kinematics,
 // grip poses solved against the held object (each joint curls until that bone touches a surface), the
 // penetration check (mm) and pose blending. Shared by the live mock, the bake and the node tests.
 // Bones: 0 sleeve, 1 palm, 2-4 thumb (metacarpal, proximal, distal), 5-7 index, 8-10 middle, 11-13 ring,
@@ -19,7 +19,7 @@
   R[12]=-(R[0]*t[0]+R[4]*t[1]+R[8]*t[2]);R[13]=-(R[1]*t[0]+R[5]*t[1]+R[9]*t[2]);R[14]=-(R[2]*t[0]+R[6]*t[1]+R[10]*t[2]);return R;}
  const frameMat=F=>[F.ex[0],F.ex[1],F.ex[2],0,F.ey[0],F.ey[1],F.ey[2],0,F.ez[0],F.ez[1],F.ez[2],0,F.o[0],F.o[1],F.o[2],1];
 
- // ---- the rig, from a parsed BBR1 room file (round 3e: anchors hb2..hb16, parts hand / hand_sleeve / hand_mitt)
+ // ---- the rig, from a parsed BBR1 room file (anchors hb2..hb16, parts hand / hand_sleeve / hand_mitt)
  function rig(f){
   const A=f.anchors,P={};f.parts.forEach(p=>P[p.name]=p);
   const B=[];for(let k=2;k<NB;k++){const a=A['hb'+k];B[k]={h:a.slice(0,3),f:a.slice(3,6),s:a.slice(6,9),p:Math.round(a[9])};}
@@ -74,7 +74,7 @@
  // ---- poses
  const P0=()=>new Float32Array(NB*2);
  function pose(spec){const p=P0();for(const d of DIG){const v=spec[d];if(!v)continue;CH(d).forEach((k,j)=>{p[k*2]=v[j]||0;});if(v[3])p[CH(d)[0]*2+1]=v[3];}return p;}
- // Round 3f: the poses follow real hands at rest and reaching (photo/film reference of relaxed hands and
+ // The poses follow real hands at rest and reaching (photo/film reference of relaxed hands and
  // grasps): never straight; the "finger cascade" (each finger from index to pinky a little more curled), DIP
  // about two thirds of PIP (the tendon coupling), a slight fan, the thumb half-opposed beside the index.
  const POSES={
@@ -97,7 +97,7 @@
  // staged: a curling joint follows the one before it (proximal first, like the solver's wrap), an opening joint
  // goes first from the tip (the reverse); spreads move with the first joint
  function stagePose(a,b,k){const o=P0();for(let i=0;i<o.length;i++)o[i]=a[i]+(b[i]-a[i])*k;
-  // round 7: the joints overlap more (each moves over 3/4 of the step, was 1/2): no fingertip whip
+  // The joints overlap more (each moves over 3/4 of the step, was 1/2): no fingertip whip
   for(const d of DIG){const ks=CH(d),kd=lag(d,k);ks.forEach((kk,j)=>{const up=b[kk*2]>a[kk*2],t0=(up?j:2-j)*.125,q=Math.max(0,Math.min(1,(kd-t0)/.75));
    o[kk*2]=a[kk*2]+(b[kk*2]-a[kk*2])*q*q*(3-2*q);});}
   return o;}
@@ -174,7 +174,7 @@
  // solve; digits without a trail (the thumb) blend staged
  function curlPose(from,g,k){const o=stagePose(from,g.pose,k);
   for(const d in g.trail){const T=g.trail[d],ks=CH(d);if(T.length<2)continue;const n=T.length-1,x=lag(d,k)*n,i=Math.min(n-1,Math.floor(x)),f=x-i;
-   // round 7: the trail starts where the solver began, not always at `from`: fade that offset out over the curl
+   // The trail starts where the solver began, not always at `from`: fade that offset out over the curl
    // (it was a one-frame finger jump at the start of every curl / end of every let-go)
    const kd=lag(d,k),fo=1-kd*kd*(3-2*kd);
    ks.forEach((kk,j)=>{o[kk*2]=T[i][j]+(T[i+1][j]-T[i][j])*f+(from[kk*2]-T[0][j])*fo;o[kk*2+1]=g.pose[kk*2+1];});
@@ -183,7 +183,7 @@
  // a little life on a held pose: the joints breathe OPEN (away from the surfaces they rest on), never in
  function breathe(p,t,amt=1,period=0){const o=copy(p);
   // a slow breath (~4 s) through the whole hand, plus a small flutter per finger; joints only ever open from the grip.
-  // period (round 8): both waves are whole multiples of 2 pi / period, so any `period` window loops seamlessly
+  // period: both waves are whole multiples of 2 pi / period, so any `period` window loops seamlessly
   const w1=period?2*Math.PI/period:1.55,w2=period?4*Math.PI/period:0;
   DIG.forEach((d,i)=>{const w=((.5+.5*Math.sin(t*w1+i*.45))*.7+(.5+.5*Math.sin(t*(period?w2:2.3+.21*i)+i*1.9))*.3)*amt;CH(d).forEach((k,j)=>{o[k*2]-=w*[.035,.03,.02][j]*(d==='thumb'?.7:1);});});
   return o;}

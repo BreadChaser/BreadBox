@@ -80,7 +80,7 @@ PY
 done
 
 # A slow alphabetically earlier disc tree: system folders are still visited by priority, and with no scan deadline
-# (2026-11-12) both systems' games are all found.
+# both systems' games are all found.
 mkdir -p "$tmp/slow-root/(1994) Sony PlayStation" "$tmp/slow-root/(2001) Nintendo Game Boy Advance"
 cp "$tmp/roms/GBA/native.gba" "$tmp/slow-root/(2001) Nintendo Game Boy Advance/late.gba"
 for n in $(seq 1 50); do touch "$tmp/slow-root/(1994) Sony PlayStation/$n.cue"; done
@@ -91,7 +91,7 @@ cat > "$tmp/slow.c" <<'C'
 int main(void) {
  bb_index_start("slow-root",true);
  while(bb_index_busy())usleep(10000);
- /* no deadline any more (owner 2026-11-12): the old 250 ms budget flag below is ignored, every game is found */
+ /* no deadline any more: the old 250 ms budget flag below is ignored, every game is found */
  assert(bb_index_gba_count()==1);
  assert(bb_index_ps1_count()==50);
  assert(bb_index_status()==BB_INDEX_COMPLETE);

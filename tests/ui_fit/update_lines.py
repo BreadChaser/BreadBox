@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""J-05: every line the Updates card can show fits its one foot line at the text floor, with no
+"""Every line the Updates card can show fits its one foot line at the text floor, with no
 codes. A rough glyph-width model (wide capitals/m/w 1.35, narrow i/l/t/punctuation 0.55,
 others 1.0) calibrated on emulator stills of the card at 0.7: "No connection. Check Wi-Fi"
 (23.0) fits; "Bad download. Try tomorrow" (23.4) was cut. Lines must stay at or under 23.0."""

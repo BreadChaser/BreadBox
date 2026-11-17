@@ -22,7 +22,7 @@ cc -std=gnu11 -Wall -Wextra -Werror -fsanitize=address,undefined -g -DSAFEFILE_T
 "$tmp/history"
 python3 "$repo_root/tests/app/save/mutations.py"
 "$tmp/check"
-# harsh review 0.9.0 finding 1: SD errors on <name>/.bak/.tmp are never absence
+# SD errors on <name>/.bak/.tmp are never absence
 cc -std=gnu11 -Wall -Wextra -Werror -fsanitize=address,undefined -g -DSAFEFILE_TEST -Wl,--wrap=stat,--wrap=fopen \
   -I"$repo_root/app/ui" -I"$repo_root/include/breadbox" -I"$repo_root/platform/3ds" "$repo_root/tests/app/save/io_errors.c" \
   "$repo_root/app/ui/safefile.c" -o "$tmp/io-errors"

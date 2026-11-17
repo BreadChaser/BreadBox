@@ -27,6 +27,7 @@
 #include "app_main.h"
 #include "ui_font.h"
 #include "ui_fixture.h"
+#include "ui_trace.h"
 #include "bb_registry.h"
 void breadbox_return_system(const bb_system_t *system, const char *path);   // breadbox_systems.c: the Library opens on that game
 #include "bb_registry.h"
@@ -240,6 +241,9 @@ static void publish_status(void)
 	                           : "library",
 	         title, sw_state, running ? "gpu" : "", settings, err, cmd_id,
 	         command_result, batch_active ? "true" : "false", batch_id, run_index, run_count, samples);
+#ifdef BB_UI_FIXTURES
+ size_t len=strlen(json);snprintf(json+len-1,sizeof(json)-len+1,",\"ui\":%s}",ui_trace_json());
+#endif
 	devnet_status(json);
 	status_at = osGetTime();
 }

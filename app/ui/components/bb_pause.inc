@@ -100,6 +100,7 @@ void bb_continue_present_card(const char *title,C3D_Tex *tex,float tw,float th,u
     char clean[96];
     ui_clean_title(title?title:"",clean,sizeof(clean));
     const pc_continue card={tex&&tw>0.0f?tex:NULL,tw,th,0.0f,clean,stamp,saved,over_failed?UI_CONTINUE_OVER_FAILED:NULL,true,false};
+    ui_trace_continue(clean,over_failed);
     pc_continue_card(&card);
     ui_bar_draw(bb_continue_bar,BB_CONTINUE_BUTTONS(older));
 }

@@ -1,9 +1,9 @@
 #include "app_policy.h"
-// Settings > About (experimental): share PSX3D itself. The bottom screen shows
+// Settings > About (experimental): share BreadBox itself. The bottom screen shows
 // a QR code for FBI's "Scan QR code": the official release CIA, or, while
 // "Share from this 3DS" is on, this console serving its own copy of the
-// PSX3D CIA over the local Wi-Fi (HTTP, LAN only). Only that one file is ever
-// served, and only after AM confirms it is a PSX3D CIA: never games or saves.
+// BreadBox CIA over the local Wi-Fi (HTTP, LAN only). Only that one file is ever
+// served, and only after AM confirms it is a BreadBox CIA: never games or saves.
 #include <string.h>
 #include "theme.h"
 #include "app_paths.h"
@@ -61,7 +61,7 @@ static bool same_as_running(u16 file_version, const char *file_text)
 	return !strcmp(file_text, BB_VERSION);
 }
 
-// AM reads the CIA's own title ID and version: only a real PSX3D CIA is served.
+// AM reads the CIA's own title ID and version: only a real BreadBox CIA is served.
 static bool find_cia(void)
 {
 	cia_path[0] = 0;

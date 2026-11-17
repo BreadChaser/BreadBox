@@ -1,4 +1,4 @@
-// Save states go through a stream PSX3D gives the core (statefile.c): it
+// Save states go through a stream BreadBox gives the core (statefile.c): it
 // knows the buffer's length and refuses any access outside it, and a state is
 // checked before the core changes anything.
 #ifndef STATEFILE_H
@@ -15,7 +15,7 @@ typedef enum {
 	STATE_OTHER_DISC,    // made with a disc that is not in this game's list (nothing changed)
 } state_result_t;
 
-// the last retro_unserialize() (all PSX3D callers go through the wrapper)
+// the last retro_unserialize() (all BreadBox callers go through the wrapper)
 extern state_result_t state_last_result;
 
 // once, before the first state: the core's SaveFuncs become ours

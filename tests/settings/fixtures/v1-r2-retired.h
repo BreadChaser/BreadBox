@@ -1,5 +1,5 @@
 /* What the frozen v1-r2 settings fixture calls that production no longer has. Include it before the fixture.
- * ui_list_input_sections: the list input that skips section headings (app/ui/ui.c until 2026-11-06; its last
+ * ui_list_input_sections: the list input that skips section headings (app/ui/ui.c before its removal; its last
  * production user was the 2D game library). The fixture's Settings pages still use it, so the test keeps its copy. */
 #ifndef V1_R2_RETIRED_H
 #define V1_R2_RETIRED_H

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""HOME > Close at each question asked before a game runs (review finding 3).
+"""HOME > Close at each question asked before a game runs.
 
 PS1: the real card_question.c and the real early exit of run_game with its leave_unplayed()
 (taken out of emu.c verbatim) run against fakes, linked like the app: --wrap sends retro_unload_game,
@@ -171,7 +171,7 @@ int main(void)
 	return 0;
 }
 '''
-# GBA teardown after a refused start: every GPU call guarded (the review's existing path)
+# GBA teardown after a refused start: every GPU call guarded
 tear = gba[gba.index('gba: phase=teardown begin'):gba.index('prepare_failed:')]
 assert 'video_gpu_idle' in tear
 for line in tear.splitlines():

@@ -1,7 +1,7 @@
-// Save state streams (harsh review C2). The core reads and writes a state
+// Save state streams. The core reads and writes a state
 // through its SaveFuncs table; the libretro glue's own functions know only a
 // buffer and a position, so a damaged state could make it read or write past
-// the buffer. PSX3D puts its own functions in that table: they know the
+// the buffer. BreadBox puts its own functions in that table: they know the
 // buffer's length, refuse any access outside it before touching memory and
 // remember the refusal. retro_serialize/retro_unserialize are wrapped at the
 // final link: they honour the size they are given, and a state's layout is
@@ -9,9 +9,9 @@
 // running game as it was. The core's sources stay as they are (its code
 // layout too).
 //
-// Review 3 (F7): the layout after the SPU block is never learned from a
+// The layout after the SPU block is never learned from a
 // loaded state any more. It is this build's own: the constant STATE_TAIL
-// until PSX3D's first own save, then what that save measured (a mismatch is
+// until BreadBox's first own save, then what that save measured (a mismatch is
 // logged). States carry a trailer (statefile.h) with that layout, the disc
 // and a CRC-32: a sealed state is checked whole before the core reads it.
 #include <stddef.h>
@@ -181,7 +181,7 @@ static size_t tail_expected(void)
 	return state_tail_measured ? state_tail_measured : STATE_TAIL;
 }
 
-// A state PSX3D just wrote (no RetroArch header): the layout it measured,
+// A state BreadBox just wrote (no RetroArch header): the layout it measured,
 // recorded as this build's, then the trailer in the spare space.
 static void finish_own(struct stream *s)
 {

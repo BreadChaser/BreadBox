@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# PSX3D UI sounds and library music, synthesized from scratch (original,
+# BreadBox UI sounds and library music, synthesized from scratch (original,
 # no samples): soft sine tones, breathy filtered noise and slow pads in a big
 # airy reverb. No FM or bright transients, which read as chiptune. Writes raw signed 16-bit LE PCM, 32000 Hz:
 #   launch.pcm                                (mono; the menu sounds are recorded paper, see CREDITS)

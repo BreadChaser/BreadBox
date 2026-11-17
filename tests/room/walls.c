@@ -169,7 +169,7 @@ int main(int argc, char **argv)
 		room_pose h;
 		room_pose_of(&f, "home", &h);
 		room_camera(&h, 0, m, r, u, at);
-		// the approved Home view (round 2 stills) has no wall pictures: no part of either, frame included, in it
+		// the approved Home view has no wall pictures: no part of either, frame included, in it
 		for (int i = 0; i < 4; i++) {
 			room_vertex v;
 			room_wall_point(views[k].w, (i & 1) ? 1.15f : -.15f, (i >> 1) ? 1.15f : -.15f, 0, &v);
@@ -209,7 +209,7 @@ int main(int argc, char **argv)
 	}
 	CHECK(smin >= -.01f && smax <= 1.01f, "cards along the board %.3f..%.3f", smin, smax);
 	CHECK(ymin >= bw.plane[1] - bw.plane[4] / 2 - 2 && ymax <= bw.plane[1] + bw.plane[4] / 2 + 2, "cards inside the board's height");
-	// relighting (review m3): unlit x light gives the directly lit mesh, and Night -> Day -> Night (any number of style
+	// relighting: unlit x light gives the directly lit mesh, and Night -> Day -> Night (any number of style
 	// changes, lights over 1.59 that clamp a card's 160 shade) ends exactly where it started
 	{
 		static room_vertex unlit[ROOM_BOARD_VERTS], lit[ROOM_BOARD_VERTS], direct[ROOM_BOARD_VERTS];

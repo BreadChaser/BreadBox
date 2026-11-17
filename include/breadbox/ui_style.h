@@ -5,6 +5,9 @@
 #define UI_TOP_SCREEN_WIDTH 400
 #define UI_GAME_NOTICE_WIDTH 320
 #define UI_GAME_NOTICE_LEFT ((UI_TOP_SCREEN_WIDTH - UI_GAME_NOTICE_WIDTH) / 2)
+#define UI_LIST_GLOW_Z .55f
+#define UI_LIST_FOCUS_Z .56f
+#define UI_LIST_EDGE_Z .57f
 #define UI_LIST_TOP 4
 #define UI_LIST_ROW 24
 #define UI_LIST_ROWS 8               // 8 x 24 from y 4, above the 40 px bar (no context line)
@@ -28,7 +31,7 @@
 #define UI_FONT_VALUE .45f
 #define UI_FONT_META .42f
 #define UI_FONT_SMALL .4f
-// Bottom-screen readability floor (owner 2026-11-05, review 2026-11-05): no text on the bottom screen is
+// Bottom-screen readability floor: no text on the bottom screen is
 // drawn smaller than UI_TEXT_FLOOR. Measured in native screenshots: capitals and ascenders 10 px, a line with
 // descenders 13-14 px (the system font at .5 was 7 px). Long text is fitted by ui_fit.h: down to the floor,
 // then cut with "..." (the full text shows where the item is focused).
@@ -195,7 +198,7 @@
 #define UI_PC_INSET 2
 // A card's caption: its handwriting (at the floor size) stands on a baseline UI_PC_CAPTION_PAD above the card's
 // foot, its capitals UI_PC_CAPTION_PAD under the picture. The strip is made from the font's own measures: it was
-// 11 px for the .38 hand, and at the floor the baseline fell 3 px below the card (owner 2026-11-11).
+// 11 px for the .38 hand, and at the floor the baseline fell 3 px below the card.
 #define UI_PC_CAPTION_PAD 2
 #define UI_PC_CAPTION (UI_PC_CAPTION_PAD * 2 + UI_PC_HAND_TINY * UI_FONT_CAP)   // 14
 #define UI_PC_CAPTION_X (UI_PC_CONT_EDGE + UI_PC_CAPTION_PAD)   // the same margin on every card: clear of Continue's edge
@@ -292,14 +295,14 @@
 #define UI_PC_Z_SAVED 0.42f
 #define UI_PC_Z_PIN 0.45f
 // The Continue postcard (postcards.inc pc_continue_card): the room's Continue place and the Continue? question on
-// the bottom screen, flat on the desk (owner 2026-11-12 picked mock A, devtools continue-card NOTES.md fix round).
+// the bottom screen, flat on the desk.
 // Laid out bottom-up: the printed foot line, the name on 1-3 ruled lines, the picture in the space left; the
 // system's stamp top right with the postmark over it, "Continue" handwritten in red under the stamp.
 #define UI_PC_CC_X 8
 #define UI_PC_CC_Y 6
 #define UI_PC_CC_W 304
 #define UI_PC_CC_H 190                // to 196: the 40 px bar below
-// its tilt (radians, turned the hall postcard's way; owner 2026-11-12 "needs to be angled a bit"): 0.86 degrees, about 4 px
+// its tilt (radians, turned the hall postcard's way): 0.86 degrees, about 4 px
 // over the name's line. Enough to read as lying on the desk; the mock's 0.02 stepped the 1x letters more. Turned about
 // its middle the corners stay on the screen and above the bar (tests/postcards/continue_card.py).
 #define UI_PC_CC_TILT 0.015f
@@ -331,7 +334,7 @@
 #define UI_PC_CC_FLECK_MY 53
 #define UI_PC_CC_FLECK_ALPHA 22
 // The room's paper cards on the bottom screen (shelf_scene_draw.c): text sizes in pixels (font scale = px / 30)
-// and the step between their lines. Readable on a real Old 3DS (owner 2026-11-05: was 8-10 px).
+// and the step between their lines. Readable on a real Old 3DS.
 #define UI_ROOM_ROW_PX UI_TEXT_FLOOR_PX      // the Collection card's rows
 #define UI_ROOM_VALUE_PX UI_TEXT_FLOOR_PX    // their counts
 #define UI_ROOM_LINE_PX UI_TEXT_FLOOR_PX     // "Last played", "Play time", a place's rows
@@ -374,7 +377,7 @@
 #define UI_ROOM_STAMP_X 222           // the FAVORITE stamp
 #define UI_ROOM_STAMP_Y 98            // in the empty ruled lines between the title and the foot line (never over text)
 // the bookshelf close-up: the selected box tips out this far (mm) as the camera reaches it;
-// after this many seconds still it would come out by itself (0: never, A takes it out; owner)
+// after this many seconds still it would come out by itself (0: never, A takes it out)
 #define UI_SHELF_TIP_MM 18.0f
 #define UI_SHELF_AUTO_TAKEOUT_S 0.0f
 #define UI_SHELF_COVER_WAIT_S 0.6f   // A waits at most this long for the cover, back and case texture before the take-out (the case moves out in 0.65 s)
@@ -425,13 +428,13 @@
 #define UI_TAG_SHADOW 2
 #define UI_TAG_SHADOW_ALPHA 90
 #define UI_TAG_Z 0.62f
-// Ruled paper (owner 2026-11-05: "why doesn't the text actually go on the lines?"). Every ruled card (the Settings /
+// Ruled paper. Every ruled card (the Settings /
 // pause card, the room and game cards, the postcard's back) uses one pitch for its ruled lines and its lines of
 // text, and each text's baseline sits on a ruled line like handwriting (descenders cross it). Headers sit on the
 // red rule; tabs stay in the unruled top margin. tests/ui_paper checks it from these tokens.
 #define UI_PAPER_LINE 22              // the pitch: one line of text at the floor per ruled line
 // Where the letters stand in the font's 30 px cell is the loaded font's own (ui_font.h): Nintendo's system font
-// stands lower in its cell than Azahar's replacement (owner 2026-11-12: text ~3 px under the lines on hardware).
+// stands lower in its cell than Azahar's replacement (about 3 px on hardware).
 #define UI_FONT_BASELINE ui_face_baseline(UI_FACE_SYSTEM)
 #define UI_TITLE_FONT_BASELINE ui_face_baseline(UI_FACE_TITLE)
 #define UI_PAPER_CAP 10               // capitals at the floor stand this tall on their line
@@ -624,3 +627,96 @@
 #define UI_TEXT_ALIGN_LEFT 0
 #define UI_NOTICE_TEXT_WIDTH (UI_TOP_SCREEN_WIDTH-UI_NOTICE_INSET*2)
 #define UI_NOTICE_ACCENT 3
+#define UI_LOOK_ZERO 0
+#define UI_LOOK_ONE 1
+#define UI_LOOK_TWO 2
+#define UI_LOOK_THREE 3
+// List presentations share these dimensions at native screen resolution.
+#define UI_LOOK_TOP_Z .1f
+#define UI_LOOK_PANEL_Z .4f
+#define UI_LOOK_MARK_Z .5f
+#define UI_LOOK_IMAGE_Z .6f
+#define UI_LOOK_TOP_CENTER 200
+#define UI_LOOK_TOP_INSET 10
+#define UI_LOOK_TOP_TEXT_WIDTH 380
+#define UI_LOOK_TITLE_Y 150
+#define UI_LOOK_TITLE_LINES 2
+#define UI_LOOK_TITLE_STEP 19
+#define UI_LOOK_TITLE_SIZE .8f
+#define UI_LOOK_PLAYED_Y 193
+#define UI_LOOK_PLAYED_SIZE .7f
+#define UI_LOOK_COVER_Y 24
+#define UI_LOOK_COVER_SIZE 124
+#define UI_LOOK_SIDE_Y 50
+#define UI_LOOK_SIDE_SIZE 96
+#define UI_LOOK_COVER_STEP 112
+#define UI_LOOK_PICTURE_W 180
+#define UI_LOOK_PICTURE_H 135
+#define UI_LOOK_PICTURE_TEX 256
+#define UI_LOOK_PICTURE_ROWS 192
+#define UI_LOOK_ICON_SIZE 64
+#define UI_LOOK_ICON_Y 90
+#define UI_LOOK_TILE_X 8
+#define UI_LOOK_TILE_Y 8
+#define UI_LOOK_TILE_W 304
+#define UI_LOOK_TILE_GAP 6
+#define UI_LOOK_HERO_H 56
+#define UI_LOOK_MAIN_H 38
+#define UI_LOOK_SMALL_H 38
+#define UI_LOOK_TILE_INSET 12
+#define UI_LOOK_TILE_TEXT_Y 7
+#define UI_LOOK_TILE_TEXT_SIZE .7f
+#define UI_LOOK_TILE_SUB_Y 29
+#define UI_LOOK_TILE_SUB_SIZE .7f
+#define UI_LOOK_THUMB_W 56
+#define UI_LOOK_THUMB_H 42
+#define UI_LOOK_THUMB_GAP 10
+#define UI_LOOK_BORDER 1
+#define UI_LOOK_FOCUS_EDGE 4
+#define UI_LOOK_FOOTER_GLYPH_Y 202
+#define UI_LOOK_FOOTER_WORD_Y 219
+#define UI_LOOK_FOOTER_FONT .7f
+#define UI_LOOK_FOOTER_WIDTH 320
+#define UI_LOOK_FOOTER_INSET 4
+#define UI_LOOK_LIST_X 2
+#define UI_LOOK_LIST_W 314
+#define UI_LOOK_EMPTY_Y 74
+#define UI_LOOK_NOTICE_Y 178
+#define UI_LOOK_NOTICE_H 22
+#define UI_LOOK_NOTICE_TIME 3
+#define UI_LOOK_COVER_DIM .45f
+
+#define UI_LOOK_OUT_THRESHOLD .002f
+#define UI_LOOK_SIDE_LABEL_Y 4
+
+#define UI_LOOK_NO_NEIGHBOR (-2)
+
+/* The list looks share these tile and footer bounds. */
+#define UI_LOOK_FOOTER_ICON_DY 10
+#define UI_LOOK_FOOTER_ICON_SIZE 16
+#define UI_LOOK_FOOTER_KEY_SIZE .5f
+#define UI_LOOK_STACK_CENTER 14
+#define UI_LOOK_STACK_STEP 9
+#define UI_LOOK_STACK_TOP 5
+#define UI_LOOK_STACK_SIZE 28
+#define UI_LOOK_STACK_RESERVE 58
+
+#define UI_LOOK_STRIP_Y 4
+#define UI_LOOK_STRIP_H 12
+#define UI_LOOK_STRIP_INSET 2
+
+#define UI_LOOK_ROW_INSET 12
+#define UI_LOOK_ROW_INSETS 24
+#define UI_LOOK_SELECTED_INDENT 8
+#define UI_LOOK_VALUE_PAD 16
+#define UI_LOOK_VALUE_INSET 8
+#define UI_LOOK_TEXT_EM 30
+#define UI_LOOK_SECTION_RISE 2
+#define UI_LOOK_RULE_Z (UI_Z_TEXT + UI_Z_STEP)
+#define UI_LOOK_RULE_COLORS 4
+#define UI_LOOK_RULE_STEP 10
+#define UI_LOOK_RULE_WIDTH 8
+#define UI_LOOK_RULE_HEIGHT 1
+#define UI_LOOK_RULE_BOTTOM 4
+#define UI_LOOK_RULE_TAIL 54
+#define UI_LOOK_RULE_TAIL_INSET 66

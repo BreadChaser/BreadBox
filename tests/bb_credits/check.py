@@ -35,7 +35,7 @@ for caller in ['app/settings/settings_ui.c', 'app/services/share.c']:
 install = re.search(r'install_pages\[\]\s*=\s*\{(.*?)\n\};', src, re.S).group(1)
 if 'BreadBox.cia' not in install or 'SD card' not in install: errors.append('the install help must say sharing needs BreadBox.cia on the SD card')
 # HOME > Close during library_load: the first-run loop must not draw after aptMainLoop() went false (home.c)
-home = (root / 'app/ui/home.c').read_text()
+home = (root / 'app/ui/home_empty.c').read_text()
 loop = home[home.index('int home_empty_library_run'):]
 draw = loop.index('video_present_vsync(false, empty_top, empty_bottom')
 guard = loop.rfind('!aptMainLoop()', 0, draw)

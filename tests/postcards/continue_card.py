@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """The Continue postcard (postcards.inc pc_continue_card) lays out inside the screen at real metrics.
 
-Owner 2026-11-12: "needs to be angled a bit": the card lies turned by UI_PC_CC_TILT; all four corners stay on the screen
+The card lies turned by UI_PC_CC_TILT; all four corners stay on the screen
 and above the bar.
 
-Owner 2026-11-11: "the continue game menu bottom cuts the name off, lacks detail and looks bad"; mock A (the
-postcard) picked. Runs the shipped drawing code against the recording renderer of tests/postcards/harness.py
-(the conservative width model of tests/ui_fit/strings.py) for the four names of devtools continue-card NOTES.md,
+The Continue card must keep its name and details inside the paper.
+Runs the shipped drawing code against the recording renderer of tests/postcards/harness.py
+(the conservative width model of tests/ui_fit/strings.py) for four long game names,
 a one-word name and an empty one, PS1 (4:3) and GBA (3:2, letterboxed in the room's 256x192 picture) and no
 picture, the room ("Continue") and the question ("Continue?"), "Left off" and the red Start over notice, and
 the blank card. Every view must keep:

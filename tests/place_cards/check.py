@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The room's place cards before A (owner 2026-11-12, app/ui/place_cards.c): Collection's counts per system, Settings'
+"""The room's place cards before A (app/ui/place_cards.c): Collection's counts per system, Settings'
 version / updates / room style, Quit's play today and last game.
 
 check.c runs the production logic (counts from a fake index: two systems, one system only, 0 games known and

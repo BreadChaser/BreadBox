@@ -36,12 +36,22 @@ $(error Only the validated split renderer layout is supported)
 endif
 export PICA_LAYOUT_CFLAGS := -DPICA_LAYOUT_SPLIT
 
+# Private disc profiling; absent from ordinary builds.
+ifeq ($(BB_DISC_TIMING),1)
+export EXTRA_DEFS += -DBB_DISC_TIMING
+export CFLAGS_LAST += -DBB_DISC_TIMING
+endif
+
 EXTERN_SYMS := psx3d_depth_get psx3d_depth_frame psx3d_overlay_get psx3d_ov_seq psx3d_set_strength \
 	psx3d_right_get psx3d_stats psx3d_set_half3d psx3d_prof_t psx3d_prof_c psx3d_prof_on new_dynarec_print_stats \
 	psx3d_irq_t psx3d_irq_c CdromId
 EXTERN_SYMS += CdromExeHash psx3d_widescreen_hook psx3d_widescreen_state_hook psx3d_patch_clear
 EXTERN_SYMS += Mcd1Data Mcd2Data psx3d_clip_prepare padAnalogMode padToggleAnalog
 EXTERN_SYMS += SaveFuncs LoadMcd Config
+EXTERN_SYMS += cdra_read_thread pcsxr_native_thread
+ifeq ($(BB_DISC_TIMING),1)
+EXTERN_SYMS += cdt_enabled cdt_reader cdt_reads
+endif
 # Already used by the PS1 core: expose their existing sections for the library
 # probe (rfopen/rfclose: the core reads CHDs through libretro file streams, see
 # app/ui/bb_disc.c). Keep bindings identical across APP switches without moving core code.
@@ -72,6 +82,8 @@ CORE_SYMS_STAMP := core/.breadbox-core-syms
 core: source-epoch-check
 	@printf '%s\n' "$(EXTERN_SYMS) | $(WRAP_SYMS)" | cmp -s - $(CORE_SYMS_STAMP) || { \
 		rm -f core/pcsx_rearmed_libretro_ctr.a core/pcsx_rearmed_libretro_ctr.o core/pcsx_rearmed_libretro_ctr1.o; \
+		rm -f core/libpcsxcore/cdriso.o core/libpcsxcore/cdrom-async.o \
+			build/3ds/$(APP_BUILD)/emu.o build/3ds/$(APP_BUILD)/disc_timing.o build/3ds/$(APP_BUILD)/devnet.o; \
 		printf '%s\n' "$(EXTERN_SYMS) | $(WRAP_SYMS)" > $(CORE_SYMS_STAMP); }
 	$(MAKE) -C core -f Makefile.libretro platform=ctr CTR_GPU=pica EXTRA_EXTERN_SYMS="$(EXTERN_SYMS)" EXTRA_WRAP_SYMS="$(WRAP_SYMS)"
 

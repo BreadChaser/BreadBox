@@ -37,7 +37,7 @@ static float project(const float m[16], const float q[3], float *sx, float *sy)
 	return c[2] / c[3];
 }
 
-// light round 3: the `post` anchor's y is the share of empty cubbies with decor (V3: every other one)
+// The `post` anchor's y is the share of empty cubbies with decor (V3: every other one)
 static void check_decor_share(const room_file *f, const room_case_plan *plan)
 {
 	const float *post = room_anchor(f, "post");
@@ -50,7 +50,7 @@ static void check_decor_share(const room_file *f, const room_case_plan *plan)
 	CHECK(with == 10, "%d of 21 empty cubbies have decor", with);
 }
 
-// light round 3's 1 px light line: the wall view looks down a little, so its lower rows see wider; the
+// The 1 px light line: the wall view looks down a little, so its lower rows see wider; the
 // end uprights' outer faces (c[0] - c[7] / 2 and the right one) must stay outside the screen on every row
 // the case's front covers, at every height the view takes and in both eyes (else the room beside it shows)
 static void check_wall_view_edges(const room_file *f, const float *c)
@@ -77,7 +77,7 @@ static void check_wall_view_edges(const room_file *f, const float *c)
 
 static void check_half_dither(const room_file *f)
 {
-	// light round 3: the room file's `post` x sets the strength; V3 halves it (+-2 around +4, not +-4)
+	// The room file's `post` x sets the strength; V3 halves it (+-2 around +4, not +-4)
 	const float *post = room_anchor(f, "post");
 	room_dither_set(post ? post[0] : 1);
 	uint32_t pat[64];
@@ -167,7 +167,7 @@ static void check_styles(room_file *pf, const void *data, size_t size)
 	CHECK(pf->cur == 0 && pf->nprobe >= 24 && pf->probe, "style 0 in use after parse: %u probes", pf->nprobe);
 	const uint8_t *day = room_style_colours(pf, 0), *night = room_style_colours(pf, 1);
 	CHECK(day && night && day != night && !room_style_colours(pf, 2), "colour streams");
-	{   // review N4: once the app drops the vertices (room_scene.c keep_tables) there are no colour streams to give
+	{   // Once the app drops the vertices (room_scene.c keep_tables) there are no colour streams to give
 		room_file kept = *pf;
 		kept.vdata = NULL;
 		CHECK(!room_style_colours(&kept, 0) && !room_style_colours(&kept, 1), "colour streams after the vertices were dropped");
@@ -190,7 +190,7 @@ static void check_styles(room_file *pf, const void *data, size_t size)
 		room_cubby_light(pf, &g, 1, ln);
 		CHECK(ld[0] + ld[1] + ld[2] > 60 && memcmp(ld, ln, 3), "cubby light day %u,%u,%u night %u,%u,%u", ld[0], ld[1], ld[2], ln[0], ln[1], ln[2]);
 		CHECK(pf->style[1].atlas != pf->style[0].atlas, "night has no atlas of its own");
-		// light round 3: Day's light reaches 4.0 (255 / 4 = 1.0), Night keeps the PS1's 2.0 (128 = 1.0); probes,
+		// Day's light reaches 4.0 (255 / 4 = 1.0), Night keeps the PS1's 2.0 (128 = 1.0); probes,
 		// the case's boxes and the wall pictures take the same unit
 		CHECK(pf->style[0].range == 4 && (pf->style[1].range == 0 || pf->style[1].range == 2) && !pf->style[0].pad && !pf->style[1].pad,
 			"style light ranges %u %u (day 4, night 2)", pf->style[0].range, pf->style[1].range);
@@ -372,7 +372,7 @@ static void check_motion(room_file *pf)
 	CHECK(v.mode == ROOM_HOME, "return glide did not end");
 }
 
-// the bookcase (owner: "one shelf per system" = one cubby per system): a cubby each, never
+// The bookcase: one cubby per system, never
 // shared, from the top left; boxes from the left, a bookend after them when the cubby is not
 // full; the other cubbies decor (for systems to come)
 static void check_case(room_file *pf)
@@ -466,9 +466,9 @@ static void check_case(room_file *pf)
 	free(px);
 }
 
-// the real boxes' mesh cache (review M1): a room style change or a new load makes it again
+// the real boxes' mesh cache: a room style change or a new load makes it again
 
-// the bookcase lamp (owner 2026-11-12: "add a light once you click on a system"; the strip light): off it
+// The bookcase strip lamp lights the selected system: off it
 // changes nothing; on it lights the open cubby's boxes and back clearly, more at the boxes than the back, with
 // a few vertices only, and every section gets its (switched-off) strip
 static void check_lamp(room_file *pf)
@@ -515,7 +515,7 @@ static void check_lamp(room_file *pf)
 	CHECK(room_lamp_mesh(pf, 1, 1, 2, grid, 12) <= 12, "lamp mesh overran its buffer");
 }
 
-// "why are the PlayStation discs green?" (owner 2026-11-13): a black case's plastic must survive the
+// A black case's plastic must survive the
 // RGB565 spine atlas as a neutral grey, and the boxes' light (room, lamp, Day and Night) must keep it
 // neutral: max - min <= 3 at 8 bits on the lit spine; a printed carton keeps its hue
 static void check_box_colour(room_file *pf)
@@ -587,7 +587,7 @@ static void check_mesh_cache(room_file *pf, const void *data, size_t size)
 		CHECK(room_mesh_key_stale(&k, 1, 5, 10, true) && room_mesh_key_stale(&k, 1, 4, 9, true) && room_mesh_key_stale(&k, 1, 4, 10, false),
 			"another section, count or a moved box kept the old mesh");
 	}
-	// ... and its wiring (review N2): the generation is the room file's, so the loader's own calls make the boxes again
+	// ... and its wiring: the generation is the room file's, so the loader's own calls make the boxes again
 	{
 		unsigned cur0 = pf->cur;
 		room_mesh_key k = { 0 };

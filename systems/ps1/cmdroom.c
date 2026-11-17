@@ -4,8 +4,8 @@
 // buffer full. The renderer checks the buffer only after a batch; CPU uploads
 // (push_to_target), texture decodes and Real 3D's second eye draw without that
 // check, so a frame of many small uploads could fill it: Crash Bandicoot's
-// cold boot with Real 3D and the draw-order layers did (New 3DS, 2026-10-22;
-// the draw-order crash investigation). No draw now starts with less than VIDEO_CMD_ROOM
+// cold boot with Real 3D and the draw-order layers did on New 3DS.
+// No draw now starts with less than VIDEO_CMD_ROOM
 // words left: the frame is submitted first, through renderqueue.c's
 // C3D_FrameSplit guard (it submits once the buffer is 80% used, far below
 // this). VIDEO_CMD_ROOM covers one draw with every citro3d state block dirty

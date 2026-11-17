@@ -1,6 +1,6 @@
 #ifndef UI_MARK_H
 #define UI_MARK_H
-/* The selection highlighter (owner 2026-11-12: "a yellow highlighter with some randomness and scratchiness"):
+/* The selection highlighter uses a yellow, irregular, scratchy stroke:
  * a marker stroke multiplied over the paper behind the selected row of every notebook card (ui_card_draw) and
  * of the room's and Collection's lists (shelf_scene_draw.c). One routine, ui_mark_row (app/ui/ui_mark.c).
  *

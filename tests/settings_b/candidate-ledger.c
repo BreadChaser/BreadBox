@@ -55,7 +55,7 @@ int main(void){
   }
   settings_ui_t bindings={.game=scope!=0};build_page(&bindings,CAT_BINDINGS);
   for(int i=0;i<bindings.count;i++) {
-   /* explicit rename 2026-11-05: shortcut rows "FF keys" / "Rewind keys" (distinct from the touch slots);
+   /* Explicit rename: shortcut rows "FF keys" / "Rewind keys" (distinct from the touch slots);
       the frozen inventory keeps the old names */
    const char *l=input_control_label(bindings.items[i]-CONTROL_ROW,NULL);
    if(!strcmp(l,"FF keys"))l="Fast forward";else if(!strcmp(l,"Rewind keys"))l="Rewind";

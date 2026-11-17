@@ -47,6 +47,7 @@ const char *bb_session_title(void) { return emu_game_title(); }
 #error "build with -DPSX3D_TEST_PRESETS=\"<repo>/assets/romfs/presets\""
 #endif
 #include "../../../app/ui/theme.c"
+#include "../../../app/ui/look_theme.c"
 #include "../../../app/ui/theme_game.c"
 #include "../../../systems/ps1/presets.c"
 #include "../../../platform/3ds/input.c"
@@ -63,8 +64,14 @@ static bool touch_button_lit(int i) {ps1_panel_prepare();return panel.active==i 
 #include "../../../systems/ps1/options.c"
 // Frontend motion uses elapsed time on hardware and in the host SDK substitute.
 #define SYSCLOCK_ARM11 1000000000ULL
+#ifdef BB_MENU_SCRIPT
+static u64 host_script_tick=1000000000ULL;
+#endif
 static inline u64 svcGetSystemTick(void)
 {
+#ifdef BB_MENU_SCRIPT
+ return host_script_tick;
+#endif
  struct timespec now;
  clock_gettime(CLOCK_MONOTONIC, &now);
  return (u64)now.tv_sec * SYSCLOCK_ARM11 + now.tv_nsec;
@@ -117,6 +124,12 @@ static u32 fake_held, fake_down;
 static touchPosition fake_touch;
 static circlePosition fake_cpad, fake_cstick;
 static FILE *svg;
+static bool list_depth_probe;
+static unsigned list_depth_draws;
+static void list_depth(float z)
+{
+ if(list_depth_probe){assert(z>.5f && z<.7f);list_depth_draws++;}
+}
 static int drawn_glyphs;
 static bool capture_bounds;
 /* What C2D_DrawText was given, for renderer-level checks of visible text (the real components draw; nothing stubbed). */
@@ -153,14 +166,29 @@ void scene_draw(bool bottom) { (void)bottom;host_scene_count++; }
 bool icons_draw(int slot, int id, float cx, float cy, float size, bool lit, float alpha, float z)
 { (void)slot; (void)id; (void)cx; (void)cy; (void)size; (void)lit; (void)alpha; (void)z; return false; }
 bool icons_glyph(int ui_icon, float cx, float cy, u32 ink, float z) { (void)ui_icon; (void)cx; (void)cy; (void)ink; (void)z; return false; }
-void hidScanInput(void) {}
+#ifdef BB_MENU_SCRIPT
+static void host_script_input(void);
+#endif
+void hidScanInput(void) {
+#ifdef BB_MENU_SCRIPT
+ host_script_input();
+#endif
+}
 u32 hidKeysHeld(void) { return fake_held; }
 u32 hidKeysDown(void) { return fake_down | host_menu_key; }
 void hidCircleRead(circlePosition *p) { *p = fake_cpad; }
 void irrstCstickRead(circlePosition *p) { *p = fake_cstick; }
 void hidTouchRead(touchPosition *p) { *p = fake_touch; }
+#ifdef BB_MENU_SCRIPT
+static bool host_script_poll(void);
+static void host_script_present(void);
+static void host_script_input(void);
+#endif
 bool aptMainLoop(void)
 {
+#ifdef BB_MENU_SCRIPT
+ return host_script_poll();
+#endif
  if(host_menu_frames>=0){fake_down=fake_held=0;return host_menu_frames-->0;}
  // Test a held A on entry, release, then a fresh A or B. No implicit accept.
  fake_down = 0;
@@ -175,6 +203,9 @@ void video_present_vsync(bool game, void (*top)(void *), void (*bottom)(void *),
  if(host_render_top && top)top(ud);
  assert(confirm_step < 3); // held A must never confirm on the first iteration
  bottom(ud);
+#ifdef BB_MENU_SCRIPT
+ host_script_present();
+#endif
 }
 C2D_TextBuf C2D_TextBufNew(unsigned n) { (void)n; return NULL; }
 void C2D_TextBufDelete(C2D_TextBuf b) { (void)b; }
@@ -236,7 +267,7 @@ void C2D_TextGetDimensions(C2D_Text *t,float sx,float sy,float *w,float *h)
 }
 static unsigned host_rgb(u32 c) { return (c&255)<<16 | (c&0xff00) | (c>>16&255); }
 void C2D_DrawRectSolid(float x,float y,float z,float w,float h,u32 c)
-{ if(host_text_on && host_rect_n<(int)(sizeof(host_rects)/sizeof(host_rects[0]))) host_rects[host_rect_n++]=(host_rect_t){x,y,w,h,z};
+{ list_depth(z);if(host_text_on && host_rect_n<(int)(sizeof(host_rects)/sizeof(host_rects[0]))) host_rects[host_rect_n++]=(host_rect_t){x,y,w,h,z};
   if(z==0.1f) assert(x==0 && y==0 && w==320 && h==240); ink_bounds(x,y,x+w,y+h); if(svg) fprintf(svg,"<rect x='%g' y='%g' width='%g' height='%g' fill='#%06x'/>\n",x,y,w,h,host_rgb(c)); }
 static unsigned gradient_id;
 static void svg_gradient(float x,float y,float x2,float y2,u32 a,u32 b)
@@ -245,7 +276,7 @@ static void svg_gradient(float x,float y,float x2,float y2,u32 a,u32 b)
 }
 void C2D_DrawRectangle(float x,float y,float z,float w,float h,u32 a,u32 b,u32 c,u32 d)
 {
- (void)z;(void)b;(void)d; if(!svg)return;
+ list_depth(z);(void)b;(void)d; if(!svg)return;
  svg_gradient(x,y,x,y+h,a,c);
  fprintf(svg,"<rect x='%g' y='%g' width='%g' height='%g' fill='url(#g%u)'/>\n",x,y,w,h,gradient_id);
 }
@@ -259,7 +290,7 @@ void C2D_DrawTriangle(float x,float y,u32 a,float x2,float y2,u32 b,float x3,flo
 }
 void C2D_DrawEllipse(float x,float y,float z,float w,float h,u32 a,u32 b,u32 c,u32 d)
 {
- (void)z;(void)b;(void)d; if(!svg)return;
+ list_depth(z);(void)b;(void)d; if(!svg)return;
  svg_gradient(x,y,x,y+h,a,c);
  fprintf(svg,"<ellipse cx='%g' cy='%g' rx='%g' ry='%g' fill='url(#g%u)'/>\n",x+w/2,y+h/2,w/2,h/2,gradient_id);
 }
@@ -583,7 +614,7 @@ static void action_checks(void)
 }
 static void serial_config_checks(void)
 {
- // room styles in config.ini (review m9): Night survives a save and a load; a retired theme (with the retired
+ // room styles in config.ini: Night survives a save and a load; a retired theme (with the retired
  // theme_room flag) loads as Day and neither key is written back; Day, the default, is never written
  write_text(PSX3D_CONFIG,"theme=night\n"); config_load(); assert(!strcmp(theme()->id,"night"));
  config_save(); assert(contains(PSX3D_CONFIG,"theme=night\n") && !contains(PSX3D_CONFIG,"theme_room"));
@@ -591,16 +622,25 @@ static void serial_config_checks(void)
  write_text(PSX3D_CONFIG,"theme=dark\ntheme_room=1\n"); config_load(); assert(g_cfg.theme==theme_default() && !strcmp(theme()->id,"day"));
  config_save(); assert(!contains(PSX3D_CONFIG,"theme=") && !contains(PSX3D_CONFIG,"theme_room"));
  write_text(PSX3D_CONFIG,"theme=rustic-room\n"); config_load(); assert(!strcmp(theme()->id,"day"));
- // the 2D library's keys (review R1): an old config.ini still loads, its other values kept, and they are never
+ for(int look=0;look<BB_LOOK_COUNT;look++) {
+  const char *id=theme_look_get(look)->saved_id;char setting[64];
+  snprintf(setting,sizeof(setting),"theme=%s\n",id);write_text(PSX3D_CONFIG,setting);
+  config_load();assert(theme_look()==look);config_save();
+  assert(look ? contains(PSX3D_CONFIG,setting) : !contains(PSX3D_CONFIG,"theme="));
+  config_load();assert(theme_look()==look);
+ }
+ write_text(PSX3D_CONFIG,"theme=unknown-look\n");config_load();assert(theme_look()==BB_LOOK_ROOM);
+ config_save();assert(!contains(PSX3D_CONFIG,"theme="));
+ // the 2D library's keys: an old config.ini still loads, its other values kept, and they are never
  // written again
- /* J-06: the very first start beside PSX3D copies its app settings (PSX3D's file is unchanged), once */
+ /* The very first start beside PSX3D copies its app settings (PSX3D's file is unchanged), once */
  remove(PSX3D_CONFIG);remove(PSX3D_CONFIG ".bak");remove(PSX3D_CONFIG ".tmp");mkdir(APP_LEGACY_PSX3D_ROOT,0700);
  write_text(APP_LEGACY_PSX3D_ROOT "/config.ini","show_fps=1\nlast_game=Crash\nlast_game_state=Crash\nsmooth=1\n");
  assert(config_import_psx3d()); config_load(); assert(g_cfg.show_fps==1 && g_cfg.smooth==1);
  assert(!contains(PSX3D_CONFIG,"last_game") && contains(APP_LEGACY_PSX3D_ROOT "/config.ini","last_game=Crash\n"));
  write_text(APP_LEGACY_PSX3D_ROOT "/config.ini","show_fps=0\n"); assert(!config_import_psx3d()); /* BreadBox has its own now */
  config_load(); assert(g_cfg.show_fps==1);
- /* Review finding 4: PSX3D's lines are read like BreadBox's own (spaces, tabs, CRLF, comments), the four
+ /* PSX3D's lines are read like BreadBox's own (spaces, tabs, CRLF, comments), the four
   * Continue keys never come over, unknown keys/values stay behind, an overlong line is dropped whole and
   * its tail is never read as a line, a huge file is left alone */
  {
@@ -626,7 +666,7 @@ static void serial_config_checks(void)
   assert(!contains(PSX3D_CONFIG,"touch_stick=7") && !contains(PSX3D_CONFIG,"neon") && !contains(PSX3D_CONFIG,"purple"));
   config_load();assert(!g_cfg.last_game[0]);assert(g_cfg.show_fps==1);assert(!user_has("smooth"));assert(g_cfg.touch_stick==-1);assert(g_cfg.theme==theme_default());
   assert(!config_core_override("evil_key") && !config_core_override("pcsx_rearmed_spu_thread"));
-  /* Review round b finding 2: only the core's own options with their own values come over */
+  /* Only the core's own options with their own values come over */
   FRESH();write_text(APP_LEGACY_PSX3D_ROOT "/config.ini","core.pcsx_rearmed_cd_turbo=enabled\ncore.pcsx_rearmed_totally_unknown=enabled\n"
    "core.pcsx_rearmed_frameskip_type=sometimes\ncore.pcsx_rearmed_psx3d_widescreen=7\n");
   assert(config_import_psx3d());
@@ -727,7 +767,7 @@ static void serial_config_checks(void)
  config_reset_defaults();
  puts("PASS: per-console presets/serials, raw inheritance, global/game bindings+stick+hotkeys, resets and legacy migration");
 }
-/* Every supported button has a visible cue beside its icon, and no word is drawn on a button (review 2026-11-05). */
+/* Every supported button has a visible cue beside its icon, and no word is drawn on a button. */
 static void bar_cue_checks(void)
 {
  static const struct { u32 key; const char *cue; } keys[]={{KEY_A,"\xee\x80\x80"},{KEY_B,"\xee\x80\x81"},{KEY_X,"\xee\x80\x82"},
@@ -744,7 +784,7 @@ static void bar_cue_checks(void)
  host_text_begin(); ui_bar_draw(&none,1); host_text_on=false; assert(host_text_n==0);   /* a place has no button cue */
  puts("PASS: bar cues: A B X Y L R glyphs and SELECT / START outlines drawn at the floor, no captions");
 }
-/* The shared dialog API gives each caller's answer its own icon (review 2026-11-05, finding 1). */
+/* The shared dialog API gives each caller's answer its own icon. */
 static void dialog_icon_checks(void)
 {
  static const struct { const char *a, *b; int ai, bi; } callers[]={
@@ -964,6 +1004,16 @@ static void game_palette_checks(void)
  assert(g_game_palette.gradient[0]==C2D_Color32(72,77,86,255));
 }
 
+static const char *depth_label(int row,void *unused){(void)row;(void)unused;return "Room";}
+static void list_depth_checks(void)
+{
+ flist_t list={.init=true,.hl=0};list.lift[0]=1;
+ list_depth_draws=0;list_depth_probe=true;
+ flist_draw(&list,1,0,0,4,314,24,8,depth_label,NULL,NULL,theme()->heading);
+ list_depth_probe=false;assert(list_depth_draws==3);
+ puts("PASS: list selection draws above the desk and below text");
+}
+
 int main(void)
 {
  assert(!mkdir("sdmc:",0700)); assert(!mkdir("sdmc:/3ds",0700)); assert(!mkdir(PSX3D_DIR,0700));
@@ -976,12 +1026,12 @@ int main(void)
  assert(!strcmp(options_get("pcsx_rearmed_spu_interpolation"),"simple"));
  g_new3ds=true;
  assert(!strcmp(options_get("pcsx_rearmed_spu_interpolation"),"gaussian"));
- config_load(); game_palette_checks(); theme_game_begin(); layout_checks(); cache_idle_checks(); curved_fill_checks(); side_and_new_checks(); action_checks(); serial_config_checks(); symbol_checks(); descriptor_checks();stats_input_checks();
+ config_load(); list_depth_checks(); game_palette_checks(); theme_game_begin(); layout_checks(); cache_idle_checks(); curved_fill_checks(); side_and_new_checks(); action_checks(); serial_config_checks(); symbol_checks(); descriptor_checks();stats_input_checks();
  frameskip_checks(); presets_v2_checks(); bar_cue_checks(); dialog_icon_checks(); play_label_checks();
  fps_mockups();
  shot("reset-global"); confirm_t c={"RESET ALL SETTINGS?","Restore this console's defaults and all slot bindings? Game overrides are kept.","A  Reset to defaults",{{KEY_B,"Cancel",0,false},{KEY_A,"Reset to defaults",0,false}}}; confirm_draw(&c); shot_end();
  shot("reset-game"); c=(confirm_t){"RESET THIS GAME?","Remove this game's settings and control overrides?","A  Reset to defaults",{{KEY_B,"Cancel",0,false},{KEY_A,"Reset to defaults",0,false}}}; confirm_draw(&c); shot_end();
- // the Library's cards (review R3): the same shared dialog, one page each
+ // the Library's cards: the same shared dialog, one page each
  static const char *const library_cards[][3]={
   {"library-launch-gone","Can't start this game","BreadBox can't find this game in your games folder now. Hold Y on the shelves to check the library again."},
   {"library-launch-discs","Can't start this game","BreadBox couldn't write this game's disc list. Is the SD card full or locked?"},

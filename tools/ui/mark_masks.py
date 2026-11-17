@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""The selection highlighter's stroke masks (owner 2026-11-12: "a yellow highlighter with some randomness and
-scratchiness"; the mockup's "dry" stroke, devtools settings-overhaul NOTES.md section 9).
+"""The selection highlighter's stroke masks: a yellow highlighter with irregular edges and
+scratchiness, using a dry marker stroke.
 
 Writes include/breadbox/ui_mark_masks.h: UI_MARK_VARIANTS strokes of UI_MARK_TEX_W x UI_MARK_TEX_H 8-bit coverage
 (an L8 texture, 8 KiB). Each stroke is a 3-slice: the nib's start cap, a streaky middle the draw stretches to the

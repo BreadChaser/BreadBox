@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Two gpSP core fixes, run from the production source (heavy test 2026-11-12, B1/B2):
+"""Two gpSP core fixes, run from the production source:
 1. update_timers(): an overflowed timer's counter register shows its reload value at once. It read 0 until the
    next tick; GBA Video carts read Timer 1 right after its overflow IRQ, took 0 as a full lap and decoded ~4 billion
    samples over their own state (Disney Vol. 1 crash), and Ms. Pac-Man - Maze Madness hung at frame 1024.

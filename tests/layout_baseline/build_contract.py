@@ -70,7 +70,7 @@ assert 'scribbletoad' in room and 'CC BY 4.0' in room and 'Changes made' in room
 art = (ROOT / 'tools/art/CREDITS.md').read_text()
 assert 'not for reuse outside PSX3D' not in art
 assert 'Dreamstale' in art and 'Flaticon license terms' in art and 'not** covered by BreadBox' in art
-history = (ROOT / 'tools/layout/accepted-2650.json').read_text()  # reviewer credits: tests/repo_hygiene
+history = (ROOT / 'tools/layout/accepted-2650.json').read_text()  # Private evidence links are checked by tests/repo_hygiene.
 assert '627-case probe' in history and 'no state format change' in history
 print('current version/build/navigation paths and retained asset/qualification notices PASS')
 

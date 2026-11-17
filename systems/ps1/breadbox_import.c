@@ -33,7 +33,7 @@
 extern void log_printf(const char *,...);
 typedef struct { size_t size; unsigned crc, saved, saves; bool weak; } file_info;
 enum { OTHER, CARD, STATE, THUMB, SETTINGS, BLOB };   /* BLOB: copied as it is (cheats, BIOS) */
-/* PSX3D folders copied into BreadBox under the same names (J-06: cheats and BIOS too). */
+/* PSX3D folders copied into BreadBox under the same names (including cheats and BIOS). */
 static const char *const import_folders[]={"saves","states","games","cheats","bios"};
 #define IMPORT_FOLDERS (sizeof(import_folders)/sizeof(*import_folders))
 /* Only immutable legacy STATE selections are cached, for the lifetime of a

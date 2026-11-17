@@ -3,13 +3,16 @@
 static void draw_top(void *unused)
 {
  (void)unused;
- shelf_scene_top(&view);
+ if(theme_is_room())shelf_scene_top(&view);else list_look_library_top(&view);
+ home_slow_banner();
+ bb_update_draw_notice();
 }
 
 static void draw_bottom(void *unused)
 {
  (void)unused;
  ui_begin();
- shelf_scene_bottom(&view);
- ui_bar_draw(bar(),4);
+ if(theme_is_room()){shelf_scene_bottom(&view);ui_bar_draw(bar(),BB_LIBRARY_ACTIONS);}
+ else list_look_library_bottom(&view,bar(),BB_LIBRARY_ACTIONS);
+ ui_trace_library(&view,bar(),BB_LIBRARY_ACTIONS);
 }

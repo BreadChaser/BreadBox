@@ -260,7 +260,7 @@ static void write_faults(void)
 static void reads(void)
 {
 	safe_info_t info;
-	// the reviewer's probe: a three-byte file, then the same as the backup;
+	// A three-byte file, then the same as the backup;
 	// nothing comes back, nothing on the card changes
 	clean();
 	put_ext("", "BAD", 3);
@@ -311,7 +311,7 @@ static void reads(void)
 	put_ext(".tmp", B, SIZE / 2);
 	snprintf(ctx, sizeof(ctx), "half tmp");
 	CHECK(load(0, NULL) == 0 && !safe_stat("card", &FMT, NULL));
-	// a complete sole .tmp is a save (the reviewer: invisible before)
+	// a complete sole .tmp is a save
 	clean();
 	put_ext(".tmp", B, SIZE);
 	snprintf(ctx, sizeof(ctx), "sole tmp");
@@ -322,7 +322,7 @@ static void reads(void)
 static void repairs(void)
 {
 	safe_info_t info;
-	// the reviewer's probe: sole .tmp, repair while writes fail: the .tmp
+	// Sole .tmp, repair while writes fail: the .tmp
 	// is renamed, never rewritten, so a write fault can't touch it
 	clean();
 	put_ext(".tmp", A, SIZE);
@@ -393,7 +393,7 @@ static void repairs(void)
 	CHECK(size_of("card.bad") == 9);   // a damaged file is never deleted, not even here
 }
 
-// finding 1 (review of fix/journeys-r1): a damaged file makes room under the
+// A damaged file makes room under the
 // first free .bad name; an older .bad (and .bad2) is never removed
 static void parking(void)
 {

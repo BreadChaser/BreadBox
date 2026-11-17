@@ -1,4 +1,4 @@
-/* J-01: a damaged cartridge save (or clock) with no good copy. The player is asked once:
+/* A damaged cartridge save (or clock) with no good copy. The player is asked once:
  * put the newest backup back, start empty, or go back. The damaged file is never deleted. */
 #define main legacy_check_main
 #ifdef SAFEFILE_TEST
@@ -52,7 +52,7 @@ static void damaged(const char *dir,const unsigned char *bad,size_t n)
 }
 /* A smaller save that may be from another emulator, at real sizes: a GBA-sized 128 KiB battery and
  * the real chip rule (gba_cart_save_fits) with the save type gpSP would know before the game runs.
- * It is never converted on its own (merge review B1): always the damaged-save question, with "Use it"
+ * It is never converted on its own: always the damaged-save question, with "Use it"
  * (foreign) only when the size fits; Back changes no byte. "Use it" puts the original into Backups
  * byte for byte, then the game gets it padded with 0xFF. */
 #define BIG (128u*1024u)
@@ -128,12 +128,12 @@ static void smaller(void)
  unsigned char *orig=malloc(BIG),*good=malloc(BIG);assert(orig && good);
  for(size_t i=0;i<BIG;i++)orig[i]=(unsigned char)(i*5+3);
  memset(good,0x77,BIG);char dir[64],e[256];hist_entry_t list[8];
- /* review probe 1: BreadBox's own first 128 KiB write (no backup yet), cut to 512 B, EEPROM cartridge */
+ /* BreadBox's own first 128 KiB write (no backup yet), cut to 512 B, EEPROM cartridge */
  enter("first-write-cut");use_sizes(true);chip=GBA_SAVE_EEPROM;put("game.id","test-test-unique\n",17);
  begin();memcpy(big,good,BIG);assert(bb_save_flush() && bb_save_end(false));
  assert(!history_list("test-test-unique",false,list,8) && !truncate("battery.sav",512));
  asked_back(true);use_sizes(false);leave();
- /* review probe 2: two writes, the player deletes the backups; owner marker absent, a legacy claim, damaged */
+ /* Two writes, the player deletes the backups; owner marker absent, a legacy claim, damaged */
  for(int marker=0;marker<3;marker++){
   snprintf(dir,sizeof(dir),"backups-deleted-%d",marker);enter(dir);use_sizes(true);chip=GBA_SAVE_EEPROM;
   if(marker)put("game.id",marker==1?"test-test-unique\n":"damaged",marker==1?17:7);
@@ -145,7 +145,7 @@ static void smaller(void)
  }
  for(int k=0;k<4;k++){
   size_t n=chip_sizes[k];
-  /* review probe 3: an unknown chip, each size: asked (Use it offered), Back changes nothing */
+  /* An unknown chip, each size: asked (Use it offered), Back changes nothing */
   snprintf(dir,sizeof(dir),"unknown%zu",n);enter(dir);use_sizes(true);put("battery.sav",orig,n);
   asked_back(true);
   /* ... Use it: converted, original in Backups; cut again later it is asked about (with that backup
@@ -195,7 +195,7 @@ static void smaller(void)
  free(orig);free(good);
 }
 #ifdef SAFEFILE_TEST
-/* Review finding 2: a power cut at every step of Restore, and a full SD card: the next start asks again or has the restored save, never blank RAM. */
+/* A power cut at every step of Restore, and a full SD card: the next start asks again or has the restored save, never blank RAM. */
 static void restore_cuts(void)
 {
  char e[256];unsigned char seven[7]={1,2,3,4,5,6,7},good[128],junk[20]={9};memset(good,0x77,128);
@@ -263,7 +263,7 @@ int main(int argc,char **argv)
  enter("clock");put("battery.rtc",garbage,9);choice=BB_DAMAGE_EMPTY;
  assert(bb_save_begin(&config,e,sizeof(e)) && calls==1 && seen.clock && same("battery.rtc.bad",garbage,9));
  assert(bb_save_end(false));leave();
- /* Review finding 1: restoring again and again, with .bad and .bad2 already there, never
+ /* Restoring again and again, with .bad and .bad2 already there, never
   * removes one: each damaged file gets the next free name */
  enter("repeat");put("battery.sav.bad",garbage,10);put("battery.sav.bad2",garbage,11);
  history_fake_now=1700000000;assert(history_add("test-test-unique",HIST_SAVE,".sav",good,128));history_fake_now=0;

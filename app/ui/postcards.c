@@ -1,3 +1,4 @@
+#include "ui_trace_postcards.h"
 // Postcard slot browser: shared view state (postcards.h). Drawing lives in
 // components/postcards.inc. GPL-2.0-or-later.
 #include <stdlib.h>
@@ -5,6 +6,7 @@
 #include <math.h>
 #include <time.h>
 #include "postcards.h"
+#include "postcard_palette.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <sys/types.h>

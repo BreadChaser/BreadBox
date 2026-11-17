@@ -18,6 +18,7 @@
 #include "cdriso.h"
 #include "cdrom.h"
 #include "cdrom-async.h"
+#include "disc_timing.h"
 
 #if 0
 #include <stdio.h>
@@ -67,6 +68,13 @@ static struct {
    alignas(64) u8 buf_local[CD_FRAMESIZE_RAW_ALIGNED];
 } acdrom;
 
+/* Startup-only access; keep scheduling policy outside the read path. */
+__attribute__((noinline, section(".psx3d_cold.text")))
+struct sthread *cdra_read_thread(void)
+{
+   return acdrom.thread;
+}
+
 static void lbacache_do(u32 lba, u32 cdda_bit)
 {
    alignas(64) unsigned char buf[CD_FRAMESIZE_RAW_ALIGNED];
@@ -76,6 +84,9 @@ static void lbacache_do(u32 lba, u32 cdda_bit)
 
    lba2msf(lba + 150, &msf[0], &msf[1], &msf[2]);
    slock_lock(acdrom.read_lock);
+#ifdef BB_DISC_TIMING
+   unsigned cdt_start = cdt_begin(1);
+#endif
    if (g_cd_handle)
       ret = rcdrom_readSector(g_cd_handle, lba, buf);
    else if (cdda_bit)
@@ -89,6 +100,10 @@ static void lbacache_do(u32 lba, u32 cdda_bit)
          ret |= ISOreadSub(msf, buf_sub);
    }
 
+#ifdef BB_DISC_TIMING
+   cdt_end(1, cdt_start);
+   cdt_reader = 0;
+#endif
    slock_lock(acdrom.buf_lock);
    slock_unlock(acdrom.read_lock);
    acdrom_dbg("c  %d:%02d:%02d %2d m%d f%d\n", msf[0], msf[1], msf[2], ret,
@@ -325,6 +340,10 @@ static int cdra_do_read(const unsigned char *time, int is_cdda,
 {
    u32 lba = MSF2SECT(time[0], time[1], time[2]);
    int hit = 0, ret = -1, read_locked = 0;
+#ifdef BB_DISC_TIMING
+   unsigned cdt_start = cdt_enabled ? (unsigned)svcGetSystemTick() : 0;
+   unsigned cdt_wait = 0, cdt_read = 0;
+#endif
    do
    {
       if (acdrom.buf_lock) {
@@ -332,9 +351,18 @@ static int cdra_do_read(const unsigned char *time, int is_cdda,
          if (hit)
             break;
       }
+#ifdef BB_DISC_TIMING
+      if (cdt_enabled) cdt_reads[0].misses++;
+#endif
       if (acdrom.read_lock) {
          // maybe still prefetching
+#ifdef BB_DISC_TIMING
+         unsigned wait_start = cdt_enabled ? (unsigned)svcGetSystemTick() : 0;
+#endif
          slock_lock(acdrom.read_lock);
+#ifdef BB_DISC_TIMING
+         if (cdt_enabled) cdt_wait = (unsigned)svcGetSystemTick() - wait_start;
+#endif
          read_locked = 1;
          hit = lbacache_get(lba, buf, buf_sub, is_cdda);
          if (hit) {
@@ -343,6 +371,9 @@ static int cdra_do_read(const unsigned char *time, int is_cdda,
          }
       }
       acdrom.do_prefetch = 0;
+#ifdef BB_DISC_TIMING
+      cdt_read = cdt_begin(0);
+#endif
       if (g_cd_handle) {
          if (buf_sub)
             ret = rcdrom_readSub(g_cd_handle, lba, buf_sub);
@@ -355,10 +386,20 @@ static int cdra_do_read(const unsigned char *time, int is_cdda,
          ret = ISOreadCDDA(time, buf);
       else
          ret = ISOreadTrack(time, buf);
+#ifdef BB_DISC_TIMING
+      cdt_end(0, cdt_read);
+#endif
       if (ret)
          SysPrintf("cdrom read failed for lba %d: %d\n", lba, ret);
    }
    while (0);
+#ifdef BB_DISC_TIMING
+   if (cdt_enabled) {
+      cdt_reads[0].wait_ticks += cdt_wait;
+      unsigned elapsed = (unsigned)svcGetSystemTick() - cdt_start;
+      if (elapsed > cdt_reads[0].call_max) cdt_reads[0].call_max = elapsed;
+   }
+#endif
    if (read_locked)
       slock_unlock(acdrom.read_lock);
    if (hit)

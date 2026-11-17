@@ -61,6 +61,7 @@ static PSX3D_COLD void welcome_bottom(void *ud)
 		c.nrows++;   // a blank ruled line: the list and the promise stay two sentences
 		c.row[c.nrows++] = (shelf_card_row){ BB_WELCOME_UNTOUCHED };
 	}
+	ui_trace_welcome(c.title,welcome_page,welcome_pages());
 	shelf_scene_card(&c);
 	int n;
 	const ui_button_t *bar = welcome_bar(&n);

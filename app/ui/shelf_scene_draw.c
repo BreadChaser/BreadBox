@@ -1,4 +1,5 @@
 #include "shelf_scene_internal.h"
+#include "ui_trace.h"
 
 // a render target must be in VRAM; the second atlas only if it fits
 static void atlases_make(void)
@@ -257,6 +258,7 @@ static void depth_off(bool off)
 // ---------------------------------------------------------------- the desk (bottom screen)
 static void desk(void)
 {
+ if(!theme_is_room()){rect(0,0,320,240,shelf_scene_room->desk);return;}
 	// the desk grain twice, one above the other (no vertical stretch)
 	for (int i = 0; i < 2; i++) {
 		float y = i * 120;
@@ -282,7 +284,7 @@ static void card_begin(float x, float y, float w, float h, float ang)
 	u32 mid = shelf_scene_mix(shelf_scene_room->paper, shelf_scene_room->paper_edge, .45f);
 	const u32 c[4] = { shelf_scene_room->paper, mid, shelf_scene_room->paper_edge, mid };
 	shelf_scene_solid4(p, c);
-	for (int i = 0; i < 70; i++) rect(rnd(i + 1) * w, rnd(i + 2) * h, 1 + rnd(i + 3) * 3, 1, with_alpha(0xff1e5078, .05f + rnd(i) * .06f));
+	if(theme_is_room())for (int i = 0; i < 70; i++) rect(rnd(i + 1) * w, rnd(i + 2) * h, 1 + rnd(i + 3) * 3, 1, with_alpha(0xff1e5078, .05f + rnd(i) * .06f));
 	// one pitch for the ruled lines and the lines of text (ui_style.h UI_PAPER_LINE): every baseline is on a line
 	rect(0, UI_ROOM_RULE_Y, w, 1.2f, shelf_scene_room->rule);
 	for (float yy = UI_ROOM_RULE_Y + UI_PAPER_LINE; yy < h - UI_ROOM_RULE_FOOT; yy += UI_PAPER_LINE) rect(0, yy, w, 1, shelf_scene_room->rule_soft);
@@ -328,33 +330,28 @@ static void clip(float x, float y)
 	line(x + 5, y + 34, x + 5, y + 12, 2.2f, c);
 	line(x + 6.4f, y + 26, x + 6.4f, y + 10, .8f, 0x99c8f0ff);
 }
-// the mini shelf's scale: the whole shelf, but never wider than 400 mm across 296 px
-static float strip_len(const shelf_row *r) { return fmaxf(r->end - X0, 400); }
-static float strip_x(const shelf_row *r, float x) { return 12 + (x - X0) / strip_len(r) * 296; }
-int shelf_scene_strip_hit(const shelf_view *v, float x, float y)
+#define strip_len bb_library_strip_length
+#define strip_x shelf_scene_strip_position
+static float home_row_y(const shelf_view *v,int i){(void)v;return UI_ROOM_ROWS_Y+i*UI_ROOM_LIST_STEP;}
+static bool home_foot(const shelf_view *v){return home_row_y(v,v->nrows)<=UI_ROOM_HINT_Y;}
+
+#if defined(BB_UI_FIXTURES) || defined(BB_UI_TRACE_HOST)
+PSX3D_COLD void shelf_scene_library_targets(const shelf_view *v)
 {
-	if (v->level != SHELF_ONE || y >= 44) return -1;
-	const shelf_row *r = &v->rows[v->row];
-	int best = -1;
-	float bd = 1e9f;
-	for (int i = 0; i < r->n; i++) {
-		float d = fabsf(strip_x(r, r->box[i].x) - x);
-		if (d < bd) { bd = d; best = i; }
-	}
-	return best;
+ int n=v->level==SHELF_ALL?v->nrows:v->rows[v->row].n;
+ if(v->level==SHELF_ALL) {
+  for(int i=0;i<n;i++)ui_trace_target(i,0,UI_ROOM_CARD_Y+home_row_y(v,i)-UI_PAPER_LINE+1,320,UI_PAPER_LINE);
+ } else {
+  const shelf_row *r=&v->rows[v->row];
+  for(int i=0;i<n;i++) {
+   float x=strip_x(r,r->box[i].x);
+   int left=i?(int)ceilf((x+strip_x(r,r->box[i-1].x))/2):0;
+   int right=i+1<n?(int)ceilf((x+strip_x(r,r->box[i+1].x))/2):320;
+   ui_trace_target(i,left,0,right-left,44);
+  }
+ }
 }
-static float home_row_y(const shelf_view *v, int i) { (void)v; return UI_ROOM_ROWS_Y + i * UI_ROOM_LIST_STEP; }
-// rows that fit above the catalog's foot line (more rows: the foot line gives way)
-static bool home_foot(const shelf_view *v) { return home_row_y(v, v->nrows) <= UI_ROOM_HINT_Y; }
-int shelf_scene_card_hit(const shelf_view *v, float x, float y)
-{
-	(void)x;
-	for (int i = 0; i < v->nrows; i++) {   // a row's band: between the ruled line above it and its own
-		float ry = UI_ROOM_CARD_Y + home_row_y(v, i);
-		if (y >= ry - UI_PAPER_LINE + 1 && y < ry + 1) return i;   // from the line above to its own line
-	}
-	return -1;
-}
+#endif
 
 static void shelf_bottom(const shelf_view *v);
 void shelf_scene_bottom(const shelf_view *v)
@@ -602,9 +599,10 @@ PSX3D_COLD float shelf_scene_line_width(const char *s) { return text_w(UI_ROOM_L
 void shelf_scene_desk(bool load)
 {
 	shelf_scene_room = theme_room(theme());
-	bool grain = shelf_scene_room && (load ? shelf_scene_prepare_gpu() : shelf_scene_state.ready);
+	bool grain = theme_is_room() && shelf_scene_room && (load ? shelf_scene_prepare_gpu() : shelf_scene_state.ready);
 	depth_off(true);
 	if (grain) desk();
+	else if(shelf_scene_room && !theme_is_room())C2D_DrawRectSolid(0,0,Z,320,240,shelf_scene_room->desk);
 	else if (shelf_scene_room) C2D_DrawRectangle(0, 0, Z, 320, 240, shelf_scene_shade(shelf_scene_room->desk, .68f), shelf_scene_shade(shelf_scene_room->desk, .42f), shelf_scene_shade(shelf_scene_room->desk, .62f), shelf_scene_shade(shelf_scene_room->desk, .55f));
 	else C2D_DrawRectSolid(0, 0, Z, 320, 240, theme()->surface);
 	depth_off(false);

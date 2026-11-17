@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""J-07: saves made inside the pause card queue their message for after it; a newer save's
+"""Saves made inside the pause card queue their message for after it; a newer save's
 message replaces an older one still waiting, so resuming never shows a stale slot. The real
 osd queue code is compiled from systems/ps1/emu.c; the messages are the shipped postcard words
 (include/breadbox/ui_words.h), so a change of wording cannot silently turn the check off."""
@@ -9,7 +9,7 @@ root = Path(__file__).resolve().parents[2]
 src = (root / 'systems/ps1/emu.c').read_text()
 words = dict(re.findall(r'#define\s+(UI_PC_\w+)\s+("(?:\\.|[^"\\])*")', (root / 'include/breadbox/ui_words.h').read_text()))
 head = src[src.index('#define OSD_QUEUE'):src.index('static bool osd_dirty;') + len('static bool osd_dirty;')]
-start = src.index('// J-07: a save')
+start = src.index('// A save')
 end = src.index('// a frame passed: the shown message counts down')
 tick = src[end:src.index('static void osd(const char *fmt, ...)\n{')]
 prog = '''#include <assert.h>

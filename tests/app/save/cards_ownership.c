@@ -51,7 +51,7 @@ int main(void)
  char label[600];assert(cards_trouble(label,sizeof(label))==CARD_TROUBLE_MEMORY);
  cards_accept();pattern(ram,9);pattern(Mcd2Data,11);assert(cards_save_now()==CARD_WRITE_CLEAN);
  assert(access("oom.srm",F_OK) && access("oom2.mcd",F_OK));allocation_fail=false;cards_end();
- /* Review A finding 1: Try again after the card file changed its header (VGS -> DexDrive) with no
+ /* Try again after the card file changed its header (VGS -> DexDrive) with no
   * memory for the bigger image: nothing is written past the old one, the card stays locked; with
   * memory again it loads (ASan). */
  assert(!mkdir("header-retry",0700) && !chdir("header-retry"));history_set_root("hist");

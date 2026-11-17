@@ -85,6 +85,7 @@ static void draw_bottom(void *ud)
 }
 static void draw_qr(void)
 {
+ ui_trace_qr(share_label(share_sel,NULL));
 	C2D_DrawRectSolid(0, 0, UI_Z_BACKDROP, UI_BOTTOM_SCREEN_WIDTH, UI_SCREEN_HEIGHT, UI_COLOR_QR_WHITE);   // fixed: the QR code scans black on white
 	if (!qr_size)
 		return;

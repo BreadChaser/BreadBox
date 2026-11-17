@@ -23,7 +23,7 @@ cc -std=gnu11 -O1 -g -Wall -Wextra -Werror -Wno-sign-compare -Wno-misleading-ind
 mkdir "$out/budget-sd"
 "$out/budget" "$out/budget-sd" budget
 
-# Review regressions: retry picture, deleted primary, slot label, weak/blank cards, full SD.
+# Regressions: retry picture, deleted primary, slot label, weak/blank cards, full SD.
 cc -std=gnu11 -O1 -g -Wall -Wextra -Werror -Wno-sign-compare -Wno-misleading-indentation \
  -Wl,--wrap=state_check -Wl,--wrap=fwrite -Wl,--wrap=mkdir -Wl,--wrap=lstat -Wl,--wrap=stat -Wl,--wrap=fopen -Wl,--wrap=opendir -Wl,--wrap=open -DPSX_IMPORT_TEST -fsanitize=address,undefined \
  -Icore/include -Iapp/ui -Iinclude/breadbox -Iplatform/3ds tests/psx3d_import/review.c tests/psx3d_import/strict_fs.c systems/ps1/breadbox_import.c \

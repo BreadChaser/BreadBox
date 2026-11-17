@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PS1's Continue question (review fix r1b, finding 2; r1c, R1b-4): the production states_resume_prompt()
+"""PS1's Continue question: the production states_resume_prompt()
 (savestates.c) and continue_prompt() (emu.c) on scripted frames. B, HOME > Close and power-off at the question are
 a Back: continue_prompt() answers false (run_game then leaves before anything runs: tests/save_service/ps1_back.py)
 and the shell keeps the room as it was. Every other PS1 Continue writer stops at continue_frozen (a Start over

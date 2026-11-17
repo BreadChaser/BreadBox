@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The shipped room is the refined mesh (light round 3, V3): every grid line tools/room/lamplight/refine.json adds
+"""The shipped room is the refined mesh (V3): every grid line tools/room/lamplight/refine.json adds
 (where the Cycles light changes faster than the 30 cm cells follow) has vertices in assets/romfs/room/room.bbr, on
 its surface's plane. A default build (tools/room/build.sh, no env) reads refine.json; a room built without it has
 only the 30 cm (rug: 40 cm) cell lines and fails here. Plain Python: no Blender, no NumPy."""

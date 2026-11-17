@@ -215,7 +215,7 @@ static void streams(void)
 	void *f = s_open((const char *)buf, "rb");
 	snprintf(ctx, sizeof(ctx), "stream");
 	CHECK(s_seek(f, 16, SEEK_SET) == 16);   // the end itself is fine
-	CHECK(s_read(f, out, 1) == -1 && out[0] == 9);   // the reviewer's probe
+	CHECK(s_read(f, out, 1) == -1 && out[0] == 9);
 	s_close(f);
 	CHECK(stream_refused);
 	long bad[][2] = { { -1, SEEK_SET }, { 17, SEEK_SET }, { -9, SEEK_CUR }, { 9, SEEK_CUR },
@@ -343,9 +343,9 @@ static void bad_sizes(void)
 	free(s);
 }
 
-// Review 3 F7a: a state from another build whose records are 16 bytes
+// A state from another build whose records are 16 bytes
 // longer (same core version number) must not teach its layout: before
-// PSX3D's first own save and after it, it is refused and good states load.
+// BreadBox's first own save and after it, it is refused and good states load.
 static void poisoning(void)
 {
 	size_t saved = state_tail_measured;

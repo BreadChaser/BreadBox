@@ -91,7 +91,7 @@ int main(void){
 '''+s[c:d]+r'''
   if(!skip_video||probe_frame){make(0,0);for(unsigned x=0;x<240;x++)pic[12*240+x]=(u16)((frames/8)&1);gba_track_alternation(pic,480);}
   frames++;assert(frames-stop<700);}
- /* Classic NES Excitebike's race (owner 2026-11-12, Old, 2D flicker): the whole
+ /* Classic NES Excitebike's race (Old 3DS, 2D flicker): the whole
     picture scrolls, and the only steadily alternating row is the status row,
     which also holds the race timer that changes every frame. Whole-row hashes
     never matched two frames back there, so the race never locked. */

@@ -1,7 +1,7 @@
 // Rewind history with the real worker thread: rewind.c's own worker_main,
 // encode and apply run on a host pthread. Delta allocations fail on demand.
 // Every step back must land exactly on an earlier captured state, never on a
-// mix of two histories (harsh review M1: 0 -> 1, failed 1 -> 2, then 3).
+// mix of two histories (0 -> 1, failed 1 -> 2, then 3).
 #include <assert.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -147,7 +147,7 @@ static void start(void)
 
 int main(void)
 {
-	// The reviewer's case: 0 -> 1, the 1 -> 2 delta can't be allocated, then 3
+	// Allocation failure: 0 -> 1, the 1 -> 2 delta can't be allocated, then 3
 	start();
 	set_game(0); capture();               // base 0
 	set_game(1); capture();               // step 0 -> 1
@@ -214,7 +214,7 @@ int main(void)
 	}
 	CHECK(back == MAX_STEPS);
 	rewind_stop();
-	// Review 3 F7c: a step that can't be loaded is reported (-1), the history
+	// A step that can't be loaded is reported (-1), the history
 	// is dropped (nothing older leads anywhere valid), and the caller is told
 	// the game was left half-restored
 	start();
