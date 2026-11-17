@@ -29,6 +29,7 @@ one-time import from `sdmc:/3ds/PSX3D` remain live BreadBox compatibility code.
   `postcard_palette.c` resolves shared save-board colors;
   `library_touch.c` owns shared system and game touch targets;
   `library_actions.c` publishes the common library controls; `look_fonts.c` loads menu fonts.
+  `list_scene.c` is PSX3D's moving top-screen backdrop (sky, sun, palms, rolling grid; made on first use, released before a game);
   `list_look.c` and its component draw PSX3D/Simple from that same state (their game list plays on A: no box is taken out), with `look_theme.c` selecting
   artwork/font and `theme.c` supplying all shared screen colors.
   `look_style.c` (component `look_style.inc`) paints the list themes' rules, selection and bar words; the shared

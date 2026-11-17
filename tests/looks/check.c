@@ -95,6 +95,7 @@ static void library_checks(void)
 static void geometry_checks(void)
 {
  static float expected[8192][5];int count=0;unsigned expected_hits=0;
+ scene_refused=true;   /* both on the plain page: PSX3D's scene is its own picture, the screens over it are compared */
  for(int look=BB_LOOK_PSX3D;look<=BB_LOOK_SIMPLE;look++) {
   theme_select_look(look);geometry_n=0;geometry_on=true;hit_hash=2166136261u;
   home_checks();library_checks();geometry_on=false;
@@ -135,10 +136,33 @@ static void home_move_checks(void)
  }
  puts("PASS: list looks' home: every D-pad move lands on the tile that way on screen, none past an edge");
 }
+/* PSX3D's top screen is its moving scene; Simple, both bottom screens and a scene without memory get the plain page. */
+static void backdrop_checks(void)
+{
+ theme_select_look(BB_LOOK_PSX3D);
+ int before=scene_draws;list_look_backdrop(false);assert(scene_draws==before+1);
+ list_look_backdrop(true);assert(scene_draws==before+1);
+ geometry_n=0;geometry_on=true;scene_refused=true;list_look_backdrop(false);assert(scene_draws==before+2);scene_refused=false;
+ geometry_on=false;assert(geometry_n==1 && geometry[0][0]==0 && geometry[0][1]==0 && geometry[0][3]==UI_TOP_SCREEN_WIDTH && geometry[0][4]==UI_SCREEN_HEIGHT);   /* the plain page, whole screen */
+ theme_select_look(BB_LOOK_SIMPLE);list_look_backdrop(false);list_look_backdrop(true);assert(scene_draws==before+2);
+ int released=scene_releases;list_look_release();assert(scene_releases==released+1);
+ puts("PASS: PSX3D draws its moving scene on top only, falls back to the plain page, and releases it with the menu");
+}
+/* PSX3D shows its own pictures of Together, Settings and Share (PSX3D v0.5.2's); Simple the shared icons. */
+static void picture_checks(void)
+{
+ bb_home_picture h={.have_continue=false,.title="Game",.continue_title="Game"};
+ theme_select_look(BB_LOOK_PSX3D);place_pictures=0;list_look_home_bottom(&h);assert(place_pictures==3);
+ place_pictures=0;h.action=E_SETTINGS;list_look_home_top(&h);assert(place_pictures==1);
+ place_pictures=0;h.action=E_QUIT;list_look_home_top(&h);assert(place_pictures==0);
+ theme_select_look(BB_LOOK_SIMPLE);place_pictures=0;h.action=E_SETTINGS;list_look_home_bottom(&h);list_look_home_top(&h);assert(place_pictures==0);
+ puts("PASS: PSX3D draws its own place pictures, Simple the shared icons");
+}
 int main(void)
 {
+ backdrop_checks();picture_checks();
  home_move_checks();
- geometry_checks();
+ geometry_checks();scene_refused=false;
  for(int look=BB_LOOK_PSX3D;look<BB_LOOK_COUNT;look++) {
   theme_select_look(look);home_checks();library_checks();
   printf("PASS: %s draws and selects every shared place, game, group and action\n",theme_look_get(look)->name);

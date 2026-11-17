@@ -46,7 +46,7 @@ and brings your PSX3D saves over on first start.
 All screenshots were taken on real consoles.
 
 > [!NOTE]
-> BreadBox 0.9.3 is a public beta. Most games play well, but demanding
+> BreadBox 0.9.4 is a public beta. Most games play well, but demanding
 > PlayStation games run slower on the Old 3DS, and some games have drawing
 > problems. See [Performance](#performance) and [Known issues](#known-issues).
 

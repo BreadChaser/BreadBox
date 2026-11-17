@@ -15,22 +15,21 @@
 #include "cold_code.h"
 #include "ui_trace.h"
 #include "letter_strip.h"
+#include "list_scene.h"
+#include "icons.h"
 
-static C2D_SpriteSheet backdrop;
 static flist_t games_list, systems_list;
 static PSX3D_COLD void list_home_rect(const bb_home_picture *, int, float *, float *, float *, float *);
 static PSX3D_COLD int home_count(const bb_home_picture *h) { return bb_home_count(h->have_continue); }
 static PSX3D_COLD const bb_home_place *home_place(const bb_home_picture *h, int i) { return bb_home_at(i,h->have_continue); }
 
-PSX3D_COLD void list_look_prepare(void)
+/* PSX3D's own pictures of the places (as in PSX3D v0.5.2); -1: the place has none, its shared icon is drawn. */
+static PSX3D_COLD int place_picture(const bb_home_place *p)
 {
- if(!backdrop)backdrop=C2D_SpriteSheetLoad("romfs:/gfx/psx3d_backdrop.t3x");
+ if(!theme_look_get(theme_look())->artwork)return -1;
+ return p->icon==UI_ICON_TOGETHER ? ICON_TOGETHER : p->icon==UI_ICON_SCOPE ? ICON_SETTINGS : p->icon==UI_ICON_QR ? ICON_SHARE : -1;
 }
-PSX3D_COLD void list_look_release(void)
-{
- if(backdrop)C2D_SpriteSheetFree(backdrop);
- backdrop=NULL;
-}
+PSX3D_COLD void list_look_release(void) { list_scene_release(); }   /* before a game: the scene's textures and tables */
 /* The list's section name stays in the first row; the systems or games scroll under it. */
 static PSX3D_COLD const char *section_label(const shelf_view *v)
 {

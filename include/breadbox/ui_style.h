@@ -656,6 +656,7 @@
 #define UI_LOOK_PICTURE_ROWS 192
 #define UI_LOOK_ICON_SIZE 64
 #define UI_LOOK_ICON_Y 90
+#define UI_LOOK_PICTURE_ICON 110        // PSX3D's own picture of a place, on the top screen
 #define UI_LOOK_TILE_X 8
 #define UI_LOOK_TILE_Y 8
 #define UI_LOOK_TILE_W 304
@@ -723,7 +724,7 @@
 #define UI_LOOK_HEAD_STROKE 16        // a title's rule: four 16 x 2 strokes (PSX3D v0.5.2 menu header)
 #define UI_LOOK_HEAD_RULE_H 2
 #define UI_LOOK_BAR_ICON_Y 211.0f     // a list look's bar: the icon over its word
-#define UI_LOOK_BAR_ICON_R 8
+#define UI_LOOK_BAR_ICON_R 11        // PSX3D v0.5.2's size for its drawn icons (the other themes' glyphs are made 1:1)
 #define UI_LOOK_BAR_WORD_Y 219
 #define UI_PICKER_ICON_X 293          // the theme picker's sun / moon, where a row's value goes
 #define UI_PICKER_ICON_SIZE 24

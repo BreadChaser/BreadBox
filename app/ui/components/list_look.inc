@@ -20,9 +20,9 @@ static PSX3D_COLD void list_home_rect(const bb_home_picture *h, int i, float *x,
 PSX3D_COLD void list_look_backdrop(bool bottom)
 {
  const theme_t *t=theme();
+ /* PSX3D's top screen is its moving scene; without memory for it, and everywhere else, the plain page colour. */
+ if(!bottom && theme_look_get(theme_look())->artwork && list_scene_draw())return;
  C2D_DrawRectSolid(UI_LOOK_ZERO,UI_LOOK_ZERO,UI_LOOK_TOP_Z,bottom ? UI_BOTTOM_SCREEN_WIDTH : UI_TOP_SCREEN_WIDTH,UI_SCREEN_HEIGHT,t->surface);
- if(!bottom && backdrop && theme_look_get(theme_look())->artwork)
-  C2D_DrawImageAt(C2D_SpriteSheetGetImage(backdrop,UI_LOOK_ZERO),UI_LOOK_ZERO,UI_LOOK_ZERO,UI_LOOK_TOP_Z,NULL,UI_LOOK_ONE,UI_LOOK_ONE);
 }
 static PSX3D_COLD void list_title(const char *title, const char *line)
 {
@@ -69,7 +69,8 @@ PSX3D_COLD void list_look_home_top(const bb_home_picture *h)
  if(h->action==E_CONTINUE && h->picture)
   list_picture(h->picture,UI_LOOK_TOP_CENTER-UI_LOOK_PICTURE_W/UI_LOOK_TWO,UI_LOOK_COVER_Y,UI_LOOK_PICTURE_W,UI_LOOK_PICTURE_H);
  else if(h->action==E_LIBRARY || h->action==E_CONTINUE)list_cover_row(h->cover,h->covers);
- else if(p)ui_icon_draw(p->icon,UI_LOOK_TOP_CENTER,UI_LOOK_ICON_Y,UI_LOOK_ICON_SIZE,theme()->heading,theme()->surface);
+ else if(p && !icons_draw(ICON_SLOT_TOP,place_picture(p),UI_LOOK_TOP_CENTER,UI_LOOK_ICON_Y,UI_LOOK_PICTURE_ICON,true,UI_LOOK_ONE,UI_LOOK_IMAGE_Z))
+  ui_icon_draw(p->icon,UI_LOOK_TOP_CENTER,UI_LOOK_ICON_Y,UI_LOOK_ICON_SIZE,theme()->heading,theme()->surface);
  list_title(h->title,h->played);
 }
 PSX3D_COLD void list_look_home_bottom(const bb_home_picture *h)
@@ -97,7 +98,8 @@ PSX3D_COLD void list_look_home_bottom(const bb_home_picture *h)
    for(int c=UI_LOOK_TWO;c>=UI_LOOK_ZERO;c--)list_cover(c<h->covers?h->cover[c]:-UI_LOOK_ONE,tx+UI_LOOK_STACK_CENTER+c*UI_LOOK_STACK_STEP,y+(height-UI_LOOK_STACK_SIZE)/UI_LOOK_TWO,UI_LOOK_STACK_SIZE,c!=UI_LOOK_ZERO);
    tx+=UI_LOOK_STACK_RESERVE;sub[UI_LOOK_ZERO]=h->games;
   } else {   /* the place's icon beside its name */
-   ui_icon_draw(p->icon,tx+UI_LOOK_TILE_ICON/UI_LOOK_TWO,y+height/UI_LOOK_TWO,UI_LOOK_TILE_ICON,on?t->text_bright:look_style()->icon,on?t->select_bottom:t->card_top);
+   if(!icons_draw(on?ICON_SLOT_TILE:ICON_STILL,place_picture(p),tx+UI_LOOK_TILE_ICON/UI_LOOK_TWO,y+height/UI_LOOK_TWO,UI_LOOK_TILE_ICON,on,UI_LOOK_ONE,UI_LOOK_IMAGE_Z))
+    ui_icon_draw(p->icon,tx+UI_LOOK_TILE_ICON/UI_LOOK_TWO,y+height/UI_LOOK_TWO,UI_LOOK_TILE_ICON,on?t->text_bright:look_style()->icon,on?t->select_bottom:t->card_top);
    tx+=UI_LOOK_TILE_ICON+UI_LOOK_THUMB_GAP;
   }
   int lines=UI_LOOK_ONE+(sub[UI_LOOK_ZERO]&&*sub[UI_LOOK_ZERO])+(sub[UI_LOOK_ONE]&&*sub[UI_LOOK_ONE]);

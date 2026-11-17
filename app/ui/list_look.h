@@ -14,7 +14,6 @@ typedef struct {
  int cover[3], covers;
 } bb_home_picture;
 
-void list_look_prepare(void);
 void list_look_release(void);
 void list_look_backdrop(bool bottom);
 void list_look_home_top(const bb_home_picture *home);

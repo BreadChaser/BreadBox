@@ -22,7 +22,6 @@ PSX3D_COLD void libui_init(void)
  title_font=display_font;
 	if (!title_font)
 		log_printf("libui: title font missing, using system font\n");
- list_look_prepare();
  if(!theme_is_room())shelf_scene_prepare();
  font_ready=true;libui_look_changed();
 }

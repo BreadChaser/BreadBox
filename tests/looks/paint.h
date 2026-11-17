@@ -7,12 +7,12 @@
 #include "libui.h"
 #include "covers.h"
 #include "cold_code.h"
-typedef void *C2D_SpriteSheet;
 typedef struct { C3D_Tex *tex; const Tex3DS_SubTexture *sub; } C2D_Image;
 typedef struct { int unused; } C2D_ImageTint;
-static C2D_SpriteSheet C2D_SpriteSheetLoad(const char *p){(void)p;return NULL;}
-static void C2D_SpriteSheetFree(C2D_SpriteSheet p){(void)p;}
-static C2D_Image C2D_SpriteSheetGetImage(C2D_SpriteSheet p,int n){(void)p;(void)n;return (C2D_Image){0};}
+/* PSX3D's moving scene (list_scene.c): drawn or, without memory for it, not; the looks then paint their plain page. */
+static int scene_draws,scene_releases;static bool scene_refused;
+bool list_scene_draw(void){scene_draws++;return !scene_refused;}
+void list_scene_release(void){scene_releases++;}
 static void C2D_PlainImageTint(C2D_ImageTint *p,u32 c,float a){(void)p;(void)c;(void)a;}
 static void C2D_DrawImageAt(C2D_Image i,float x,float y,float z,const C2D_ImageTint *t,float sx,float sy)
 {(void)i;(void)x;(void)y;(void)z;(void)t;(void)sx;(void)sy;}
@@ -41,6 +41,10 @@ int ui_fit_lines(C2D_Font font,const char *s,float size,float min,float w,int ma
 C2D_Font libui_font(void){return NULL;}
 static int cover_ids[16],ncover_ids;
 C3D_Tex *covers_get(int id,Tex3DS_SubTexture *sub){(void)sub;cover_ids[ncover_ids++%16]=id;return NULL;}
+#include "icons.h"
+static int place_pictures;   /* PSX3D's own pictures drawn (icons.c) */
+bool icons_draw(int slot,int id,float cx,float cy,float size,bool lit,float alpha,float z)
+{(void)slot;(void)cx;(void)cy;(void)size;(void)lit;(void)alpha;(void)z;if(id<0)return false;assert(id==ICON_TOGETHER||id==ICON_SETTINGS||id==ICON_SHARE);place_pictures++;return true;}
 void ui_icon_draw(int icon,float x,float y,float size,u32 c,u32 bg)
 {(void)icon;(void)x;(void)y;(void)size;(void)c;(void)bg;}
 void shelf_scene_card(const shelf_card *c){record(c->title);}

@@ -2,6 +2,17 @@
 
 What changed in each release, newest first. The first block lists short in-app highlights (six at most). Longer release notes follow under Details.
 
+## v0.9.4 (public beta)
+
+- PSX3D backdrop moves
+- PSX3D original icons
+- A plays from the list
+
+### Details
+
+- The PSX3D theme's sky, sun, palms and grid move again, and it uses its original icons.
+- In PSX3D and Simple, A starts a game straight from the list, X opens its Options and Back never needs a second press.
+
 ## v0.9.3 (public beta)
 
 - PlayStation controls fixed

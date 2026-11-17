@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "theme.h"
+#include "look_theme.h"
 #include "icons.h"
 #include "ui_style.h"
 #include "app_log.h"
@@ -361,6 +362,8 @@ bool icons_draw(int slot, int id, float cx, float cy, float size, bool lit, floa
 
 bool icons_glyph(int ui_icon, float cx, float cy, u32 ink, float z)
 {
+	if (theme_look_get(theme_look())->artwork)   // PSX3D keeps its own solid icons (ui.c draws them)
+		return false;
 	if (
         ui_icon != UI_ICON_START && (ui_icon < UI_ICON_STAR || ui_icon > UI_ICON_EXIT))
 		return false;
