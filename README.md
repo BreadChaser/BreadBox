@@ -9,7 +9,7 @@
 
 <p align="center">
   <a href="https://github.com/BreadChaser/BreadBox/releases/latest"><img src="https://img.shields.io/github/v/release/BreadChaser/BreadBox?color=c9a46a" alt="Latest release"></a>
-  <a href="https://github.com/BreadChaser/BreadBox/releases"><img src="https://img.shields.io/github/downloads/BreadChaser/BreadBox/total?color=8a6a45" alt="Downloads"></a>
+  <a href="https://github.com/BreadChaser/BreadBox/releases"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/BreadChaser/BreadBox/badges/downloads.json" alt="Downloads"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--2.0--or--later-blue" alt="GPL-2.0-or-later"></a>
   <img src="https://img.shields.io/badge/platform-Nintendo%203DS-e60012" alt="Nintendo 3DS">
 </p>

@@ -1,0 +1,44 @@
+# Keeps the README's download count: installer files only (.cia and .3dsx) over every release.
+# The update check's small file (update.json) is not a download of BreadBox, so it is left out.
+# The count is written to downloads.json on the "badges" branch, which the README badge reads.
+name: downloads
+
+on:
+  schedule:
+    - cron: "23 */6 * * *"
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: downloads
+  cancel-in-progress: true
+
+jobs:
+  count:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+    steps:
+      - name: Count installer downloads
+        run: |
+          set -euo pipefail
+          count=$(gh api "repos/$REPO/releases" --paginate \
+            --jq '[.[].assets[] | select(.name | test("\\.(cia|3dsx)$")) | .download_count] | add // 0' \
+            | awk '{ total += $1 } END { print total + 0 }')
+          mkdir badge && cd badge
+          git init -q
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git"
+          if git fetch -q --depth=1 origin badges; then git checkout -q -b badges FETCH_HEAD; else git checkout -q --orphan badges; fi
+          printf '{"schemaVersion":1,"label":"downloads","message":"%s","color":"8a6a45"}\n' "$count" > downloads.json
+          git add downloads.json
+          if git diff --cached --quiet; then echo "unchanged: $count"; exit 0; fi
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "Download count: $count"
+          git push -q origin badges
+          echo "updated: $count"
