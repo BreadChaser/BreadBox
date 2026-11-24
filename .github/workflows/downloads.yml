@@ -1,6 +1,8 @@
 # Keeps the README's download count: installer files only (.cia and .3dsx) over every release.
 # The update check's small file (update.json) is not a download of BreadBox, so it is left out.
-# The count is written to downloads.json on the "badges" branch, which the README badge reads.
+# The count and the latest release are drawn as small images (downloads.svg, release.svg) on the
+# "badges" branch. The README shows those files directly, so its badges do not depend on an outside
+# badge service answering in time. downloads.json keeps the plain number.
 name: downloads
 
 on:
@@ -31,13 +33,34 @@ jobs:
           count=$(gh api "repos/$REPO/releases" --paginate \
             --jq '[.[].assets[] | select(.name | test("\\.(cia|3dsx)$")) | .download_count] | add // 0' \
             | awk '{ total += $1 } END { print total + 0 }')
+          release=$(gh api "repos/$REPO/releases/latest" --jq .tag_name)
+          # badge <file> <label> <message> <color>: a flat two-part badge, about 6.5 px a letter.
+          badge() {
+            local lt=$(( ${#2} * 13 / 2 )) mt=$(( ${#3} * 13 / 2 ))
+            local lw=$(( lt + 10 )) mw=$(( mt + 10 ))
+            local w=$(( lw + mw ))
+            {
+              printf '<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="20" role="img" aria-label="%s: %s">' "$w" "$2" "$3"
+              printf '<title>%s: %s</title>' "$2" "$3"
+              printf '<linearGradient id="s" x2="0" y2="100%%"><stop offset="0" stop-color="#bbb" stop-opacity=".1"/><stop offset="1" stop-opacity=".1"/></linearGradient>'
+              printf '<clipPath id="r"><rect width="%d" height="20" rx="3" fill="#fff"/></clipPath>' "$w"
+              printf '<g clip-path="url(#r)"><rect width="%d" height="20" fill="#555"/><rect x="%d" width="%d" height="20" fill="#%s"/><rect width="%d" height="20" fill="url(#s)"/></g>' "$lw" "$lw" "$mw" "$4" "$w"
+              printf '<g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11">'
+              printf '<text x="%d" y="14" textLength="%d">%s</text>' "$(( lw / 2 ))" "$lt" "$2"
+              printf '<text x="%d" y="14" textLength="%d">%s</text>' "$(( lw + mw / 2 ))" "$mt" "$3"
+              printf '</g></svg>\n'
+            } > "$1"
+          }
+          case "$release" in *[!A-Za-z0-9._-]*|"") echo "unexpected release name"; exit 1 ;; esac
           mkdir badge && cd badge
           git init -q
           git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git"
           if git fetch -q --depth=1 origin badges; then git checkout -q -b badges FETCH_HEAD; else git checkout -q --orphan badges; fi
           printf '{"schemaVersion":1,"label":"downloads","message":"%s","color":"8a6a45"}\n' "$count" > downloads.json
-          git add downloads.json
-          if git diff --cached --quiet; then echo "unchanged: $count"; exit 0; fi
+          badge downloads.svg downloads "$count" 8a6a45
+          badge release.svg release "$release" c9a46a
+          git add downloads.json downloads.svg release.svg
+          if git diff --cached --quiet; then echo "unchanged: $count, $release"; exit 0; fi
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
             commit -q -m "Download count: $count"
           git push -q origin badges
